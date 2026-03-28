@@ -14,7 +14,8 @@
     "harness:govern": "node scripts/govern.mjs",
     "harness:aggregate": "node scripts/aggregate.mjs",
     "harness:weekly": "node scripts/weekly-report.mjs",
-    "harness:next-plan": "node scripts/next-plan.mjs"
+    "harness:next-plan": "node scripts/next-plan.mjs",
+    "harness:task-pack": "node scripts/task-pack.mjs"
   },
   "dependencies": {
     "react": "^19.2.4",

@@ -57,11 +57,17 @@ npm run harness:govern -- --task your-task-id
 # 聚合与周报
 npm run harness:aggregate
 npm run harness:weekly
+
+# 生成任务包 + 下一轮计划
+npm run harness:task-pack
+npm run harness:next-plan
 ```
 
 产物位置：
 - `harness/metrics/summary.json`
 - `harness/metrics/weekly-YYYY-MM-DD.md`
+- `harness/task-packs/task-pack-YYYY-MM-DD.md`
+- `plans/auto-next-YYYY-MM-DD.md`
 
 ## 交互说明
 
