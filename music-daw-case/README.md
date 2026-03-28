@@ -36,6 +36,24 @@ npm run dev
 npm run build
 ```
 
+## 测试
+
+```bash
+# 单元/行为测试（vitest）
+npm run test
+
+# e2e（playwright）
+npx playwright install chromium
+npm run test:e2e
+```
+
+## Harness 自动评测（v0.2）
+
+```bash
+npm run harness:eval -- --task your-task-id
+npm run harness:govern -- --task your-task-id
+```
+
 ## 交互说明
 
 - 点击 `Play` 开始从头播放整个时间轴

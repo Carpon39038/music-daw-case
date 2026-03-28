@@ -29,3 +29,33 @@ npm error JSON.parse Invalid package.json: JSONParseError: Expected ',' or '}' a
 - Related Files: music-daw-case/package.json
 
 ---
+## [ERR-20260328-002] package-json-edit-missing-comma-recurring
+
+**Logged**: 2026-03-28T12:35:00Z
+**Priority**: high
+**Status**: pending
+**Area**: config
+
+### Summary
+Second recurrence of package.json missing comma after scripts block while editing npm scripts for test/e2e integration.
+
+### Error
+```
+npm error code EJSONPARSE
+npm error JSON.parse Invalid package.json: JSONParseError: Expected ',' or '}' after property value
+```
+
+### Context
+- Operation attempted: `npm run test`
+- Similar to ERR-20260328-001
+
+### Suggested Fix
+- After each package.json edit, always run JSON parse check immediately.
+- Prefer deterministic JSON patch helper over manual text replacements.
+
+### Metadata
+- Reproducible: yes
+- Related Files: music-daw-case/package.json
+- See Also: ERR-20260328-001
+
+---

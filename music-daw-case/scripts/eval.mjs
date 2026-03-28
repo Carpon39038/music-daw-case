@@ -25,12 +25,14 @@ function runStep(name, cmd) {
 }
 
 const lint = runStep('lint', 'npm run lint')
+const unit = runStep('test', 'npm run test')
+const e2e = runStep('test:e2e', 'npm run test:e2e')
 const build = runStep('build', 'npm run build')
 
-const pass = lint.ok && build.ok
+const pass = lint.ok && unit.ok && e2e.ok && build.ok
 const now = new Date().toISOString()
 
-const report = `# Eval Report\n\n- Task ID: ${taskId}\n- Evaluator: harness/eval.mjs\n- Date: ${now}\n\n## Verdict\n\n- ${pass ? 'PASS' : 'FAIL'}\n\n## Evidence\n\n### lint (${lint.ok ? 'PASS' : 'FAIL'})\n\n\`\`\`\n${lint.output.slice(0, 5000)}\n\`\`\`\n\n### build (${build.ok ? 'PASS' : 'FAIL'})\n\n\`\`\`\n${build.output.slice(0, 5000)}\n\`\`\`\n\n## Issues\n\n${pass ? '- 无阻塞问题。' : '- 见上方失败步骤输出。'}\n\n## Recommendation\n\n- ${pass ? 'merge' : 'fix and rerun'}\n`
+const report = `# Eval Report\n\n- Task ID: ${taskId}\n- Evaluator: harness/eval.mjs\n- Date: ${now}\n\n## Verdict\n\n- ${pass ? 'PASS' : 'FAIL'}\n\n## Evidence\n\n### lint (${lint.ok ? 'PASS' : 'FAIL'})\n\n\`\`\`\n${lint.output.slice(0, 4000)}\n\`\`\`\n\n### unit test (${unit.ok ? 'PASS' : 'FAIL'})\n\n\`\`\`\n${unit.output.slice(0, 4000)}\n\`\`\`\n\n### e2e test (${e2e.ok ? 'PASS' : 'FAIL'})\n\n\`\`\`\n${e2e.output.slice(0, 4000)}\n\`\`\`\n\n### build (${build.ok ? 'PASS' : 'FAIL'})\n\n\`\`\`\n${build.output.slice(0, 4000)}\n\`\`\`\n\n## Issues\n\n${pass ? '- 无阻塞问题。' : '- 见上方失败步骤输出。'}\n\n## Recommendation\n\n- ${pass ? 'merge' : 'fix and rerun'}\n`
 
 const reportPath = resolve(outDir, `${taskId}.md`)
 writeFileSync(reportPath, report)
