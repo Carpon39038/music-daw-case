@@ -47,6 +47,18 @@ function createInitialProject(): ProjectState {
   }
 }
 
+declare global {
+  interface Window {
+    __DAW_DEBUG__?: {
+      isPlaying: boolean
+      scheduledNodeCount: number
+      bpm: number
+      trackCount: number
+      clipCount: number
+    }
+  }
+}
+
 function App() {
   const [project, setProject] = useState<ProjectState>(() => createInitialProject())
   const [isPlaying, setIsPlaying] = useState(false)
@@ -64,6 +76,10 @@ function App() {
 
   const beatDuration = useMemo(() => 60 / project.bpm, [project.bpm])
   const totalDurationSec = TIMELINE_BEATS * beatDuration
+  const totalClipCount = useMemo(
+    () => project.tracks.reduce((sum, t) => sum + t.clips.length, 0),
+    [project.tracks],
+  )
 
   const ensureAudio = async () => {
     if (!audioCtxRef.current) {
@@ -245,6 +261,16 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    window.__DAW_DEBUG__ = {
+      isPlaying,
+      scheduledNodeCount: scheduledNodesRef.current.length,
+      bpm: project.bpm,
+      trackCount: project.tracks.length,
+      clipCount: totalClipCount,
+    }
+  }, [isPlaying, project.bpm, project.tracks.length, totalClipCount])
+
   const addClip = (trackId: string) => {
     setProject((prev) => {
       const next = structuredClone(prev)
@@ -282,14 +308,15 @@ function App() {
     <div className="app">
       <h1>Music DAW Case (Harness MVP)</h1>
 
-      <section className="transport">
-        <button onClick={startPlayback} disabled={isPlaying}>Play</button>
-        <button onClick={pausePlayback} disabled={!isPlaying}>Pause</button>
-        <button onClick={stopPlayback}>Stop</button>
+      <section className="transport" data-testid="transport">
+        <button data-testid="play-btn" onClick={startPlayback} disabled={isPlaying}>Play</button>
+        <button data-testid="pause-btn" onClick={pausePlayback} disabled={!isPlaying}>Pause</button>
+        <button data-testid="stop-btn" onClick={stopPlayback}>Stop</button>
 
         <label>
           BPM
           <input
+            data-testid="bpm-input"
             type="number"
             min={60}
             max={200}
@@ -310,11 +337,12 @@ function App() {
       <section className="timeline">
         {project.tracks.map((track) => (
           <div className="track-row" key={track.id}>
-            <div className="track-header">
+            <div className="track-header" data-testid={`track-header-${track.id}`}>
               <div className="track-name">{track.name}</div>
               <label>
                 Vol
                 <input
+                  data-testid={`vol-${track.id}`}
                   type="range"
                   min={0}
                   max={1}
@@ -323,7 +351,7 @@ function App() {
                   onChange={(e) => setTrackVolume(track.id, Number(e.target.value))}
                 />
               </label>
-              <button onClick={() => addClip(track.id)} disabled={isPlaying}>+ Clip</button>
+              <button data-testid={`add-clip-${track.id}`} onClick={() => addClip(track.id)} disabled={isPlaying}>+ Clip</button>
             </div>
 
             <div className="track-grid">
@@ -334,6 +362,7 @@ function App() {
               {track.clips.map((clip) => (
                 <button
                   key={clip.id}
+                  data-testid={`clip-${track.id}-${clip.id}`}
                   className={`clip ${clip.wave}`}
                   style={{
                     left: `${(clip.startBeat / TIMELINE_BEATS) * 100}%`,
