@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-03-28T12:39:03.079Z",
+  "total": 2,
+  "pass": 2,
+  "fail": 0,
+  "failedSteps": {
+    "lint": 0,
+    "unit": 0,
+    "e2e": 0,
+    "build": 0
+  },
+  "tasks": [
+    {
+      "taskId": "daw-harness-v01",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false
+    },
+    {
+      "taskId": "daw-harness-v02",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false
+    }
+  ],
+  "passRate": 1
+}

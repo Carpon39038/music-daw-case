@@ -47,12 +47,21 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-## Harness 自动评测（v0.2）
+## Harness 自动评测（v0.3）
 
 ```bash
+# 单次任务评测
 npm run harness:eval -- --task your-task-id
 npm run harness:govern -- --task your-task-id
+
+# 聚合与周报
+npm run harness:aggregate
+npm run harness:weekly
 ```
+
+产物位置：
+- `harness/metrics/summary.json`
+- `harness/metrics/weekly-YYYY-MM-DD.md`
 
 ## 交互说明
 

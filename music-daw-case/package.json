@@ -11,7 +11,9 @@
     "test:e2e": "playwright test",
     "preview": "vite preview",
     "harness:eval": "node scripts/eval.mjs",
-    "harness:govern": "node scripts/govern.mjs"
+    "harness:govern": "node scripts/govern.mjs",
+    "harness:aggregate": "node scripts/aggregate.mjs",
+    "harness:weekly": "node scripts/weekly-report.mjs"
   },
   "dependencies": {
     "react": "^19.2.4",
