@@ -13,7 +13,8 @@
     "harness:eval": "node scripts/eval.mjs",
     "harness:govern": "node scripts/govern.mjs",
     "harness:aggregate": "node scripts/aggregate.mjs",
-    "harness:weekly": "node scripts/weekly-report.mjs"
+    "harness:weekly": "node scripts/weekly-report.mjs",
+    "harness:next-plan": "node scripts/next-plan.mjs"
   },
   "dependencies": {
     "react": "^19.2.4",

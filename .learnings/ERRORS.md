@@ -59,3 +59,31 @@ npm error JSON.parse Invalid package.json: JSONParseError: Expected ',' or '}' a
 - See Also: ERR-20260328-001
 
 ---
+## [ERR-20260328-003] next-plan-template-literal-escaping
+
+**Logged**: 2026-03-28T12:42:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: scripts
+
+### Summary
+`next-plan.mjs` used a template literal containing escaped backticks for a markdown inline code snippet, causing JS parse error (`Unexpected identifier 'npm'`).
+
+### Error
+```
+SyntaxError: Unexpected identifier 'npm'
+```
+
+### Context
+- Command: `npm run harness:next-plan`
+- File: scripts/next-plan.mjs
+
+### Suggested Fix
+Avoid backtick-in-template complexity; use plain quoted command string in markdown line.
+
+### Metadata
+- Reproducible: yes
+- Related Files: music-daw-case/scripts/next-plan.mjs
+- See Also: ERR-20260328-001
+
+---
