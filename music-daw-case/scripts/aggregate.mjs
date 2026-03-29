@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-import { readdirSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { readdirSync, readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const root = process.cwd()
 const evalDir = resolve(root, 'reports/eval')
 const outDir = resolve(root, 'harness/metrics')
+const judgementsDir = resolve(outDir, 'judgements')
 mkdirSync(outDir, { recursive: true })
 
 const files = readdirSync(evalDir).filter((f) => f.endsWith('.md') && !f.startsWith('_template'))
@@ -24,12 +25,21 @@ const summary = {
     R4_toolchain_or_build: 0,
     R6_validation_gap: 0,
   },
+  scoreSummary: {
+    count: 0,
+    avgTotal: null,
+    maxTotal: null,
+    latestTotal: null,
+  },
   tasks: [],
 }
+
+const totals = []
 
 for (const file of files) {
   const content = readFileSync(resolve(evalDir, file), 'utf8')
   const taskIdMatch = content.match(/- Task ID: (.+)/)
+  const taskId = taskIdMatch?.[1]?.trim() || file.replace('.md', '')
   const verdictPass = content.includes('\n- PASS\n')
 
   summary.total += 1
@@ -58,14 +68,36 @@ for (const file of files) {
     summary.failureTaxonomy.R4_toolchain_or_build += 1
   }
 
+  let totalScore = null
+  const judgementPath = resolve(judgementsDir, `${taskId}.json`)
+  if (existsSync(judgementPath)) {
+    try {
+      const j = JSON.parse(readFileSync(judgementPath, 'utf8'))
+      if (typeof j?.total === 'number') {
+        totalScore = j.total
+        totals.push(totalScore)
+      }
+    } catch {
+      // ignore malformed judgement files
+    }
+  }
+
   summary.tasks.push({
-    taskId: taskIdMatch?.[1]?.trim() || file.replace('.md', ''),
+    taskId,
     verdict: verdictPass ? 'PASS' : 'FAIL',
     lintFail,
     unitFail,
     e2eFail,
     buildFail,
+    totalScore,
   })
+}
+
+if (totals.length) {
+  summary.scoreSummary.count = totals.length
+  summary.scoreSummary.maxTotal = Math.max(...totals)
+  summary.scoreSummary.latestTotal = totals[totals.length - 1]
+  summary.scoreSummary.avgTotal = Number((totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(2))
 }
 
 const payload = {
