@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-03-29T08:06:11.632Z",
-  "total": 5,
-  "pass": 5,
+  "generatedAt": "2026-03-29T08:59:08.831Z",
+  "total": 6,
+  "pass": 6,
   "fail": 0,
   "failedSteps": {
     "lint": 0,
@@ -15,7 +15,7 @@
     "R6_validation_gap": 0
   },
   "scoreSummary": {
-    "count": 3,
+    "count": 4,
     "avgTotal": 25,
     "maxTotal": 25,
     "latestTotal": 25
@@ -59,6 +59,15 @@
     },
     {
       "taskId": "daw-harness-v07",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daw-harness-v08",
       "verdict": "PASS",
       "lintFail": false,
       "unitFail": false,
