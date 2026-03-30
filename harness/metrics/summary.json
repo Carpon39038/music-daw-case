@@ -1,22 +1,22 @@
 {
-  "generatedAt": "2026-03-30T06:35:12.339Z",
-  "total": 11,
-  "pass": 11,
-  "fail": 0,
+  "generatedAt": "2026-03-30T15:01:31.825Z",
+  "total": 17,
+  "pass": 15,
+  "fail": 2,
   "failedSteps": {
     "lint": 0,
-    "unit": 0,
-    "e2e": 0,
+    "unit": 1,
+    "e2e": 1,
     "build": 0
   },
   "failureTaxonomy": {
     "R3_rules_missing": 0,
     "R4_toolchain_or_build": 0,
-    "R6_validation_gap": 0
+    "R6_validation_gap": 2
   },
   "scoreSummary": {
-    "count": 9,
-    "avgTotal": 25,
+    "count": 15,
+    "avgTotal": 24.2,
     "maxTotal": 25,
     "latestTotal": 25
   },
@@ -119,7 +119,61 @@
       "e2eFail": false,
       "buildFail": false,
       "totalScore": 25
+    },
+    {
+      "taskId": "drill-e2e-fail-2026-03-30",
+      "verdict": "FAIL",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": true,
+      "buildFail": false,
+      "totalScore": 18
+    },
+    {
+      "taskId": "drill-unit-fail-2026-03-30",
+      "verdict": "FAIL",
+      "lintFail": false,
+      "unitFail": true,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 20
+    },
+    {
+      "taskId": "step2-e2e-coverage-2026-03-30",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "step3-audio-runtime-2026-03-30",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "step5-clip-drag-snap-2026-03-30",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "verify-2026-03-30",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
     }
   ],
-  "passRate": 1
+  "passRate": 0.8824
 }

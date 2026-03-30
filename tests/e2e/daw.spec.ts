@@ -101,7 +101,7 @@ test.describe('DAW MVP e2e', () => {
     await expect(bpmInput).toHaveValue('120')
   })
 
-  test('clip drag should snap to beat and stay within timeline bounds', async ({ page }) => {
+  test('clip drag should snap to beat and clamp within both timeline bounds', async ({ page }) => {
     await page.goto('/')
 
     const clip = page.locator('[data-testid^="clip-track-1-"]').first()
@@ -132,8 +132,61 @@ test.describe('DAW MVP e2e', () => {
     await page.mouse.move(box.x - 500, box.y + box.height / 2)
     await page.mouse.up()
 
-    const leftAfterClamp = await clip.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
-    expect(leftAfterClamp).toBeGreaterThanOrEqual(0)
+    const leftAfterClampMin = await clip.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
+    expect(leftAfterClampMin).toBeGreaterThanOrEqual(0)
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + 3000, box.y + box.height / 2)
+    await page.mouse.up()
+
+    const leftAfterClampMax = await clip.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
+    expect(leftAfterClampMax).toBeLessThanOrEqual(100)
+  })
+
+  test('clip drag position should be reflected in playback schedule state', async ({ page }) => {
+    await page.goto('/')
+
+    const clip = page.locator('[data-testid^="clip-track-1-"]').first()
+    const box = await clip.boundingBox()
+    expect(box).not.toBeNull()
+    if (!box) return
+
+    const beforeBeat = await page.evaluate(() => window.__DAW_DEBUG__?.firstTrackFirstClipStartBeat)
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2)
+    await page.mouse.up()
+
+    const afterBeat = await page.evaluate(() => window.__DAW_DEBUG__?.firstTrackFirstClipStartBeat)
+    expect(afterBeat).toBeGreaterThan(beforeBeat ?? -1)
+
+    await page.getByTestId('play-btn').click()
+    const scheduled = await page.evaluate(() => window.__DAW_DEBUG__?.scheduledNodeCount ?? 0)
+    expect(scheduled).toBeGreaterThan(0)
+    await page.getByTestId('stop-btn').click()
+  })
+
+  test('clip drag should revert on Escape (cancel consistency)', async ({ page }) => {
+    await page.goto('/')
+
+    const clip = page.locator('[data-testid^="clip-track-1-"]').first()
+    const beforeLeft = await clip.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
+
+    const box = await clip.boundingBox()
+    expect(box).not.toBeNull()
+    if (!box) return
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2)
+    await page.keyboard.press('Escape')
+
+    const afterCancelLeft = await clip.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
+    expect(afterCancelLeft).toBe(beforeLeft)
+
+    await page.mouse.up()
   })
 
   test('audio runtime should clear scheduled nodes on pause and stop', async ({ page }) => {

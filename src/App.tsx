@@ -55,6 +55,7 @@ declare global {
       bpm: number
       trackCount: number
       clipCount: number
+      firstTrackFirstClipStartBeat: number | null
     }
   }
 }
@@ -278,8 +279,9 @@ function App() {
       bpm: project.bpm,
       trackCount: project.tracks.length,
       clipCount: totalClipCount,
+      firstTrackFirstClipStartBeat: project.tracks[0]?.clips[0]?.startBeat ?? null,
     }
-  }, [isPlaying, project.bpm, project.tracks.length, totalClipCount])
+  }, [isPlaying, project, totalClipCount])
 
   const addClip = (trackId: string) => {
     setProject((prev) => {
@@ -365,9 +367,18 @@ function App() {
       updateClipStartBeat(state.trackId, state.clipId, nextStart)
     }
 
+    const onKeyDown = (keyEvent: KeyboardEvent) => {
+      const state = dragStateRef.current
+      if (!state) return
+      if (keyEvent.key !== 'Escape') return
+      updateClipStartBeat(state.trackId, state.clipId, state.originStartBeat)
+      cleanup()
+    }
+
     const cleanup = () => {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', cleanup)
+      window.removeEventListener('keydown', onKeyDown)
       dragStateRef.current = null
       dragCleanupRef.current = null
     }
@@ -375,6 +386,7 @@ function App() {
     dragCleanupRef.current = cleanup
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', cleanup)
+    window.addEventListener('keydown', onKeyDown)
   }
 
   useEffect(() => {

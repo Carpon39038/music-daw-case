@@ -65,6 +65,14 @@ pnpm run verify:ci
 - `verify:full` = preflight + e2e
 - `verify:ci` = full + harness:loop（自动产出 eval/judge/govern/summary/weekly/task-pack/next-plan）
 
+## 发布门禁（固定规则）
+
+- PR 到 `main` 必须通过 GitHub Action `quality-gate`（执行 `pnpm run verify:full`）
+- 每日自动跑 `daily-verify-ci`（执行 `pnpm run verify:ci`）
+- FAIL 才会触发提醒（workflow 自动创建 failure issue）
+
+> 建议在仓库 Settings → Branch protection rules 中，把 `quality-gate / verify-full` 设为 Required status check。
+
 ## Harness 自动评测（v0.3）
 
 ```bash
