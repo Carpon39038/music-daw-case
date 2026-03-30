@@ -101,6 +101,41 @@ test.describe('DAW MVP e2e', () => {
     await expect(bpmInput).toHaveValue('120')
   })
 
+  test('clip drag should snap to beat and stay within timeline bounds', async ({ page }) => {
+    await page.goto('/')
+
+    const clip = page.locator('[data-testid^="clip-track-1-"]').first()
+    const beforeLeft = await clip.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
+
+    const box = await clip.boundingBox()
+    expect(box).not.toBeNull()
+    if (!box) return
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2)
+    await page.mouse.up()
+
+    const afterLeft = await clip.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
+    expect(afterLeft).toBeGreaterThan(beforeLeft)
+
+    const isBeatSnap = await clip.evaluate((el) => {
+      const leftPercent = Number.parseFloat((el as HTMLElement).style.left)
+      const beatPercent = 100 / 16
+      const ratio = leftPercent / beatPercent
+      return Math.abs(ratio - Math.round(ratio)) < 1e-6
+    })
+    expect(isBeatSnap).toBe(true)
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x - 500, box.y + box.height / 2)
+    await page.mouse.up()
+
+    const leftAfterClamp = await clip.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
+    expect(leftAfterClamp).toBeGreaterThanOrEqual(0)
+  })
+
   test('audio runtime should clear scheduled nodes on pause and stop', async ({ page }) => {
     await page.goto('/')
 

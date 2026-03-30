@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import './App.css'
 
 type WaveType = 'sine' | 'square'
@@ -63,6 +63,16 @@ function App() {
   const [project, setProject] = useState<ProjectState>(() => createInitialProject())
   const [isPlaying, setIsPlaying] = useState(false)
   const [playheadBeat, setPlayheadBeat] = useState(0)
+  const dragStateRef = useRef<{
+    trackId: string
+    clipId: string
+    startClientX: number
+    originStartBeat: number
+    beatWidthPx: number
+    lengthBeats: number
+  } | null>(null)
+  const timelineRef = useRef<HTMLDivElement | null>(null)
+  const dragCleanupRef = useRef<(() => void) | null>(null)
 
   const audioCtxRef = useRef<AudioContext | null>(null)
   const masterGainRef = useRef<GainNode | null>(null)
@@ -304,6 +314,75 @@ function App() {
     }))
   }
 
+  const updateClipStartBeat = (trackId: string, clipId: string, startBeat: number) => {
+    setProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) =>
+        t.id === trackId
+          ? {
+              ...t,
+              clips: t.clips.map((c) => (c.id === clipId ? { ...c, startBeat } : c)),
+            }
+          : t,
+      ),
+    }))
+  }
+
+  const startClipDrag = (
+    e: ReactMouseEvent<HTMLButtonElement>,
+    trackId: string,
+    clipId: string,
+    originStartBeat: number,
+    lengthBeats: number,
+  ) => {
+    if (isPlaying) return
+    if (e.button !== 0) return
+
+    const grid = timelineRef.current
+    if (!grid) return
+
+    const beatWidthPx = grid.getBoundingClientRect().width / TIMELINE_BEATS
+    if (!Number.isFinite(beatWidthPx) || beatWidthPx <= 0) return
+
+    dragStateRef.current = {
+      trackId,
+      clipId,
+      startClientX: e.clientX,
+      originStartBeat,
+      beatWidthPx,
+      lengthBeats,
+    }
+
+    const onMove = (moveEvent: MouseEvent) => {
+      const state = dragStateRef.current
+      if (!state) return
+
+      const deltaBeatRaw = (moveEvent.clientX - state.startClientX) / state.beatWidthPx
+      const deltaBeat = Math.round(deltaBeatRaw)
+      const maxStart = Math.max(0, TIMELINE_BEATS - state.lengthBeats)
+      const nextStart = Math.min(maxStart, Math.max(0, state.originStartBeat + deltaBeat))
+
+      updateClipStartBeat(state.trackId, state.clipId, nextStart)
+    }
+
+    const cleanup = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', cleanup)
+      dragStateRef.current = null
+      dragCleanupRef.current = null
+    }
+
+    dragCleanupRef.current = cleanup
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', cleanup)
+  }
+
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.()
+    }
+  }, [])
+
   return (
     <div className="app">
       <h1>Music DAW Case (Harness MVP)</h1>
@@ -354,7 +433,7 @@ function App() {
               <button data-testid={`add-clip-${track.id}`} onClick={() => addClip(track.id)} disabled={isPlaying}>+ Clip</button>
             </div>
 
-            <div className="track-grid">
+            <div className="track-grid" ref={timelineRef}>
               {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => (
                 <div className="beat-cell" key={beat} />
               ))}
@@ -368,7 +447,8 @@ function App() {
                     left: `${(clip.startBeat / TIMELINE_BEATS) * 100}%`,
                     width: `${(clip.lengthBeats / TIMELINE_BEATS) * 100}%`,
                   }}
-                  title={`${clip.wave} ${clip.noteHz.toFixed(2)}Hz`}
+                  title={`${clip.wave} ${clip.noteHz.toFixed(2)}Hz @ beat ${clip.startBeat}`}
+                  onMouseDown={(e) => startClipDrag(e, track.id, clip.id, clip.startBeat, clip.lengthBeats)}
                   onDoubleClick={() => !isPlaying && removeClip(track.id, clip.id)}
                 >
                   {clip.wave} {Math.round(clip.noteHz)}Hz
