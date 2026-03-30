@@ -8,7 +8,7 @@ mkdirSync(metricsDir, { recursive: true })
 
 const summaryPath = resolve(metricsDir, 'summary.json')
 if (!existsSync(summaryPath)) {
-  console.error('summary.json not found. Run npm run harness:aggregate first.')
+  console.error('summary.json not found. Run pnpm run harness:aggregate first.')
   process.exit(1)
 }
 

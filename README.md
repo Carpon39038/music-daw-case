@@ -24,8 +24,8 @@
 
 ```bash
 cd music-daw-case
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 打开终端输出里的本地地址（通常是 http://localhost:5173 ）。
@@ -33,38 +33,38 @@ npm run dev
 ## 构建验证
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## 测试
 
 ```bash
 # 单元/行为测试（vitest）
-npm run test
+pnpm run test
 
 # e2e（playwright）
-npx playwright install chromium
-npm run test:e2e
+pnpm exec playwright install chromium
+pnpm run test:e2e
 ```
 
 ## Harness 自动评测（v0.3）
 
 ```bash
 # 单次任务评测
-npm run harness:eval -- --task your-task-id
-npm run harness:govern -- --task your-task-id
+pnpm run harness:eval -- --task your-task-id
+pnpm run harness:govern -- --task your-task-id
 
 # 聚合与周报
-npm run harness:aggregate
-npm run harness:weekly
+pnpm run harness:aggregate
+pnpm run harness:weekly
 
 # 生成任务包 + 下一轮计划
-npm run harness:task-pack
-npm run harness:next-plan
+pnpm run harness:task-pack
+pnpm run harness:next-plan
 
 # 独立评审 + 一键闭环
-npm run harness:judge -- --task your-task-id
-npm run harness:loop -- --task your-task-id
+pnpm run harness:judge -- --task your-task-id
+pnpm run harness:loop -- --task your-task-id
 ```
 
 产物位置：
@@ -123,10 +123,10 @@ npm run harness:loop -- --task your-task-id
 
 ```bash
 # 1) 跑评测（输出到 reports/eval/<task-id>.md）
-npm run harness:eval -- --task demo-task
+pnpm run harness:eval -- --task demo-task
 
 # 2) 跑 governor（输出到 harness/metrics/<task-id>-governor.md）
-npm run harness:govern -- --task demo-task
+pnpm run harness:govern -- --task demo-task
 ```
 
 ## 下一步演进建议（v0.2+）

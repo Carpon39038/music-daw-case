@@ -24,26 +24,26 @@
 
 ## 3) Acceptance Criteria (可验证)
 
-- [x] AC1: 能执行 `npm run harness:eval -- --task daw-harness-v01` 产出评测报告
-- [x] AC2: 能执行 `npm run harness:govern -- --task daw-harness-v01` 产出 governor 建议
+- [x] AC1: 能执行 `pnpm run harness:eval -- --task daw-harness-v01` 产出评测报告
+- [x] AC2: 能执行 `pnpm run harness:govern -- --task daw-harness-v01` 产出 governor 建议
 - [x] AC3: README 有 harness 使用说明
 
 ## 4) Risks / Dependencies
 
 - 风险1：JSON 手改导致 package.json 语法错误
-- 依赖1：npm、node 环境可用
+- 依赖1：pnpm、node 环境可用
 
 ## 5) Build Steps
 
 1. 创建目录与模板
 2. 增加 eval/govern 脚本
-3. 更新 README 与 npm scripts
+3. 更新 README 与 pnpm scripts
 4. 执行闭环验证
 
 ## 6) Verification Plan
 
-- `npm run harness:eval -- --task daw-harness-v01`
-- `npm run harness:govern -- --task daw-harness-v01`
+- `pnpm run harness:eval -- --task daw-harness-v01`
+- `pnpm run harness:govern -- --task daw-harness-v01`
 
 ## 7) Rollback Plan
 

@@ -24,10 +24,10 @@ function runStep(name, cmd) {
   }
 }
 
-const lint = runStep('lint', 'npm run lint')
-const unit = runStep('test', 'npm run test')
-const e2e = runStep('test:e2e', 'npm run test:e2e')
-const build = runStep('build', 'npm run build')
+const lint = runStep('lint', 'pnpm run lint')
+const unit = runStep('test', 'pnpm run test')
+const e2e = runStep('test:e2e', 'pnpm run test:e2e')
+const build = runStep('build', 'pnpm run build')
 
 const pass = lint.ok && unit.ok && e2e.ok && build.ok
 const now = new Date().toISOString()

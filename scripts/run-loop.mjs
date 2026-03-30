@@ -6,13 +6,13 @@ const taskIdx = args.indexOf('--task')
 const taskId = taskIdx >= 0 ? args[taskIdx + 1] : `loop-${Date.now()}`
 
 const steps = [
-  `npm run harness:eval -- --task ${taskId}`,
-  `npm run harness:judge -- --task ${taskId}`,
-  `npm run harness:govern -- --task ${taskId}`,
-  'npm run harness:aggregate',
-  'npm run harness:task-pack',
-  'npm run harness:next-plan',
-  'npm run harness:weekly',
+  `pnpm run harness:eval -- --task ${taskId}`,
+  `pnpm run harness:judge -- --task ${taskId}`,
+  `pnpm run harness:govern -- --task ${taskId}`,
+  'pnpm run harness:aggregate',
+  'pnpm run harness:task-pack',
+  'pnpm run harness:next-plan',
+  'pnpm run harness:weekly',
 ]
 
 for (const cmd of steps) {

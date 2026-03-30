@@ -7,7 +7,7 @@ const taskIdx = args.indexOf('--task')
 const taskId = taskIdx >= 0 ? args[taskIdx + 1] : null
 
 if (!taskId) {
-  console.error('Usage: npm run harness:govern -- --task <task-id>')
+  console.error('Usage: pnpm run harness:govern -- --task <task-id>')
   process.exit(1)
 }
 

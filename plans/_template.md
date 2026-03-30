@@ -35,9 +35,9 @@
 
 ## 6) Verification Plan
 
-- `npm run lint`
-- `npm run build`
-- （可选）`npm run test`
+- `pnpm run lint`
+- `pnpm run build`
+- （可选）`pnpm run test`
 
 ## 7) Rollback Plan
 

@@ -16,10 +16,10 @@
 cp plans/_template.md plans/2026-03-28-daw-ui-improve.md
 
 # 2) 实现功能后执行评测
-npm run harness:eval -- --task 2026-03-28-daw-ui-improve
+pnpm run harness:eval -- --task 2026-03-28-daw-ui-improve
 
 # 3) 汇总并更新进化建议
-npm run harness:govern -- --task 2026-03-28-daw-ui-improve
+pnpm run harness:govern -- --task 2026-03-28-daw-ui-improve
 ```
 
 ## 输出位置
