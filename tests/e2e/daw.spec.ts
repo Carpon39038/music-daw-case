@@ -189,6 +189,72 @@ test.describe('DAW MVP e2e', () => {
     await page.mouse.up()
   })
 
+  test('undo/redo should restore clip add operation state', async ({ page }) => {
+    await page.goto('/')
+
+    const before = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+
+    await page.getByTestId('add-clip-track-1').click()
+    const afterAdd = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    expect(afterAdd).toBe(before + 1)
+
+    await page.getByTestId('undo-btn').click()
+    const afterUndo = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    expect(afterUndo).toBe(before)
+
+    await page.getByTestId('redo-btn').click()
+    const afterRedo = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    expect(afterRedo).toBe(before + 1)
+  })
+
+  test('project should persist clip edits across reload', async ({ page }) => {
+    await page.goto('/')
+
+    const before = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    await page.getByTestId('add-clip-track-1').click()
+    const afterAdd = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    expect(afterAdd).toBe(before + 1)
+
+    await page.reload()
+
+    const afterReload = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    expect(afterReload).toBe(before + 1)
+
+    await page.getByTestId('reset-project-btn').click()
+  })
+
+  test('clip drag should avoid overlap by auto-resolving to nearest free slot', async ({ page }) => {
+    await page.goto('/')
+
+    const clipList = page.locator('[data-testid^="clip-track-1-"]')
+    await expect(clipList).toHaveCount(1)
+
+    await page.getByTestId('add-clip-track-1').click()
+    await expect(clipList).toHaveCount(2)
+
+    const first = clipList.nth(0)
+    const second = clipList.nth(1)
+
+    const firstBox = await first.boundingBox()
+    const secondBox = await second.boundingBox()
+    expect(firstBox).not.toBeNull()
+    expect(secondBox).not.toBeNull()
+    if (!firstBox || !secondBox) return
+
+    await page.mouse.move(secondBox.x + secondBox.width / 2, secondBox.y + secondBox.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height / 2)
+    await page.mouse.up()
+
+    const firstLeft = await first.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
+    const secondLeft = await second.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
+    const firstWidth = await first.evaluate((el) => Number.parseFloat((el as HTMLElement).style.width))
+    const secondWidth = await second.evaluate((el) => Number.parseFloat((el as HTMLElement).style.width))
+
+    const overlapped = firstLeft < secondLeft + secondWidth && secondLeft < firstLeft + firstWidth
+    expect(overlapped).toBe(false)
+  })
+
   test('audio runtime should clear scheduled nodes on pause and stop', async ({ page }) => {
     await page.goto('/')
 

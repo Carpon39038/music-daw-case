@@ -25,6 +25,40 @@ interface ProjectState {
 
 const TRACK_COUNT = 4
 const TIMELINE_BEATS = 16
+const PROJECT_STORAGE_KEY = 'music-daw-case.project.v1'
+
+function rangesOverlap(aStart: number, aLen: number, bStart: number, bLen: number) {
+  const aEnd = aStart + aLen
+  const bEnd = bStart + bLen
+  return aStart < bEnd && bStart < aEnd
+}
+
+function resolveNonOverlappingStart(
+  clips: Clip[],
+  clipLength: number,
+  desiredStart: number,
+  currentClipId?: string,
+) {
+  const maxStart = Math.max(0, TIMELINE_BEATS - clipLength)
+  const clamped = Math.min(maxStart, Math.max(0, desiredStart))
+
+  const conflicts = (start: number) =>
+    clips.some(
+      (c) => c.id !== currentClipId && rangesOverlap(start, clipLength, c.startBeat, c.lengthBeats),
+    )
+
+  if (!conflicts(clamped)) return clamped
+
+  for (let offset = 1; offset <= TIMELINE_BEATS; offset++) {
+    const right = clamped + offset
+    if (right <= maxStart && !conflicts(right)) return right
+
+    const left = clamped - offset
+    if (left >= 0 && !conflicts(left)) return left
+  }
+
+  return clamped
+}
 
 function createInitialProject(): ProjectState {
   const defaultNotes = [261.63, 329.63, 392.0, 523.25]
@@ -47,6 +81,40 @@ function createInitialProject(): ProjectState {
   }
 }
 
+function isValidProjectState(value: unknown): value is ProjectState {
+  if (!value || typeof value !== 'object') return false
+  const p = value as Partial<ProjectState>
+  if (typeof p.bpm !== 'number' || !Array.isArray(p.tracks)) return false
+  return p.tracks.every((t) => {
+    if (!t || typeof t !== 'object') return false
+    if (typeof t.id !== 'string' || typeof t.name !== 'string' || typeof t.volume !== 'number') return false
+    if (!Array.isArray(t.clips)) return false
+    return t.clips.every((c) => {
+      if (!c || typeof c !== 'object') return false
+      return (
+        typeof c.id === 'string' &&
+        typeof c.startBeat === 'number' &&
+        typeof c.lengthBeats === 'number' &&
+        typeof c.noteHz === 'number' &&
+        (c.wave === 'sine' || c.wave === 'square')
+      )
+    })
+  })
+}
+
+function loadInitialProject(): ProjectState {
+  if (typeof window === 'undefined') return createInitialProject()
+  try {
+    const raw = window.localStorage.getItem(PROJECT_STORAGE_KEY)
+    if (!raw) return createInitialProject()
+    const parsed = JSON.parse(raw)
+    if (!isValidProjectState(parsed)) return createInitialProject()
+    return parsed
+  } catch {
+    return createInitialProject()
+  }
+}
+
 declare global {
   interface Window {
     __DAW_DEBUG__?: {
@@ -56,14 +124,18 @@ declare global {
       trackCount: number
       clipCount: number
       firstTrackFirstClipStartBeat: number | null
+      undoDepth: number
+      redoDepth: number
     }
   }
 }
 
 function App() {
-  const [project, setProject] = useState<ProjectState>(() => createInitialProject())
+  const [project, setProject] = useState<ProjectState>(() => loadInitialProject())
   const [isPlaying, setIsPlaying] = useState(false)
   const [playheadBeat, setPlayheadBeat] = useState(0)
+  const undoStackRef = useRef<ProjectState[]>([])
+  const redoStackRef = useRef<ProjectState[]>([])
   const dragStateRef = useRef<{
     trackId: string
     clipId: string
@@ -71,6 +143,8 @@ function App() {
     originStartBeat: number
     beatWidthPx: number
     lengthBeats: number
+    originProject: ProjectState
+    hasMoved: boolean
   } | null>(null)
   const timelineRef = useRef<HTMLDivElement | null>(null)
   const dragCleanupRef = useRef<(() => void) | null>(null)
@@ -280,18 +354,42 @@ function App() {
       trackCount: project.tracks.length,
       clipCount: totalClipCount,
       firstTrackFirstClipStartBeat: project.tracks[0]?.clips[0]?.startBeat ?? null,
+      undoDepth: undoStackRef.current.length,
+      redoDepth: redoStackRef.current.length,
     }
   }, [isPlaying, project, totalClipCount])
 
-  const addClip = (trackId: string) => {
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project))
+    } catch {
+      // ignore persistence errors
+    }
+  }, [project])
+
+  const applyProjectUpdate = (updater: (prev: ProjectState) => ProjectState) => {
     setProject((prev) => {
+      const next = updater(prev)
+      if (next === prev) return prev
+      undoStackRef.current.push(structuredClone(prev))
+      if (undoStackRef.current.length > 100) undoStackRef.current.shift()
+      redoStackRef.current = []
+      return next
+    })
+  }
+
+  const addClip = (trackId: string) => {
+    applyProjectUpdate((prev) => {
       const next = structuredClone(prev)
       const track = next.tracks.find((t) => t.id === trackId)
       if (!track) return prev
+      const lengthBeats = 2
+      const desiredStart = Math.floor(Math.random() * 12)
+      const startBeat = resolveNonOverlappingStart(track.clips, lengthBeats, desiredStart)
       const newClip: Clip = {
         id: `${trackId}-clip-${Date.now()}`,
-        startBeat: Math.floor(Math.random() * 12),
-        lengthBeats: 2,
+        startBeat,
+        lengthBeats,
         noteHz: [220, 261.63, 329.63, 392, 440][Math.floor(Math.random() * 5)],
         wave: Math.random() > 0.5 ? 'sine' : 'square',
       }
@@ -301,7 +399,7 @@ function App() {
   }
 
   const removeClip = (trackId: string, clipId: string) => {
-    setProject((prev) => ({
+    applyProjectUpdate((prev) => ({
       ...prev,
       tracks: prev.tracks.map((t) =>
         t.id === trackId ? { ...t, clips: t.clips.filter((c) => c.id !== clipId) } : t,
@@ -310,7 +408,7 @@ function App() {
   }
 
   const setTrackVolume = (trackId: string, volume: number) => {
-    setProject((prev) => ({
+    applyProjectUpdate((prev) => ({
       ...prev,
       tracks: prev.tracks.map((t) => (t.id === trackId ? { ...t, volume } : t)),
     }))
@@ -319,15 +417,31 @@ function App() {
   const updateClipStartBeat = (trackId: string, clipId: string, startBeat: number) => {
     setProject((prev) => ({
       ...prev,
-      tracks: prev.tracks.map((t) =>
-        t.id === trackId
-          ? {
-              ...t,
-              clips: t.clips.map((c) => (c.id === clipId ? { ...c, startBeat } : c)),
-            }
-          : t,
-      ),
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId) return t
+        const current = t.clips.find((c) => c.id === clipId)
+        if (!current) return t
+        const resolved = resolveNonOverlappingStart(t.clips, current.lengthBeats, startBeat, clipId)
+        return {
+          ...t,
+          clips: t.clips.map((c) => (c.id === clipId ? { ...c, startBeat: resolved } : c)),
+        }
+      }),
     }))
+  }
+
+  const undo = () => {
+    const prev = undoStackRef.current.pop()
+    if (!prev) return
+    redoStackRef.current.push(structuredClone(project))
+    setProject(prev)
+  }
+
+  const redo = () => {
+    const next = redoStackRef.current.pop()
+    if (!next) return
+    undoStackRef.current.push(structuredClone(project))
+    setProject(next)
   }
 
   const startClipDrag = (
@@ -353,7 +467,11 @@ function App() {
       originStartBeat,
       beatWidthPx,
       lengthBeats,
+      originProject: structuredClone(project),
+      hasMoved: false,
     }
+
+    let cancelled = false
 
     const onMove = (moveEvent: MouseEvent) => {
       const state = dragStateRef.current
@@ -364,6 +482,9 @@ function App() {
       const maxStart = Math.max(0, TIMELINE_BEATS - state.lengthBeats)
       const nextStart = Math.min(maxStart, Math.max(0, state.originStartBeat + deltaBeat))
 
+      if (nextStart !== state.originStartBeat) {
+        state.hasMoved = true
+      }
       updateClipStartBeat(state.trackId, state.clipId, nextStart)
     }
 
@@ -371,11 +492,18 @@ function App() {
       const state = dragStateRef.current
       if (!state) return
       if (keyEvent.key !== 'Escape') return
-      updateClipStartBeat(state.trackId, state.clipId, state.originStartBeat)
+      cancelled = true
+      setProject(state.originProject)
       cleanup()
     }
 
     const cleanup = () => {
+      const state = dragStateRef.current
+      if (state && state.hasMoved && !cancelled) {
+        undoStackRef.current.push(structuredClone(state.originProject))
+        if (undoStackRef.current.length > 100) undoStackRef.current.shift()
+        redoStackRef.current = []
+      }
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', cleanup)
       window.removeEventListener('keydown', onKeyDown)
@@ -403,6 +531,24 @@ function App() {
         <button data-testid="play-btn" onClick={startPlayback} disabled={isPlaying}>Play</button>
         <button data-testid="pause-btn" onClick={pausePlayback} disabled={!isPlaying}>Pause</button>
         <button data-testid="stop-btn" onClick={stopPlayback}>Stop</button>
+        <button data-testid="undo-btn" onClick={undo} disabled={undoStackRef.current.length === 0 || isPlaying}>Undo</button>
+        <button data-testid="redo-btn" onClick={redo} disabled={redoStackRef.current.length === 0 || isPlaying}>Redo</button>
+        <button
+          data-testid="reset-project-btn"
+          onClick={() => {
+            applyProjectUpdate(() => createInitialProject())
+            undoStackRef.current = []
+            redoStackRef.current = []
+            try {
+              window.localStorage.removeItem(PROJECT_STORAGE_KEY)
+            } catch {
+              // ignore
+            }
+          }}
+          disabled={isPlaying}
+        >
+          Reset
+        </button>
 
         <label>
           BPM
