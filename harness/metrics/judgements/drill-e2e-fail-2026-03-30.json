@@ -1,0 +1,23 @@
+{
+  "taskId": "drill-e2e-fail-2026-03-30",
+  "generatedAt": "2026-03-30T14:25:12.693Z",
+  "inputs": {
+    "evalPath": "/Users/cc/.openclaw/workspace/reports/eval/drill-e2e-fail-2026-03-30.md"
+  },
+  "stepFail": {
+    "lint": false,
+    "unit": false,
+    "e2e": true,
+    "build": false
+  },
+  "scores": {
+    "functionalCorrectness": 2,
+    "regressionRisk": 3,
+    "maintainability": 4,
+    "architectureConsistency": 4,
+    "observability": 3,
+    "uxCriticalPath": 2
+  },
+  "total": 18,
+  "verdict": "FAIL"
+}

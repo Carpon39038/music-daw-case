@@ -1,0 +1,23 @@
+{
+  "taskId": "drill-unit-fail-2026-03-30",
+  "generatedAt": "2026-03-30T14:25:30.974Z",
+  "inputs": {
+    "evalPath": "/Users/cc/.openclaw/workspace/reports/eval/drill-unit-fail-2026-03-30.md"
+  },
+  "stepFail": {
+    "lint": false,
+    "unit": true,
+    "e2e": false,
+    "build": false
+  },
+  "scores": {
+    "functionalCorrectness": 3,
+    "regressionRisk": 2,
+    "maintainability": 4,
+    "architectureConsistency": 4,
+    "observability": 3,
+    "uxCriticalPath": 4
+  },
+  "total": 20,
+  "verdict": "FAIL"
+}

@@ -47,6 +47,24 @@ pnpm exec playwright install chromium
 pnpm run test:e2e
 ```
 
+## 维护态验证规范（建议默认流程）
+
+```bash
+# 开发前快速健康检查
+pnpm run verify:preflight
+
+# 提交前完整检查（含 e2e）
+pnpm run verify:full
+
+# 发布前/每日回归（含 harness 闭环）
+pnpm run verify:ci
+```
+
+说明：
+- `verify:preflight` = lint + unit + build
+- `verify:full` = preflight + e2e
+- `verify:ci` = full + harness:loop（自动产出 eval/judge/govern/summary/weekly/task-pack/next-plan）
+
 ## Harness 自动评测（v0.3）
 
 ```bash
