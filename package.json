@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
+    "pretest:e2e": "pnpm run build",
     "test:e2e": "playwright test",
     "preview": "vite preview",
     "verify:preflight": "pnpm run lint && pnpm run test && pnpm run build",
