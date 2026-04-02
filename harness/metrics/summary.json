@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-03-30T15:01:31.825Z",
-  "total": 17,
-  "pass": 15,
+  "generatedAt": "2026-04-02T06:29:03.799Z",
+  "total": 20,
+  "pass": 18,
   "fail": 2,
   "failedSteps": {
     "lint": 0,
@@ -15,8 +15,8 @@
     "R6_validation_gap": 2
   },
   "scoreSummary": {
-    "count": 15,
-    "avgTotal": 24.2,
+    "count": 18,
+    "avgTotal": 24.33,
     "maxTotal": 25,
     "latestTotal": 25
   },
@@ -32,6 +32,15 @@
     },
     {
       "taskId": "daily-2026-03-30-pnpm-verify",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-02",
       "verdict": "PASS",
       "lintFail": false,
       "unitFail": false,
@@ -166,6 +175,24 @@
       "totalScore": 25
     },
     {
+      "taskId": "step6-project-persistence-2026-03-30",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "step7-overlap-policy-2026-03-30",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
       "taskId": "verify-2026-03-30",
       "verdict": "PASS",
       "lintFail": false,
@@ -175,5 +202,5 @@
       "totalScore": 25
     }
   ],
-  "passRate": 0.8824
+  "passRate": 0.9
 }
