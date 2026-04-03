@@ -50,7 +50,7 @@ function getGitSignals() {
 
 async function getLatestFailureRun() {
   try {
-    const res = await fetch('https://api.github.com/repos/CaBeta/music-daw-case/actions/runs?per_page=20', {
+    const res = await fetch('https://api.github.com/repos/Carpon39038/music-daw-case/actions/runs?per_page=20', {
       headers: { 'Accept': 'application/vnd.github+json' },
     })
     if (!res.ok) return null
