@@ -22,7 +22,8 @@
     "harness:next-plan": "node scripts/next-plan.mjs",
     "harness:task-pack": "node scripts/task-pack.mjs",
     "harness:judge": "node scripts/judge.mjs",
-    "harness:loop": "node scripts/run-loop.mjs"
+    "harness:loop": "node scripts/run-loop.mjs",
+    "harness:gated": "node scripts/harness-gated-run.mjs"
   },
   "dependencies": {
     "react": "^19.2.4",
