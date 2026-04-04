@@ -752,6 +752,47 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false
+      const tagName = target.tagName.toLowerCase()
+      return tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target.isContentEditable
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isTypingTarget(event.target)) return
+
+      const isMetaUndo = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z'
+      if (isMetaUndo) {
+        event.preventDefault()
+        if (event.shiftKey) {
+          redo()
+        } else {
+          undo()
+        }
+        return
+      }
+
+      if (event.code === 'Space') {
+        event.preventDefault()
+        if (isPlaying) {
+          pausePlayback()
+        } else {
+          void startPlayback()
+        }
+        return
+      }
+
+      if (event.key.toLowerCase() === 's') {
+        event.preventDefault()
+        stopPlayback()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isPlaying, project])
+
   return (
     <div className="app">
       <h1>Music DAW Case (Harness MVP)</h1>
@@ -912,7 +953,7 @@ function App() {
         ))}
       </section>
 
-      <p className="hint">双击 clip 切换波形；Alt+双击删除。播放时禁用新增 clip 与 BPM 修改。</p>
+      <p className="hint">双击 clip 切换波形；Alt+双击删除。播放时禁用新增 clip 与 BPM 修改。快捷键：Space 播放/暂停，S 停止，⌘/Ctrl+Z 撤销，⌘/Ctrl+Shift+Z 重做。</p>
     </div>
   )
 }

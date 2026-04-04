@@ -580,4 +580,58 @@ test.describe('DAW MVP e2e', () => {
     await page.getByTestId('solo-track-3').click()
     await page.getByTestId('reset-project-btn').click()
   })
+
+  test('keyboard shortcuts should drive transport and history actions', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByTestId('reset-project-btn').click()
+
+    const before = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+
+    await page.getByTestId('add-clip-track-1').click()
+    await page.keyboard.press('Meta+z')
+
+    const afterUndo = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    expect(afterUndo).toBe(before)
+
+    await page.keyboard.press('Meta+Shift+z')
+
+    const afterRedo = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    expect(afterRedo).toBe(before + 1)
+
+    await page.keyboard.press('Space')
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.isPlaying), {
+        timeout: 3000,
+        message: 'space should start playback when stopped',
+      })
+      .toBe(true)
+
+    await page.keyboard.press('Space')
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.isPlaying), {
+        timeout: 3000,
+        message: 'space should pause playback when playing',
+      })
+      .toBe(false)
+
+    await page.keyboard.press('Space')
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.isPlaying), {
+        timeout: 3000,
+        message: 'space should resume playback after pause',
+      })
+      .toBe(true)
+
+    await page.keyboard.press('s')
+
+    const debugAfterStop = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterStop?.isPlaying).toBe(false)
+    expect(debugAfterStop?.playheadBeat).toBe(0)
+
+    await page.getByTestId('reset-project-btn').click()
+  })
 })
