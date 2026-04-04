@@ -136,6 +136,7 @@ declare global {
       clipCount: number
       firstTrackFirstClipStartBeat: number | null
       firstTrackFirstClipLengthBeats: number | null
+      firstTrackFirstClipWave: WaveType | null
       playheadBeat: number
       undoDepth: number
       redoDepth: number
@@ -422,6 +423,7 @@ function App() {
       clipCount: totalClipCount,
       firstTrackFirstClipStartBeat: project.tracks[0]?.clips[0]?.startBeat ?? null,
       firstTrackFirstClipLengthBeats: project.tracks[0]?.clips[0]?.lengthBeats ?? null,
+      firstTrackFirstClipWave: project.tracks[0]?.clips[0]?.wave ?? null,
       playheadBeat,
       undoDepth: undoStackRef.current.length,
       redoDepth: redoStackRef.current.length,
@@ -491,11 +493,36 @@ function App() {
   }
 
   const removeClip = (trackId: string, clipId: string) => {
+    applyProjectUpdate((prev) => {
+      const track = prev.tracks.find((t) => t.id === trackId)
+      if (!track) return prev
+      if (track.clips.length <= 1) return prev
+
+      return {
+        ...prev,
+        tracks: prev.tracks.map((t) =>
+          t.id === trackId ? { ...t, clips: t.clips.filter((c) => c.id !== clipId) } : t,
+        ),
+      }
+    })
+  }
+
+  const cycleClipWave = (trackId: string, clipId: string) => {
     applyProjectUpdate((prev) => ({
       ...prev,
-      tracks: prev.tracks.map((t) =>
-        t.id === trackId ? { ...t, clips: t.clips.filter((c) => c.id !== clipId) } : t,
-      ),
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) => {
+            if (c.id !== clipId) return c
+            return {
+              ...c,
+              wave: c.wave === 'sine' ? 'square' : 'sine',
+            }
+          }),
+        }
+      }),
     }))
   }
 
@@ -851,9 +878,16 @@ function App() {
                     left: `${(clip.startBeat / TIMELINE_BEATS) * 100}%`,
                     width: `${(clip.lengthBeats / TIMELINE_BEATS) * 100}%`,
                   }}
-                  title={`${clip.wave} ${clip.noteHz.toFixed(2)}Hz @ beat ${clip.startBeat}`}
+                  title={`${clip.wave} ${clip.noteHz.toFixed(2)}Hz @ beat ${clip.startBeat}（双击切换波形，Alt+双击删除）`}
                   onMouseDown={(e) => startClipDrag(e, track.id, clip.id, clip.startBeat, clip.lengthBeats)}
-                  onDoubleClick={() => !isPlaying && removeClip(track.id, clip.id)}
+                  onDoubleClick={(e) => {
+                    if (isPlaying) return
+                    if (e.altKey) {
+                      removeClip(track.id, clip.id)
+                      return
+                    }
+                    cycleClipWave(track.id, clip.id)
+                  }}
                 >
                   <span className="clip-label">
                     {clip.wave} {Math.round(clip.noteHz)}Hz · {clip.lengthBeats} beat
@@ -878,7 +912,7 @@ function App() {
         ))}
       </section>
 
-      <p className="hint">双击 clip 删除；播放时禁用新增 clip 与 BPM 修改。</p>
+      <p className="hint">双击 clip 切换波形；Alt+双击删除。播放时禁用新增 clip 与 BPM 修改。</p>
     </div>
   )
 }

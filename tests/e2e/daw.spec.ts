@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('DAW MVP e2e', () => {
-  test('transport + clip add/remove + playback debug state', async ({ page }) => {
+  test('transport + clip add + playback debug state', async ({ page }) => {
     await page.goto('/')
 
     await expect(page.getByRole('heading', { name: /Music DAW Case/i })).toBeVisible()
@@ -26,11 +26,6 @@ test.describe('DAW MVP e2e', () => {
     await page.getByTestId('pause-btn').click()
     const paused = await page.evaluate(() => window.__DAW_DEBUG__?.isPlaying)
     expect(paused).toBe(false)
-
-    const firstClip = page.locator('[data-testid^="clip-track-1-"]').first()
-    await firstClip.dispatchEvent('dblclick')
-    const afterRemove = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
-    expect(afterRemove).toBe(afterAdd - 1)
   })
 
   test('bpm and volume controls are editable when stopped', async ({ page }) => {
@@ -302,6 +297,54 @@ test.describe('DAW MVP e2e', () => {
 
     const overlapped = firstLeft < secondLeft + secondWidth && secondLeft < firstLeft + firstWidth
     expect(overlapped).toBe(false)
+  })
+
+  test('double click should toggle clip wave while Alt+double click deletes clip', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByTestId('add-clip-track-1').click()
+
+    const clip = page.locator('[data-testid^="clip-track-1-"]').first()
+
+    const before = await page.evaluate(() => ({
+      wave: window.__DAW_DEBUG__?.firstTrackFirstClipWave,
+      count: window.__DAW_DEBUG__?.clipCount ?? 0,
+    }))
+
+    await clip.dispatchEvent('dblclick')
+
+    const afterWaveToggle = await page.evaluate(() => ({
+      wave: window.__DAW_DEBUG__?.firstTrackFirstClipWave,
+      count: window.__DAW_DEBUG__?.clipCount ?? 0,
+    }))
+
+    expect(afterWaveToggle.wave).not.toBe(before.wave)
+    expect(afterWaveToggle.count).toBe(before.count)
+
+    await clip.dispatchEvent('dblclick', { altKey: true })
+
+    const afterAltDelete = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    expect(afterAltDelete).toBe(afterWaveToggle.count - 1)
+  })
+
+  test('last clip of a track should be protected from accidental deletion', async ({ page }) => {
+    await page.goto('/')
+
+    const clipList = page.locator('[data-testid^="clip-track-1-"]')
+    await expect(clipList).toHaveCount(1)
+
+    const onlyClip = clipList.first()
+    await onlyClip.dispatchEvent('dblclick', { altKey: true })
+
+    await expect(clipList).toHaveCount(1)
+
+    const debug = await page.evaluate(() => ({
+      clipCount: window.__DAW_DEBUG__?.clipCount ?? 0,
+      firstWave: window.__DAW_DEBUG__?.firstTrackFirstClipWave,
+    }))
+
+    expect(debug.clipCount).toBeGreaterThanOrEqual(4)
+    expect(debug.firstWave === 'sine' || debug.firstWave === 'square').toBe(true)
   })
 
   test('audio runtime should clear scheduled nodes on pause and stop', async ({ page }) => {
