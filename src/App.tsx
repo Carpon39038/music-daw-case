@@ -135,6 +135,7 @@ declare global {
       trackCount: number
       clipCount: number
       firstTrackFirstClipStartBeat: number | null
+      firstTrackFirstClipLengthBeats: number | null
       playheadBeat: number
       undoDepth: number
       redoDepth: number
@@ -171,8 +172,19 @@ function App() {
     originProject: ProjectState
     hasMoved: boolean
   } | null>(null)
+  const resizeStateRef = useRef<{
+    trackId: string
+    clipId: string
+    startClientX: number
+    originLengthBeats: number
+    originStartBeat: number
+    beatWidthPx: number
+    originProject: ProjectState
+    hasMoved: boolean
+  } | null>(null)
   const timelineRef = useRef<HTMLDivElement | null>(null)
   const dragCleanupRef = useRef<(() => void) | null>(null)
+  const resizeCleanupRef = useRef<(() => void) | null>(null)
 
   const audioCtxRef = useRef<AudioContext | null>(null)
   const masterGainRef = useRef<GainNode | null>(null)
@@ -409,6 +421,7 @@ function App() {
       trackCount: project.tracks.length,
       clipCount: totalClipCount,
       firstTrackFirstClipStartBeat: project.tracks[0]?.clips[0]?.startBeat ?? null,
+      firstTrackFirstClipLengthBeats: project.tracks[0]?.clips[0]?.lengthBeats ?? null,
       playheadBeat,
       undoDepth: undoStackRef.current.length,
       redoDepth: redoStackRef.current.length,
@@ -523,6 +536,27 @@ function App() {
     }))
   }
 
+  const updateClipLengthBeats = (trackId: string, clipId: string, lengthBeats: number) => {
+    setProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId) return t
+        const current = t.clips.find((c) => c.id === clipId)
+        if (!current) return t
+
+        const maxLengthByTimeline = TIMELINE_BEATS - current.startBeat
+        const clampedLength = Math.min(maxLengthByTimeline, Math.max(1, lengthBeats))
+        const resolvedStart = resolveNonOverlappingStart(t.clips, clampedLength, current.startBeat, clipId)
+        return {
+          ...t,
+          clips: t.clips.map((c) =>
+            c.id === clipId ? { ...c, startBeat: resolvedStart, lengthBeats: clampedLength } : c,
+          ),
+        }
+      }),
+    }))
+  }
+
   const undo = () => {
     const prev = undoStackRef.current.pop()
     if (!prev) return
@@ -610,9 +644,84 @@ function App() {
     window.addEventListener('keydown', onKeyDown)
   }
 
+  const startClipResize = (
+    e: ReactMouseEvent<HTMLSpanElement>,
+    trackId: string,
+    clipId: string,
+    originStartBeat: number,
+    originLengthBeats: number,
+  ) => {
+    if (isPlaying) return
+    if (e.button !== 0) return
+    e.stopPropagation()
+
+    const grid = timelineRef.current
+    if (!grid) return
+
+    const beatWidthPx = grid.getBoundingClientRect().width / TIMELINE_BEATS
+    if (!Number.isFinite(beatWidthPx) || beatWidthPx <= 0) return
+
+    resizeStateRef.current = {
+      trackId,
+      clipId,
+      startClientX: e.clientX,
+      originLengthBeats,
+      originStartBeat,
+      beatWidthPx,
+      originProject: structuredClone(project),
+      hasMoved: false,
+    }
+
+    let cancelled = false
+
+    const onMove = (moveEvent: MouseEvent) => {
+      const state = resizeStateRef.current
+      if (!state) return
+
+      const deltaBeatRaw = (moveEvent.clientX - state.startClientX) / state.beatWidthPx
+      const deltaBeat = Math.round(deltaBeatRaw)
+      const maxLength = TIMELINE_BEATS - state.originStartBeat
+      const nextLength = Math.min(maxLength, Math.max(1, state.originLengthBeats + deltaBeat))
+
+      if (nextLength !== state.originLengthBeats) {
+        state.hasMoved = true
+      }
+      updateClipLengthBeats(state.trackId, state.clipId, nextLength)
+    }
+
+    const onKeyDown = (keyEvent: KeyboardEvent) => {
+      const state = resizeStateRef.current
+      if (!state) return
+      if (keyEvent.key !== 'Escape') return
+      cancelled = true
+      setProject(state.originProject)
+      cleanup()
+    }
+
+    const cleanup = () => {
+      const state = resizeStateRef.current
+      if (state && state.hasMoved && !cancelled) {
+        undoStackRef.current.push(structuredClone(state.originProject))
+        if (undoStackRef.current.length > 100) undoStackRef.current.shift()
+        redoStackRef.current = []
+      }
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', cleanup)
+      window.removeEventListener('keydown', onKeyDown)
+      resizeStateRef.current = null
+      resizeCleanupRef.current = null
+    }
+
+    resizeCleanupRef.current = cleanup
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', cleanup)
+    window.addEventListener('keydown', onKeyDown)
+  }
+
   useEffect(() => {
     return () => {
       dragCleanupRef.current?.()
+      resizeCleanupRef.current?.()
     }
   }, [])
 
@@ -746,7 +855,22 @@ function App() {
                   onMouseDown={(e) => startClipDrag(e, track.id, clip.id, clip.startBeat, clip.lengthBeats)}
                   onDoubleClick={() => !isPlaying && removeClip(track.id, clip.id)}
                 >
-                  {clip.wave} {Math.round(clip.noteHz)}Hz
+                  <span className="clip-label">
+                    {clip.wave} {Math.round(clip.noteHz)}Hz · {clip.lengthBeats} beat
+                    {clip.lengthBeats > 1 ? 's' : ''}
+                  </span>
+                  <span
+                    className="clip-resize-handle"
+                    data-testid={`clip-resize-${track.id}-${clip.id}`}
+                    onMouseDown={(e) =>
+                      startClipResize(e, track.id, clip.id, clip.startBeat, clip.lengthBeats)
+                    }
+                    role="slider"
+                    aria-label={`Resize ${track.name} clip`}
+                    aria-valuemin={1}
+                    aria-valuemax={TIMELINE_BEATS - clip.startBeat}
+                    aria-valuenow={clip.lengthBeats}
+                  />
                 </button>
               ))}
             </div>

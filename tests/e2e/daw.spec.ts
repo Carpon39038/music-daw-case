@@ -180,6 +180,43 @@ test.describe('DAW MVP e2e', () => {
     await page.getByTestId('stop-btn').click()
   })
 
+  test('clip resize should change beat length and remain playable', async ({ page }) => {
+    await page.goto('/')
+
+    const clip = page.locator('[data-testid^="clip-track-1-"]').first()
+    const resizeHandle = page.locator('[data-testid^="clip-resize-track-1-"]').first()
+
+    const before = await page.evaluate(() => ({
+      length: window.__DAW_DEBUG__?.firstTrackFirstClipLengthBeats,
+      left: window.__DAW_DEBUG__?.firstTrackFirstClipStartBeat,
+    }))
+
+    const handleBox = await resizeHandle.boundingBox()
+    expect(handleBox).not.toBeNull()
+    if (!handleBox) return
+
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(handleBox.x + 120, handleBox.y + handleBox.height / 2)
+    await page.mouse.up()
+
+    const afterGrow = await page.evaluate(() => ({
+      length: window.__DAW_DEBUG__?.firstTrackFirstClipLengthBeats,
+      left: window.__DAW_DEBUG__?.firstTrackFirstClipStartBeat,
+    }))
+
+    expect(afterGrow.length).toBeGreaterThan(before.length ?? 0)
+    expect(afterGrow.left).toBe(before.left)
+
+    const clipWidthPercent = await clip.evaluate((el) => Number.parseFloat((el as HTMLElement).style.width))
+    expect(clipWidthPercent).toBeGreaterThan(((before.length ?? 1) / 16) * 100)
+
+    await page.getByTestId('play-btn').click()
+    const scheduled = await page.evaluate(() => window.__DAW_DEBUG__?.scheduledNodeCount ?? 0)
+    expect(scheduled).toBeGreaterThan(0)
+    await page.getByTestId('stop-btn').click()
+  })
+
   test('clip drag should revert on Escape (cancel consistency)', async ({ page }) => {
     await page.goto('/')
 
