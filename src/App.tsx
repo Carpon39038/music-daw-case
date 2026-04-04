@@ -124,9 +124,11 @@ declare global {
       trackCount: number
       clipCount: number
       firstTrackFirstClipStartBeat: number | null
+      playheadBeat: number
       undoDepth: number
       redoDepth: number
       masterLevel: number
+      audioContextState: AudioContextState | 'uninitialized'
     }
   }
 }
@@ -360,11 +362,13 @@ function App() {
       trackCount: project.tracks.length,
       clipCount: totalClipCount,
       firstTrackFirstClipStartBeat: project.tracks[0]?.clips[0]?.startBeat ?? null,
+      playheadBeat,
       undoDepth: undoStackRef.current.length,
       redoDepth: redoStackRef.current.length,
       masterLevel: masterLevelRef.current,
+      audioContextState: audioCtxRef.current?.state ?? 'uninitialized',
     }
-  }, [isPlaying, project, totalClipCount])
+  }, [isPlaying, playheadBeat, project, totalClipCount])
 
   useEffect(() => {
     try {

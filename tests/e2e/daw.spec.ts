@@ -304,4 +304,44 @@ test.describe('DAW MVP e2e', () => {
       })
       .toBeLessThan(0.05)
   })
+
+  test('debug state should expose transport playhead and audio context lifecycle', async ({ page }) => {
+    await page.goto('/')
+
+    const before = await page.evaluate(() => ({
+      playheadBeat: window.__DAW_DEBUG__?.playheadBeat,
+      audioContextState: window.__DAW_DEBUG__?.audioContextState,
+    }))
+
+    expect(before.playheadBeat).toBe(0)
+    expect(before.audioContextState === 'uninitialized' || before.audioContextState === 'running').toBe(true)
+
+    await page.getByTestId('play-btn').click()
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.playheadBeat ?? 0), {
+        timeout: 3000,
+        message: 'playhead should move forward during playback',
+      })
+      .toBeGreaterThan(0)
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.audioContextState), {
+        timeout: 3000,
+        message: 'audio context should become running after playback starts',
+      })
+      .toBe('running')
+
+    await page.getByTestId('stop-btn').click()
+
+    const after = await page.evaluate(() => ({
+      playheadBeat: window.__DAW_DEBUG__?.playheadBeat,
+      audioContextState: window.__DAW_DEBUG__?.audioContextState,
+      isPlaying: window.__DAW_DEBUG__?.isPlaying,
+    }))
+
+    expect(after.isPlaying).toBe(false)
+    expect(after.playheadBeat).toBe(0)
+    expect(after.audioContextState === 'running' || after.audioContextState === 'suspended').toBe(true)
+  })
 })
