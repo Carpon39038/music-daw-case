@@ -279,4 +279,29 @@ test.describe('DAW MVP e2e', () => {
     const debug = await page.evaluate(() => window.__DAW_DEBUG__)
     expect(debug?.isPlaying).toBe(false)
   })
+
+  test('master output meter should rise during playback and decay after stop', async ({ page }) => {
+    await page.goto('/')
+
+    const levelBefore = await page.evaluate(() => window.__DAW_DEBUG__?.masterLevel ?? 0)
+    expect(levelBefore).toBeGreaterThanOrEqual(0)
+
+    await page.getByTestId('play-btn').click()
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.masterLevel ?? 0), {
+        timeout: 3000,
+        message: 'master level should rise while audio is playing',
+      })
+      .toBeGreaterThan(0.01)
+
+    await page.getByTestId('stop-btn').click()
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.masterLevel ?? 1), {
+        timeout: 3000,
+        message: 'master level should decay close to silence after stop',
+      })
+      .toBeLessThan(0.05)
+  })
 })

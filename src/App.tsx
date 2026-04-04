@@ -126,6 +126,7 @@ declare global {
       firstTrackFirstClipStartBeat: number | null
       undoDepth: number
       redoDepth: number
+      masterLevel: number
     }
   }
 }
@@ -154,6 +155,7 @@ function App() {
   const analyserRef = useRef<AnalyserNode | null>(null)
   const meterRafRef = useRef<number | null>(null)
   const meterCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const masterLevelRef = useRef<number>(0)
 
   const scheduledNodesRef = useRef<Array<{ osc: OscillatorNode; gain: GainNode }>>([])
   const startTimeRef = useRef<number>(0)
@@ -319,6 +321,10 @@ function App() {
       }
       const rms = Math.sqrt(sum / bufferLength)
       const level = Math.min(1, rms * 3)
+      masterLevelRef.current = level
+      if (window.__DAW_DEBUG__) {
+        window.__DAW_DEBUG__.masterLevel = level
+      }
 
       ctx2d.clearRect(0, 0, canvas.width, canvas.height)
       ctx2d.fillStyle = '#1d2a3a'
@@ -356,6 +362,7 @@ function App() {
       firstTrackFirstClipStartBeat: project.tracks[0]?.clips[0]?.startBeat ?? null,
       undoDepth: undoStackRef.current.length,
       redoDepth: redoStackRef.current.length,
+      masterLevel: masterLevelRef.current,
     }
   }, [isPlaying, project, totalClipCount])
 
