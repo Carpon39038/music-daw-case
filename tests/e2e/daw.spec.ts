@@ -52,12 +52,14 @@ test.describe('DAW MVP e2e', () => {
     const bpmInput = page.getByTestId('bpm-input')
     const volSlider = page.getByTestId('vol-track-1')
     const muteBtn = page.getByTestId('mute-track-1')
+    const soloBtn = page.getByTestId('solo-track-1')
     const addClipBtn = page.getByTestId('add-clip-track-1')
     const stopBtn = page.getByTestId('stop-btn')
 
     await expect(bpmInput).toBeEnabled()
     await expect(volSlider).toBeEnabled()
     await expect(muteBtn).toBeEnabled()
+    await expect(soloBtn).toBeEnabled()
     await expect(addClipBtn).toBeEnabled()
 
     await page.getByTestId('play-btn').click()
@@ -66,6 +68,7 @@ test.describe('DAW MVP e2e', () => {
     await expect(bpmInput).toBeDisabled()
     await expect(volSlider).toBeDisabled()
     await expect(muteBtn).toBeDisabled()
+    await expect(soloBtn).toBeDisabled()
     await expect(addClipBtn).toBeDisabled()
 
     await stopBtn.click()
@@ -74,6 +77,7 @@ test.describe('DAW MVP e2e', () => {
     await expect(bpmInput).toBeEnabled()
     await expect(volSlider).toBeEnabled()
     await expect(muteBtn).toBeEnabled()
+    await expect(soloBtn).toBeEnabled()
     await expect(addClipBtn).toBeEnabled()
   })
 
@@ -452,6 +456,48 @@ test.describe('DAW MVP e2e', () => {
     await page.getByTestId('mute-track-2').click()
     await page.getByTestId('mute-track-3').click()
     await page.getByTestId('mute-track-4').click()
+    await page.getByTestId('reset-project-btn').click()
+  })
+
+  test('track solo should isolate audible tracks and persist across reload', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByTestId('reset-project-btn').click()
+
+    const soloTrack2 = page.getByTestId('solo-track-2')
+    const soloTrack3 = page.getByTestId('solo-track-3')
+
+    await soloTrack2.click()
+
+    const debugSingleSolo = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugSingleSolo?.soloActive).toBe(true)
+    expect(debugSingleSolo?.soloTrackCount).toBe(1)
+    expect(debugSingleSolo?.audibleTrackCount).toBe(1)
+
+    await page.getByTestId('play-btn').click()
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.masterLevel ?? 0), {
+        timeout: 3000,
+        message: 'master level should rise when one solo track is active',
+      })
+      .toBeGreaterThan(0.005)
+    await page.getByTestId('stop-btn').click()
+
+    await soloTrack3.click()
+
+    const debugDualSolo = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugDualSolo?.soloTrackCount).toBe(2)
+    expect(debugDualSolo?.audibleTrackCount).toBe(2)
+
+    await page.reload()
+
+    const debugAfterReload = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterReload?.soloActive).toBe(true)
+    expect(debugAfterReload?.soloTrackCount).toBe(2)
+    expect(debugAfterReload?.audibleTrackCount).toBe(2)
+
+    await page.getByTestId('solo-track-2').click()
+    await page.getByTestId('solo-track-3').click()
     await page.getByTestId('reset-project-btn').click()
   })
 })

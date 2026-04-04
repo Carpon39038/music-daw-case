@@ -16,6 +16,7 @@ interface Track {
   name: string
   volume: number
   muted: boolean
+  solo: boolean
   clips: Clip[]
 }
 
@@ -70,6 +71,7 @@ function createInitialProject(): ProjectState {
       name: `Track ${i + 1}`,
       volume: 0.7,
       muted: false,
+      solo: false,
       clips: [
         {
           id: `clip-${i + 1}-1`,
@@ -93,7 +95,8 @@ function isValidProjectState(value: unknown): value is ProjectState {
       typeof t.id !== 'string' ||
       typeof t.name !== 'string' ||
       typeof t.volume !== 'number' ||
-      typeof t.muted !== 'boolean'
+      typeof t.muted !== 'boolean' ||
+      typeof t.solo !== 'boolean'
     )
       return false
     if (!Array.isArray(t.clips)) return false
@@ -144,6 +147,8 @@ declare global {
       loopRestartCount: number
       mutedTrackCount: number
       audibleTrackCount: number
+      soloTrackCount: number
+      soloActive: boolean
     }
   }
 }
@@ -189,6 +194,8 @@ function App() {
     [project.tracks],
   )
   const mutedTrackCount = useMemo(() => project.tracks.filter((t) => t.muted).length, [project.tracks])
+  const soloTrackCount = useMemo(() => project.tracks.filter((t) => t.solo).length, [project.tracks])
+  const soloActive = soloTrackCount > 0
 
   const ensureAudio = async () => {
     if (!audioCtxRef.current) {
@@ -277,7 +284,8 @@ function App() {
         osc.frequency.value = clip.noteHz
 
         gain.gain.setValueAtTime(0.0001, clipStart)
-        const effectiveTrackVolume = track.muted ? 0 : track.volume
+        const isTrackAudible = !track.muted && (!soloActive || track.solo)
+        const effectiveTrackVolume = isTrackAudible ? track.volume : 0
         gain.gain.linearRampToValueAtTime(effectiveTrackVolume * 0.15, clipStart + 0.01)
         gain.gain.setValueAtTime(effectiveTrackVolume * 0.15, Math.max(clipStart + 0.01, clipEnd - 0.02))
         gain.gain.linearRampToValueAtTime(0.0001, clipEnd)
@@ -412,7 +420,9 @@ function App() {
       loopLengthBeats: effectiveTimelineBeats,
       loopRestartCount: loopRestartCountRef.current,
       mutedTrackCount,
-      audibleTrackCount: project.tracks.length - mutedTrackCount,
+      audibleTrackCount: project.tracks.filter((t) => !t.muted && (!soloActive || t.solo)).length,
+      soloTrackCount,
+      soloActive,
     }
   }, [
     isPlaying,
@@ -424,6 +434,8 @@ function App() {
     loopEnabled,
     effectiveTimelineBeats,
     mutedTrackCount,
+    soloTrackCount,
+    soloActive,
   ])
 
   useEffect(() => {
@@ -485,6 +497,13 @@ function App() {
     applyProjectUpdate((prev) => ({
       ...prev,
       tracks: prev.tracks.map((t) => (t.id === trackId ? { ...t, muted: !t.muted } : t)),
+    }))
+  }
+
+  const toggleTrackSolo = (trackId: string) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => (t.id === trackId ? { ...t, solo: !t.solo } : t)),
     }))
   }
 
@@ -697,6 +716,14 @@ function App() {
                 aria-pressed={track.muted}
               >
                 {track.muted ? 'Unmute' : 'Mute'}
+              </button>
+              <button
+                data-testid={`solo-${track.id}`}
+                onClick={() => toggleTrackSolo(track.id)}
+                disabled={isPlaying}
+                aria-pressed={track.solo}
+              >
+                {track.solo ? 'Unsolo' : 'Solo'}
               </button>
               <button data-testid={`add-clip-${track.id}`} onClick={() => addClip(track.id)} disabled={isPlaying}>+ Clip</button>
             </div>
