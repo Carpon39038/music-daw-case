@@ -792,4 +792,70 @@ test.describe('DAW MVP e2e', () => {
     await page.getByTestId('transpose-track-1').fill('0')
     await page.getByTestId('reset-project-btn').click()
   })
+
+  test('clip duplicate should create non-overlapping copy and persist via inspector + shift double click', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByTestId('reset-project-btn').click()
+
+    const clip = page.locator('[data-testid^="clip-track-1-"]').first()
+    await clip.click()
+
+    const before = await page.evaluate(() => ({
+      clipCount: window.__DAW_DEBUG__?.clipCount ?? 0,
+      canDuplicate: window.__DAW_DEBUG__?.selectedClipCanDuplicate,
+      blockedReason: window.__DAW_DEBUG__?.selectedClipDuplicateBlockedReason,
+      targetBeat: window.__DAW_DEBUG__?.selectedClipStartBeat,
+    }))
+
+    expect(before.canDuplicate).toBe(true)
+    expect(before.blockedReason).toBe('none')
+
+    await page.getByTestId('selected-clip-duplicate-btn').click()
+
+    const afterInspectorDuplicate = await page.evaluate(() => ({
+      clipCount: window.__DAW_DEBUG__?.clipCount ?? 0,
+      selectedClipLengthBeats: window.__DAW_DEBUG__?.selectedClipLengthBeats,
+    }))
+
+    expect(afterInspectorDuplicate.clipCount).toBe(before.clipCount + 1)
+    expect(afterInspectorDuplicate.selectedClipLengthBeats).toBe(2)
+
+    const track1ClipsAfterFirst = page.locator('[data-testid^="clip-track-1-"]')
+    await expect(track1ClipsAfterFirst).toHaveCount(2)
+    const leftsAfterFirst = await track1ClipsAfterFirst.evaluateAll((elements) =>
+      elements
+        .map((el) => Number.parseFloat((el as HTMLElement).style.left))
+        .sort((a, b) => a - b),
+    )
+    expect(leftsAfterFirst).toEqual([0, 12.5])
+
+    const duplicatedClip = page.locator('[data-testid^="clip-track-1-"]').nth(1)
+    await duplicatedClip.dblclick({ modifiers: ['Shift'] })
+
+    const afterShiftDuplicate = await page.evaluate(() => ({
+      clipCount: window.__DAW_DEBUG__?.clipCount ?? 0,
+    }))
+    expect(afterShiftDuplicate.clipCount).toBe(before.clipCount + 2)
+
+    const track1ClipsAfterSecond = page.locator('[data-testid^="clip-track-1-"]')
+    await expect(track1ClipsAfterSecond).toHaveCount(3)
+    const leftsAfterSecond = await track1ClipsAfterSecond.evaluateAll((elements) =>
+      elements
+        .map((el) => Number.parseFloat((el as HTMLElement).style.left))
+        .sort((a, b) => a - b),
+    )
+    expect(leftsAfterSecond).toEqual([0, 12.5, 25])
+
+    await page.getByTestId('play-btn').click()
+    const scheduled = await page.evaluate(() => window.__DAW_DEBUG__?.scheduledNodeCount ?? 0)
+    expect(scheduled).toBeGreaterThan(0)
+    await page.getByTestId('stop-btn').click()
+
+    await page.reload()
+    const afterReload = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    expect(afterReload).toBe(before.clipCount + 2)
+
+    await page.getByTestId('reset-project-btn').click()
+  })
 })

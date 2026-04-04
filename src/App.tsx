@@ -182,6 +182,8 @@ declare global {
       selectedClipNoteHz: number | null
       selectedClipTrackTransposeSemitones: number | null
       selectedClipScheduledFrequencyHz: number | null
+      selectedClipCanDuplicate: boolean
+      selectedClipDuplicateBlockedReason: 'none' | 'playing' | 'trackLocked' | 'noSpace' | 'noSelection'
     }
   }
 }
@@ -256,12 +258,18 @@ function App() {
     const clip = track.clips.find((c) => c.id === selectedClipRef.clipId)
     if (!clip) return null
     const scheduledFrequencyHz = clip.noteHz * semitoneToRatio(track.transposeSemitones)
+    const desiredStart = clip.startBeat + clip.lengthBeats
+    const duplicateStartBeat = resolveNonOverlappingStart(track.clips, clip.lengthBeats, desiredStart, clip.id)
+    const canDuplicate = !track.locked && !isPlaying && duplicateStartBeat + clip.lengthBeats <= TIMELINE_BEATS
+
     return {
       track,
       clip,
       scheduledFrequencyHz,
+      duplicateStartBeat,
+      canDuplicate,
     }
-  }, [project.tracks, selectedClipRef])
+  }, [project.tracks, selectedClipRef, isPlaying])
 
   const ensureAudio = async () => {
     if (!audioCtxRef.current) {
@@ -508,6 +516,16 @@ function App() {
       selectedClipNoteHz: selectedClipData?.clip.noteHz ?? null,
       selectedClipTrackTransposeSemitones: selectedClipData?.track.transposeSemitones ?? null,
       selectedClipScheduledFrequencyHz: selectedClipData?.scheduledFrequencyHz ?? null,
+      selectedClipCanDuplicate: selectedClipData?.canDuplicate ?? false,
+      selectedClipDuplicateBlockedReason: !selectedClipData
+        ? 'noSelection'
+        : isPlaying
+          ? 'playing'
+          : selectedClipData.track.locked
+            ? 'trackLocked'
+            : selectedClipData.canDuplicate
+              ? 'none'
+              : 'noSpace',
     }
   }, [
     isPlaying,
@@ -588,6 +606,51 @@ function App() {
         ),
       }
     })
+  }
+
+  const duplicateClip = (trackId: string, clipId: string) => {
+    let duplicatedClipId: string | null = null
+
+    applyProjectUpdate((prev) => {
+      const track = prev.tracks.find((t) => t.id === trackId)
+      if (!track || track.locked) return prev
+
+      const sourceClip = track.clips.find((c) => c.id === clipId)
+      if (!sourceClip) return prev
+
+      const desiredStart = sourceClip.startBeat + sourceClip.lengthBeats
+      const nextStart = resolveNonOverlappingStart(track.clips, sourceClip.lengthBeats, desiredStart)
+      const stillConflicts = track.clips.some((c) =>
+        rangesOverlap(nextStart, sourceClip.lengthBeats, c.startBeat, c.lengthBeats),
+      )
+      if (stillConflicts) return prev
+
+      const nextId = `${sourceClip.id}-copy-${Date.now()}`
+      duplicatedClipId = nextId
+
+      return {
+        ...prev,
+        tracks: prev.tracks.map((t) => {
+          if (t.id !== trackId) return t
+          return {
+            ...t,
+            clips: [
+              ...t.clips,
+              {
+                ...sourceClip,
+                id: nextId,
+                startBeat: nextStart,
+              },
+            ],
+          }
+        }),
+      }
+    })
+
+    if (duplicatedClipId) {
+      setSelectedTrackId(trackId)
+      setSelectedClipRef({ trackId, clipId: duplicatedClipId })
+    }
   }
 
   const cycleClipWave = (trackId: string, clipId: string) => {
@@ -1057,6 +1120,16 @@ function App() {
             <div className="inspector-meta" data-testid="selected-clip-scheduled-frequency">
               Scheduled: {selectedClipData.scheduledFrequencyHz.toFixed(2)} Hz
             </div>
+            <div className="inspector-meta" data-testid="selected-clip-duplicate-target-beat">
+              Duplicate target beat: {selectedClipData.duplicateStartBeat}
+            </div>
+            <button
+              data-testid="selected-clip-duplicate-btn"
+              onClick={() => duplicateClip(selectedClipData.track.id, selectedClipData.clip.id)}
+              disabled={!selectedClipData.canDuplicate}
+            >
+              Duplicate Clip
+            </button>
           </div>
         ) : (
           <div className="inspector-empty" data-testid="inspector-clip-empty">Select a clip to edit note pitch.</div>
@@ -1171,6 +1244,10 @@ function App() {
                       removeClip(track.id, clip.id)
                       return
                     }
+                    if (e.shiftKey) {
+                      duplicateClip(track.id, clip.id)
+                      return
+                    }
                     cycleClipWave(track.id, clip.id)
                   }}
                 >
@@ -1197,7 +1274,7 @@ function App() {
         ))}
       </section>
 
-      <p className="hint">双击 clip 切换波形；Alt+双击删除；Lock 可冻结轨道编辑。播放时禁用新增 clip 与 BPM 修改。快捷键：Space 播放/暂停，S 停止，⌘/Ctrl+Z 撤销，⌘/Ctrl+Shift+Z 重做。</p>
+      <p className="hint">双击 clip 切换波形；Shift+双击或 Inspector 内 Duplicate Clip 可复制；Alt+双击删除；Lock 可冻结轨道编辑。播放时禁用新增 clip 与 BPM 修改。快捷键：Space 播放/暂停，S 停止，⌘/Ctrl+Z 撤销，⌘/Ctrl+Shift+Z 重做。</p>
     </div>
   )
 }
