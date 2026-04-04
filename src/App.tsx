@@ -150,6 +150,7 @@ declare global {
       scheduledNodeCount: number
       bpm: number
       trackCount: number
+      trackNames: string[]
       clipCount: number
       firstTrackFirstClipStartBeat: number | null
       firstTrackFirstClipLengthBeats: number | null
@@ -172,6 +173,15 @@ declare global {
       transposedTrackCount: number
       firstTrackTransposeSemitones: number | null
       scheduledFrequencyPreviewHz: number[]
+      selectedTrackId: string | null
+      selectedClipId: string | null
+      selectedClipTrackId: string | null
+      selectedClipStartBeat: number | null
+      selectedClipLengthBeats: number | null
+      selectedClipWave: WaveType | null
+      selectedClipNoteHz: number | null
+      selectedClipTrackTransposeSemitones: number | null
+      selectedClipScheduledFrequencyHz: number | null
     }
   }
 }
@@ -182,6 +192,8 @@ function App() {
   const [playheadBeat, setPlayheadBeat] = useState(0)
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [loopLengthBeats, setLoopLengthBeats] = useState(8)
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
+  const [selectedClipRef, setSelectedClipRef] = useState<{ trackId: string; clipId: string } | null>(null)
   const undoStackRef = useRef<ProjectState[]>([])
   const redoStackRef = useRef<ProjectState[]>([])
   const dragStateRef = useRef<{
@@ -236,6 +248,20 @@ function App() {
     [project.tracks],
   )
   const soloActive = soloTrackCount > 0
+
+  const selectedClipData = useMemo(() => {
+    if (!selectedClipRef) return null
+    const track = project.tracks.find((t) => t.id === selectedClipRef.trackId)
+    if (!track) return null
+    const clip = track.clips.find((c) => c.id === selectedClipRef.clipId)
+    if (!clip) return null
+    const scheduledFrequencyHz = clip.noteHz * semitoneToRatio(track.transposeSemitones)
+    return {
+      track,
+      clip,
+      scheduledFrequencyHz,
+    }
+  }, [project.tracks, selectedClipRef])
 
   const ensureAudio = async () => {
     if (!audioCtxRef.current) {
@@ -450,6 +476,7 @@ function App() {
       scheduledNodeCount: scheduledNodesRef.current.length,
       bpm: project.bpm,
       trackCount: project.tracks.length,
+      trackNames: project.tracks.map((t) => t.name),
       clipCount: totalClipCount,
       firstTrackFirstClipStartBeat: project.tracks[0]?.clips[0]?.startBeat ?? null,
       firstTrackFirstClipLengthBeats: project.tracks[0]?.clips[0]?.lengthBeats ?? null,
@@ -472,6 +499,15 @@ function App() {
       transposedTrackCount,
       firstTrackTransposeSemitones: project.tracks[0]?.transposeSemitones ?? null,
       scheduledFrequencyPreviewHz: [...scheduledFrequencyPreviewRef.current],
+      selectedTrackId,
+      selectedClipId: selectedClipData?.clip.id ?? null,
+      selectedClipTrackId: selectedClipData?.track.id ?? null,
+      selectedClipStartBeat: selectedClipData?.clip.startBeat ?? null,
+      selectedClipLengthBeats: selectedClipData?.clip.lengthBeats ?? null,
+      selectedClipWave: selectedClipData?.clip.wave ?? null,
+      selectedClipNoteHz: selectedClipData?.clip.noteHz ?? null,
+      selectedClipTrackTransposeSemitones: selectedClipData?.track.transposeSemitones ?? null,
+      selectedClipScheduledFrequencyHz: selectedClipData?.scheduledFrequencyHz ?? null,
     }
   }, [
     isPlaying,
@@ -487,6 +523,8 @@ function App() {
     soloActive,
     lockedTrackCount,
     transposedTrackCount,
+    selectedTrackId,
+    selectedClipData,
   ])
 
   useEffect(() => {
@@ -496,6 +534,15 @@ function App() {
       // ignore persistence errors
     }
   }, [project])
+
+  useEffect(() => {
+    if (!selectedClipRef) return
+    const track = project.tracks.find((t) => t.id === selectedClipRef.trackId)
+    const clipExists = !!track?.clips.some((c) => c.id === selectedClipRef.clipId)
+    if (!clipExists) {
+      setSelectedClipRef(null)
+    }
+  }, [project.tracks, selectedClipRef])
 
   const applyProjectUpdate = (updater: (prev: ProjectState) => ProjectState) => {
     setProject((prev) => {
@@ -601,6 +648,40 @@ function App() {
             }
           : t,
       ),
+    }))
+  }
+
+  const renameTrack = (trackId: string, name: string) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) =>
+        t.id === trackId
+          ? {
+              ...t,
+              name,
+            }
+          : t,
+      ),
+    }))
+  }
+
+  const setSelectedClipNote = (trackId: string, clipId: string, noteHz: number) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) =>
+            c.id === clipId
+              ? {
+                  ...c,
+                  noteHz: Math.max(55, Math.min(1760, noteHz)),
+                }
+              : c,
+          ),
+        }
+      }),
     }))
   }
 
@@ -929,10 +1010,76 @@ function App() {
         <canvas ref={meterCanvasRef} width={320} height={16} />
       </section>
 
+      <section className="inspector" data-testid="inspector-panel">
+        <div className="inspector-title">Inspector</div>
+        {selectedTrackId ? (
+          <div className="inspector-group" data-testid="inspector-track">
+            <div className="inspector-subtitle">Track</div>
+            <div className="inspector-row">
+              <label htmlFor="selected-track-name-input">Name</label>
+              <input
+                id="selected-track-name-input"
+                data-testid="selected-track-name-input"
+                type="text"
+                value={project.tracks.find((t) => t.id === selectedTrackId)?.name ?? ''}
+                onChange={(e) => renameTrack(selectedTrackId, e.target.value)}
+                disabled={isPlaying}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="inspector-empty" data-testid="inspector-track-empty">Select a track header to edit track name.</div>
+        )}
+
+        {selectedClipData ? (
+          <div className="inspector-group" data-testid="inspector-clip">
+            <div className="inspector-subtitle">Clip</div>
+            <div className="inspector-row">
+              <label htmlFor="selected-clip-note">Note (Hz)</label>
+              <input
+                id="selected-clip-note"
+                data-testid="selected-clip-note-input"
+                type="number"
+                min={55}
+                max={1760}
+                step={1}
+                value={Math.round(selectedClipData.clip.noteHz)}
+                onChange={(e) =>
+                  setSelectedClipNote(
+                    selectedClipData.track.id,
+                    selectedClipData.clip.id,
+                    Number(e.target.value) || selectedClipData.clip.noteHz,
+                  )
+                }
+                disabled={isPlaying || selectedClipData.track.locked}
+              />
+            </div>
+            <div className="inspector-meta" data-testid="selected-clip-scheduled-frequency">
+              Scheduled: {selectedClipData.scheduledFrequencyHz.toFixed(2)} Hz
+            </div>
+          </div>
+        ) : (
+          <div className="inspector-empty" data-testid="inspector-clip-empty">Select a clip to edit note pitch.</div>
+        )}
+      </section>
+
       <section className="timeline">
         {project.tracks.map((track) => (
           <div className="track-row" key={track.id}>
-            <div className="track-header" data-testid={`track-header-${track.id}`}>
+            <div
+              className={`track-header ${selectedTrackId === track.id ? 'selected' : ''}`}
+              data-testid={`track-header-${track.id}`}
+              onClick={() => setSelectedTrackId(track.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setSelectedTrackId(track.id)
+                }
+              }}
+              aria-label={`Select ${track.name} track`}
+            >
               <div className="track-name">{track.name}</div>
               <label>
                 Vol
@@ -1003,13 +1150,21 @@ function App() {
                 <button
                   key={clip.id}
                   data-testid={`clip-${track.id}-${clip.id}`}
-                  className={`clip ${clip.wave} ${track.locked ? 'locked' : ''}`}
+                  className={`clip ${clip.wave} ${track.locked ? 'locked' : ''} ${selectedClipRef?.clipId === clip.id && selectedClipRef.trackId === track.id ? 'selected' : ''}`}
                   style={{
                     left: `${(clip.startBeat / TIMELINE_BEATS) * 100}%`,
                     width: `${(clip.lengthBeats / TIMELINE_BEATS) * 100}%`,
                   }}
                   title={`${clip.wave} ${clip.noteHz.toFixed(2)}Hz @ beat ${clip.startBeat}${track.locked ? '（轨道已锁定）' : '（双击切换波形，Alt+双击删除）'}`}
-                  onMouseDown={(e) => startClipDrag(e, track.id, clip.id, clip.startBeat, clip.lengthBeats)}
+                  onMouseDown={(e) => {
+                    setSelectedTrackId(track.id)
+                    setSelectedClipRef({ trackId: track.id, clipId: clip.id })
+                    startClipDrag(e, track.id, clip.id, clip.startBeat, clip.lengthBeats)
+                  }}
+                  onClick={() => {
+                    setSelectedTrackId(track.id)
+                    setSelectedClipRef({ trackId: track.id, clipId: clip.id })
+                  }}
                   onDoubleClick={(e) => {
                     if (isPlaying || track.locked) return
                     if (e.altKey) {

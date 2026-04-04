@@ -717,4 +717,79 @@ test.describe('DAW MVP e2e', () => {
     await page.getByTestId('lock-track-1').click()
     await page.getByTestId('reset-project-btn').click()
   })
+
+  test('inspector should rename selected track and persist custom names across reload', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByTestId('reset-project-btn').click()
+
+    const trackHeader = page.getByTestId('track-header-track-2')
+    await trackHeader.click()
+
+    const nameInput = page.getByTestId('selected-track-name-input')
+    await expect(nameInput).toHaveValue('Track 2')
+
+    await nameInput.fill('Bass Bus')
+    await expect(trackHeader.locator('.track-name')).toHaveText('Bass Bus')
+
+    const debugAfterRename = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterRename?.selectedTrackId).toBe('track-2')
+    expect(debugAfterRename?.trackNames?.[1]).toBe('Bass Bus')
+
+    await page.reload()
+
+    const headerAfterReload = page.getByTestId('track-header-track-2')
+    await expect(headerAfterReload.locator('.track-name')).toHaveText('Bass Bus')
+
+    await headerAfterReload.click()
+    await page.getByTestId('selected-track-name-input').fill('Track 2')
+    await page.getByTestId('reset-project-btn').click()
+  })
+
+  test('inspector should retune selected clip note and affect scheduled playback frequency', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByTestId('reset-project-btn').click()
+
+    const clip = page.locator('[data-testid^="clip-track-1-"]').first()
+    await clip.click()
+
+    const noteInput = page.getByTestId('selected-clip-note-input')
+    await expect(noteInput).toHaveValue('262')
+
+    await noteInput.fill('330')
+
+    const debugAfterSet = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterSet?.selectedClipNoteHz).toBe(330)
+    expect(debugAfterSet?.selectedClipScheduledFrequencyHz).toBeCloseTo(330, 6)
+
+    await page.getByTestId('transpose-track-1').fill('12')
+
+    const debugAfterTranspose = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterTranspose?.selectedClipTrackTransposeSemitones).toBe(12)
+    expect(debugAfterTranspose?.selectedClipScheduledFrequencyHz).toBeCloseTo(660, 3)
+
+    await page.getByTestId('play-btn').click()
+
+    const preview = await page.evaluate(() => window.__DAW_DEBUG__?.scheduledFrequencyPreviewHz ?? [])
+    expect(preview.length).toBeGreaterThan(0)
+    expect(preview[0]).toBeCloseTo(660, 3)
+
+    await page.getByTestId('stop-btn').click()
+
+    await page.reload()
+
+    const debugAfterReload = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterReload?.trackNames?.[0]).toBe('Track 1')
+
+    const clipAfterReload = page.locator('[data-testid^="clip-track-1-"]').first()
+    await clipAfterReload.click()
+
+    const noteAfterReload = await page.evaluate(() => window.__DAW_DEBUG__?.selectedClipNoteHz)
+    expect(noteAfterReload).toBe(330)
+
+    await page.getByTestId('selected-clip-note-input').fill('262')
+    await page.getByTestId('transpose-track-1').fill('0')
+    await page.getByTestId('reset-project-btn').click()
+  })
 })

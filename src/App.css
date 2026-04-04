@@ -77,6 +77,63 @@ h1 {
   margin-bottom: 14px;
 }
 
+.inspector {
+  border: 1px solid #2a3f5b;
+  border-radius: 10px;
+  background: #0f1724;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inspector-title {
+  font-weight: 700;
+}
+
+.inspector-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid #253850;
+  padding-top: 8px;
+}
+
+.inspector-subtitle {
+  color: #9cb4d8;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.inspector-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspector-row label {
+  min-width: 78px;
+  color: #9fb4d2;
+}
+
+.inspector-row input {
+  flex: 1;
+  min-width: 120px;
+  background: #0e1623;
+  color: #eaf2ff;
+  border: 1px solid #2c3f59;
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+
+.inspector-meta,
+.inspector-empty {
+  color: #8ea2bf;
+  font-size: 0.9rem;
+}
+
 .meter canvas {
   border: 1px solid #2f4460;
   border-radius: 4px;
@@ -100,6 +157,14 @@ h1 {
   align-items: center;
   gap: 10px;
   margin-bottom: 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px;
+}
+
+.track-header.selected {
+  border-color: #4d78a8;
+  background: rgba(77, 120, 168, 0.14);
 }
 
 .track-name {
@@ -195,6 +260,10 @@ h1 {
 .clip.locked {
   opacity: 0.7;
   border-style: dashed;
+}
+
+.clip.selected {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
 }
 
 .hint {
