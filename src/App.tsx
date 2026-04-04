@@ -15,6 +15,7 @@ interface Track {
   id: string
   name: string
   volume: number
+  muted: boolean
   clips: Clip[]
 }
 
@@ -68,6 +69,7 @@ function createInitialProject(): ProjectState {
       id: `track-${i + 1}`,
       name: `Track ${i + 1}`,
       volume: 0.7,
+      muted: false,
       clips: [
         {
           id: `clip-${i + 1}-1`,
@@ -87,7 +89,13 @@ function isValidProjectState(value: unknown): value is ProjectState {
   if (typeof p.bpm !== 'number' || !Array.isArray(p.tracks)) return false
   return p.tracks.every((t) => {
     if (!t || typeof t !== 'object') return false
-    if (typeof t.id !== 'string' || typeof t.name !== 'string' || typeof t.volume !== 'number') return false
+    if (
+      typeof t.id !== 'string' ||
+      typeof t.name !== 'string' ||
+      typeof t.volume !== 'number' ||
+      typeof t.muted !== 'boolean'
+    )
+      return false
     if (!Array.isArray(t.clips)) return false
     return t.clips.every((c) => {
       if (!c || typeof c !== 'object') return false
@@ -134,6 +142,8 @@ declare global {
       loopEnabled: boolean
       loopLengthBeats: number
       loopRestartCount: number
+      mutedTrackCount: number
+      audibleTrackCount: number
     }
   }
 }
@@ -178,6 +188,7 @@ function App() {
     () => project.tracks.reduce((sum, t) => sum + t.clips.length, 0),
     [project.tracks],
   )
+  const mutedTrackCount = useMemo(() => project.tracks.filter((t) => t.muted).length, [project.tracks])
 
   const ensureAudio = async () => {
     if (!audioCtxRef.current) {
@@ -266,8 +277,9 @@ function App() {
         osc.frequency.value = clip.noteHz
 
         gain.gain.setValueAtTime(0.0001, clipStart)
-        gain.gain.linearRampToValueAtTime(track.volume * 0.15, clipStart + 0.01)
-        gain.gain.setValueAtTime(track.volume * 0.15, Math.max(clipStart + 0.01, clipEnd - 0.02))
+        const effectiveTrackVolume = track.muted ? 0 : track.volume
+        gain.gain.linearRampToValueAtTime(effectiveTrackVolume * 0.15, clipStart + 0.01)
+        gain.gain.setValueAtTime(effectiveTrackVolume * 0.15, Math.max(clipStart + 0.01, clipEnd - 0.02))
         gain.gain.linearRampToValueAtTime(0.0001, clipEnd)
 
         osc.connect(gain)
@@ -399,8 +411,20 @@ function App() {
       loopEnabled,
       loopLengthBeats: effectiveTimelineBeats,
       loopRestartCount: loopRestartCountRef.current,
+      mutedTrackCount,
+      audibleTrackCount: project.tracks.length - mutedTrackCount,
     }
-  }, [isPlaying, playheadBeat, project, totalClipCount, beatDuration, totalDurationSec, loopEnabled, effectiveTimelineBeats])
+  }, [
+    isPlaying,
+    playheadBeat,
+    project,
+    totalClipCount,
+    beatDuration,
+    totalDurationSec,
+    loopEnabled,
+    effectiveTimelineBeats,
+    mutedTrackCount,
+  ])
 
   useEffect(() => {
     try {
@@ -454,6 +478,13 @@ function App() {
     applyProjectUpdate((prev) => ({
       ...prev,
       tracks: prev.tracks.map((t) => (t.id === trackId ? { ...t, volume } : t)),
+    }))
+  }
+
+  const toggleTrackMute = (trackId: string) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => (t.id === trackId ? { ...t, muted: !t.muted } : t)),
     }))
   }
 
@@ -656,8 +687,17 @@ function App() {
                   step={0.01}
                   value={track.volume}
                   onChange={(e) => setTrackVolume(track.id, Number(e.target.value))}
+                  disabled={isPlaying}
                 />
               </label>
+              <button
+                data-testid={`mute-${track.id}`}
+                onClick={() => toggleTrackMute(track.id)}
+                disabled={isPlaying}
+                aria-pressed={track.muted}
+              >
+                {track.muted ? 'Unmute' : 'Mute'}
+              </button>
               <button data-testid={`add-clip-${track.id}`} onClick={() => addClip(track.id)} disabled={isPlaying}>+ Clip</button>
             </div>
 

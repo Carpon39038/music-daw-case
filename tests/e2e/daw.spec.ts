@@ -50,22 +50,30 @@ test.describe('DAW MVP e2e', () => {
     await page.goto('/')
 
     const bpmInput = page.getByTestId('bpm-input')
+    const volSlider = page.getByTestId('vol-track-1')
+    const muteBtn = page.getByTestId('mute-track-1')
     const addClipBtn = page.getByTestId('add-clip-track-1')
     const stopBtn = page.getByTestId('stop-btn')
 
     await expect(bpmInput).toBeEnabled()
+    await expect(volSlider).toBeEnabled()
+    await expect(muteBtn).toBeEnabled()
     await expect(addClipBtn).toBeEnabled()
 
     await page.getByTestId('play-btn').click()
 
     await expect(page.getByTestId('pause-btn')).toBeEnabled()
     await expect(bpmInput).toBeDisabled()
+    await expect(volSlider).toBeDisabled()
+    await expect(muteBtn).toBeDisabled()
     await expect(addClipBtn).toBeDisabled()
 
     await stopBtn.click()
 
     await expect(page.getByTestId('play-btn')).toBeEnabled()
     await expect(bpmInput).toBeEnabled()
+    await expect(volSlider).toBeEnabled()
+    await expect(muteBtn).toBeEnabled()
     await expect(addClipBtn).toBeEnabled()
   })
 
@@ -387,5 +395,63 @@ test.describe('DAW MVP e2e', () => {
     const debugStopped = await page.evaluate(() => window.__DAW_DEBUG__)
     expect(debugStopped?.isPlaying).toBe(false)
     expect(debugStopped?.loopRestartCount).toBe(0)
+  })
+
+  test('track mute should silence meter contribution and persist across reload', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByTestId('reset-project-btn').click()
+
+    const muteTrack2 = page.getByTestId('mute-track-2')
+    const muteTrack3 = page.getByTestId('mute-track-3')
+    const muteTrack4 = page.getByTestId('mute-track-4')
+
+    await muteTrack2.click()
+    await muteTrack3.click()
+    await muteTrack4.click()
+
+    const debugMuted = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugMuted?.mutedTrackCount).toBe(3)
+    expect(debugMuted?.audibleTrackCount).toBe(1)
+
+    await page.getByTestId('play-btn').click()
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.masterLevel ?? 0), {
+        timeout: 3000,
+        message: 'master level should still rise with one audible track',
+      })
+      .toBeGreaterThan(0.005)
+
+    await page.getByTestId('stop-btn').click()
+
+    const muteTrack1 = page.getByTestId('mute-track-1')
+    await muteTrack1.click()
+
+    const allMutedDebug = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(allMutedDebug?.mutedTrackCount).toBe(4)
+    expect(allMutedDebug?.audibleTrackCount).toBe(0)
+
+    await page.getByTestId('play-btn').click()
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.masterLevel ?? 1), {
+        timeout: 3000,
+        message: 'master level should stay near silence when all tracks are muted',
+      })
+      .toBeLessThan(0.02)
+
+    await page.getByTestId('stop-btn').click()
+
+    await page.reload()
+
+    const debugAfterReload = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterReload?.mutedTrackCount).toBe(4)
+
+    await page.getByTestId('mute-track-1').click()
+    await page.getByTestId('mute-track-2').click()
+    await page.getByTestId('mute-track-3').click()
+    await page.getByTestId('mute-track-4').click()
+    await page.getByTestId('reset-project-btn').click()
   })
 })
