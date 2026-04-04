@@ -358,4 +358,34 @@ test.describe('DAW MVP e2e', () => {
     expect(timing.beatDurationSec).toBeCloseTo(60 / (timing.bpm ?? 120), 6)
     expect(timing.timelineDurationSec).toBeCloseTo((timing.beatDurationSec ?? 0) * 16, 6)
   })
+
+  test('loop playback should wrap playhead and increment loop restart counter', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByTestId('loop-enabled').check()
+    await page.getByTestId('loop-length').selectOption('4')
+
+    const debugBefore = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugBefore?.loopEnabled).toBe(true)
+    expect(debugBefore?.loopLengthBeats).toBe(4)
+
+    await page.getByTestId('play-btn').click()
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.loopRestartCount ?? 0), {
+        timeout: 5000,
+        message: 'loop restart count should increase after one loop cycle',
+      })
+      .toBeGreaterThanOrEqual(1)
+
+    const debugAfter = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfter?.isPlaying).toBe(true)
+    expect((debugAfter?.playheadBeat ?? 999)).toBeLessThan(4.2)
+
+    await page.getByTestId('stop-btn').click()
+
+    const debugStopped = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugStopped?.isPlaying).toBe(false)
+    expect(debugStopped?.loopRestartCount).toBe(0)
+  })
 })

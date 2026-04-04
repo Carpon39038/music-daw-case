@@ -131,6 +131,9 @@ declare global {
       audioContextState: AudioContextState | 'uninitialized'
       beatDurationSec: number
       timelineDurationSec: number
+      loopEnabled: boolean
+      loopLengthBeats: number
+      loopRestartCount: number
     }
   }
 }
@@ -139,6 +142,8 @@ function App() {
   const [project, setProject] = useState<ProjectState>(() => loadInitialProject())
   const [isPlaying, setIsPlaying] = useState(false)
   const [playheadBeat, setPlayheadBeat] = useState(0)
+  const [loopEnabled, setLoopEnabled] = useState(false)
+  const [loopLengthBeats, setLoopLengthBeats] = useState(8)
   const undoStackRef = useRef<ProjectState[]>([])
   const redoStackRef = useRef<ProjectState[]>([])
   const dragStateRef = useRef<{
@@ -164,9 +169,11 @@ function App() {
   const scheduledNodesRef = useRef<Array<{ osc: OscillatorNode; gain: GainNode }>>([])
   const startTimeRef = useRef<number>(0)
   const animationRef = useRef<number | null>(null)
+  const loopRestartCountRef = useRef<number>(0)
 
   const beatDuration = useMemo(() => 60 / project.bpm, [project.bpm])
-  const totalDurationSec = TIMELINE_BEATS * beatDuration
+  const effectiveTimelineBeats = loopEnabled ? loopLengthBeats : TIMELINE_BEATS
+  const totalDurationSec = effectiveTimelineBeats * beatDuration
   const totalClipCount = useMemo(
     () => project.tracks.reduce((sum, t) => sum + t.clips.length, 0),
     [project.tracks],
@@ -212,6 +219,7 @@ function App() {
   const stopPlayback = () => {
     setIsPlaying(false)
     setPlayheadBeat(0)
+    loopRestartCountRef.current = 0
     clearScheduledNodes()
 
     if (animationRef.current) {
@@ -235,23 +243,31 @@ function App() {
     const master = masterGainRef.current
     if (!ctx || !master) return
 
+    const loopBeats = loopEnabled ? loopLengthBeats : TIMELINE_BEATS
+    const loopDurationSec = loopBeats * beatDuration
     const startAt = ctx.currentTime + 0.05
     startTimeRef.current = startAt
 
     project.tracks.forEach((track) => {
       track.clips.forEach((clip) => {
+        if (clip.startBeat >= loopBeats) return
+
+        const clipOffsetSec = clip.startBeat * beatDuration
+        const clipDurationSec = Math.min(loopDurationSec - clipOffsetSec, clip.lengthBeats * beatDuration)
+        if (clipDurationSec <= 0) return
+
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
 
-        const clipStart = startAt + clip.startBeat * beatDuration
-        const clipEnd = clipStart + clip.lengthBeats * beatDuration
+        const clipStart = startAt + clipOffsetSec
+        const clipEnd = clipStart + clipDurationSec
 
         osc.type = clip.wave
         osc.frequency.value = clip.noteHz
 
         gain.gain.setValueAtTime(0.0001, clipStart)
         gain.gain.linearRampToValueAtTime(track.volume * 0.15, clipStart + 0.01)
-        gain.gain.setValueAtTime(track.volume * 0.15, clipEnd - 0.02)
+        gain.gain.setValueAtTime(track.volume * 0.15, Math.max(clipStart + 0.01, clipEnd - 0.02))
         gain.gain.linearRampToValueAtTime(0.0001, clipEnd)
 
         osc.connect(gain)
@@ -267,6 +283,7 @@ function App() {
 
   const startPlayback = async () => {
     await ensureAudio()
+    loopRestartCountRef.current = 0
     clearScheduledNodes()
     scheduleProject()
     setPlayheadBeat(0)
@@ -282,9 +299,17 @@ function App() {
 
       const elapsed = Math.max(0, ctx.currentTime - startTimeRef.current)
       const beat = elapsed / beatDuration
-      setPlayheadBeat(beat)
+      const wrappedBeat = loopEnabled ? beat % effectiveTimelineBeats : beat
+      setPlayheadBeat(wrappedBeat)
 
       if (elapsed >= totalDurationSec) {
+        if (loopEnabled) {
+          loopRestartCountRef.current += 1
+          clearScheduledNodes()
+          scheduleProject()
+          animationRef.current = requestAnimationFrame(update)
+          return
+        }
         stopPlayback()
         return
       }
@@ -371,8 +396,11 @@ function App() {
       audioContextState: audioCtxRef.current?.state ?? 'uninitialized',
       beatDurationSec: beatDuration,
       timelineDurationSec: totalDurationSec,
+      loopEnabled,
+      loopLengthBeats: effectiveTimelineBeats,
+      loopRestartCount: loopRestartCountRef.current,
     }
-  }, [isPlaying, playheadBeat, project, totalClipCount, beatDuration, totalDurationSec])
+  }, [isPlaying, playheadBeat, project, totalClipCount, beatDuration, totalDurationSec, loopEnabled, effectiveTimelineBeats])
 
   useEffect(() => {
     try {
@@ -578,6 +606,33 @@ function App() {
           />
         </label>
 
+        <label>
+          Loop
+          <input
+            data-testid="loop-enabled"
+            type="checkbox"
+            checked={loopEnabled}
+            onChange={(e) => setLoopEnabled(e.target.checked)}
+            disabled={isPlaying}
+          />
+        </label>
+
+        <label>
+          Loop Beats
+          <select
+            data-testid="loop-length"
+            value={loopLengthBeats}
+            onChange={(e) => setLoopLengthBeats(Number(e.target.value))}
+            disabled={isPlaying || !loopEnabled}
+          >
+            {[4, 8, 12, 16].map((beats) => (
+              <option key={beats} value={beats}>
+                {beats}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="status">Playhead: {playheadBeat.toFixed(2)} beat</div>
       </section>
 
@@ -610,7 +665,7 @@ function App() {
               {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => (
                 <div className="beat-cell" key={beat} />
               ))}
-              <div className="playhead" style={{ left: `${(Math.min(playheadBeat, TIMELINE_BEATS) / TIMELINE_BEATS) * 100}%` }} />
+              <div className="playhead" style={{ left: `${(Math.min(playheadBeat, effectiveTimelineBeats) / effectiveTimelineBeats) * 100}%` }} />
               {track.clips.map((clip) => (
                 <button
                   key={clip.id}
