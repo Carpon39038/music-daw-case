@@ -635,6 +635,50 @@ test.describe('DAW MVP e2e', () => {
     await page.getByTestId('reset-project-btn').click()
   })
 
+  test('track pan should route left/right and persist across reload', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByTestId('reset-project-btn').click()
+
+    const pan = page.getByTestId('pan-track-1')
+    await expect(pan).toHaveValue('0')
+
+    await pan.fill('-1')
+
+    const debugAfterLeft = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterLeft?.firstTrackPan).toBe(-1)
+    expect(debugAfterLeft?.pannedTrackCount).toBe(1)
+
+    await page.getByTestId('play-btn').click()
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.masterLevel ?? 0), {
+        timeout: 3000,
+        message: 'master level should rise while panned playback is active',
+      })
+      .toBeGreaterThan(0.005)
+
+    await page.getByTestId('stop-btn').click()
+
+    await pan.fill('1')
+
+    const debugAfterRight = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterRight?.firstTrackPan).toBe(1)
+    expect(debugAfterRight?.pannedTrackCount).toBe(1)
+
+    await page.reload()
+
+    const debugAfterReload = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterReload?.firstTrackPan).toBe(1)
+    expect(debugAfterReload?.pannedTrackCount).toBe(1)
+
+    await page.getByTestId('pan-track-1').fill('0')
+    const debugAfterResetPan = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterResetPan?.firstTrackPan).toBe(0)
+
+    await page.getByTestId('reset-project-btn').click()
+  })
+
   test('track transpose should retune scheduled frequencies and persist across reload', async ({ page }) => {
     await page.goto('/')
 

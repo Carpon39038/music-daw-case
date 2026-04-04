@@ -15,6 +15,7 @@ interface Track {
   id: string
   name: string
   volume: number
+  pan: number
   muted: boolean
   solo: boolean
   locked: boolean
@@ -76,6 +77,7 @@ function createInitialProject(): ProjectState {
       id: `track-${i + 1}`,
       name: `Track ${i + 1}`,
       volume: 0.7,
+      pan: 0,
       muted: false,
       solo: false,
       locked: false,
@@ -103,6 +105,7 @@ function isValidProjectState(value: unknown): value is ProjectState {
       typeof t.id !== 'string' ||
       typeof t.name !== 'string' ||
       typeof t.volume !== 'number' ||
+      (typeof t.pan !== 'number' && typeof t.pan !== 'undefined') ||
       typeof t.muted !== 'boolean' ||
       typeof t.solo !== 'boolean' ||
       (typeof t.locked !== 'boolean' && typeof t.locked !== 'undefined') ||
@@ -136,6 +139,7 @@ function loadInitialProject(): ProjectState {
       tracks: parsed.tracks.map((track) => ({
         ...track,
         locked: track.locked ?? false,
+        pan: track.pan ?? 0,
       })),
     }
   } catch {
@@ -171,7 +175,9 @@ declare global {
       soloActive: boolean
       lockedTrackCount: number
       transposedTrackCount: number
+      pannedTrackCount: number
       firstTrackTransposeSemitones: number | null
+      firstTrackPan: number | null
       scheduledFrequencyPreviewHz: number[]
       selectedTrackId: string | null
       selectedClipId: string | null
@@ -249,6 +255,10 @@ function App() {
   const lockedTrackCount = useMemo(() => project.tracks.filter((t) => t.locked).length, [project.tracks])
   const transposedTrackCount = useMemo(
     () => project.tracks.filter((t) => t.transposeSemitones !== 0).length,
+    [project.tracks],
+  )
+  const pannedTrackCount = useMemo(
+    () => project.tracks.filter((t) => Math.abs(t.pan) > 0.001).length,
     [project.tracks],
   )
   const soloActive = soloTrackCount > 0
@@ -355,6 +365,7 @@ function App() {
 
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
+        const panner = ctx.createStereoPanner()
 
         const clipStart = startAt + clipOffsetSec
         const clipEnd = clipStart + clipDurationSec
@@ -369,9 +380,11 @@ function App() {
         gain.gain.linearRampToValueAtTime(effectiveTrackVolume * 0.15, clipStart + 0.01)
         gain.gain.setValueAtTime(effectiveTrackVolume * 0.15, Math.max(clipStart + 0.01, clipEnd - 0.02))
         gain.gain.linearRampToValueAtTime(0.0001, clipEnd)
+        panner.pan.value = Math.max(-1, Math.min(1, track.pan))
 
         osc.connect(gain)
-        gain.connect(master)
+        gain.connect(panner)
+        panner.connect(master)
 
         osc.start(clipStart)
         osc.stop(clipEnd)
@@ -509,7 +522,9 @@ function App() {
       soloActive,
       lockedTrackCount,
       transposedTrackCount,
+      pannedTrackCount,
       firstTrackTransposeSemitones: project.tracks[0]?.transposeSemitones ?? null,
+      firstTrackPan: project.tracks[0]?.pan ?? null,
       scheduledFrequencyPreviewHz: [...scheduledFrequencyPreviewRef.current],
       selectedTrackId,
       selectedClipId: selectedClipData?.clip.id ?? null,
@@ -555,6 +570,7 @@ function App() {
     soloActive,
     lockedTrackCount,
     transposedTrackCount,
+    pannedTrackCount,
     selectedTrackId,
     selectedClipData,
   ])
@@ -737,6 +753,20 @@ function App() {
     applyProjectUpdate((prev) => ({
       ...prev,
       tracks: prev.tracks.map((t) => (t.id === trackId ? { ...t, volume } : t)),
+    }))
+  }
+
+  const setTrackPan = (trackId: string, pan: number) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) =>
+        t.id === trackId
+          ? {
+              ...t,
+              pan: Math.max(-1, Math.min(1, pan)),
+            }
+          : t,
+      ),
     }))
   }
 
@@ -1234,6 +1264,20 @@ function App() {
                   onChange={(e) => setTrackVolume(track.id, Number(e.target.value))}
                   disabled={isPlaying}
                 />
+              </label>
+              <label>
+                Pan
+                <input
+                  data-testid={`pan-${track.id}`}
+                  type="range"
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  value={track.pan}
+                  onChange={(e) => setTrackPan(track.id, Number(e.target.value))}
+                  disabled={isPlaying}
+                />
+                <span className="pan-value">{track.pan.toFixed(2)}</span>
               </label>
               <label>
                 Pitch

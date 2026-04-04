@@ -173,7 +173,16 @@ h1 {
 }
 
 .track-header input[type='range'] {
-  width: 120px;
+  width: 110px;
+}
+
+.pan-value,
+.transpose-value {
+  min-width: 48px;
+  display: inline-block;
+  text-align: right;
+  color: #b7c8df;
+  font-size: 0.82rem;
 }
 
 .transpose-value {
