@@ -634,4 +634,45 @@ test.describe('DAW MVP e2e', () => {
 
     await page.getByTestId('reset-project-btn').click()
   })
+
+  test('track transpose should retune scheduled frequencies and persist across reload', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByTestId('reset-project-btn').click()
+
+    const transpose = page.getByTestId('transpose-track-1')
+    await expect(transpose).toHaveValue('0')
+
+    const base = await page.evaluate(() => window.__DAW_DEBUG__?.scheduledFrequencyPreviewHz ?? [])
+    expect(base.length).toBe(0)
+
+    await transpose.fill('12')
+
+    const debugAfterSet = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterSet?.firstTrackTransposeSemitones).toBe(12)
+    expect(debugAfterSet?.transposedTrackCount).toBe(1)
+
+    await page.getByTestId('play-btn').click()
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.scheduledFrequencyPreviewHz ?? []), {
+        timeout: 3000,
+        message: 'scheduled frequency preview should be populated during playback',
+      })
+      .not.toHaveLength(0)
+
+    const previewWithTranspose = await page.evaluate(() => window.__DAW_DEBUG__?.scheduledFrequencyPreviewHz ?? [])
+    const firstHz = previewWithTranspose[0] ?? 0
+    expect(firstHz).toBeGreaterThan(500)
+
+    await page.getByTestId('stop-btn').click()
+    await page.reload()
+
+    const debugAfterReload = await page.evaluate(() => window.__DAW_DEBUG__)
+    expect(debugAfterReload?.firstTrackTransposeSemitones).toBe(12)
+    expect(debugAfterReload?.transposedTrackCount).toBe(1)
+
+    await page.getByTestId('transpose-track-1').fill('0')
+    await page.getByTestId('reset-project-btn').click()
+  })
 })

@@ -17,6 +17,7 @@ interface Track {
   volume: number
   muted: boolean
   solo: boolean
+  transposeSemitones: number
   clips: Clip[]
 }
 
@@ -28,6 +29,10 @@ interface ProjectState {
 const TRACK_COUNT = 4
 const TIMELINE_BEATS = 16
 const PROJECT_STORAGE_KEY = 'music-daw-case.project.v1'
+
+function semitoneToRatio(semitones: number) {
+  return 2 ** (semitones / 12)
+}
 
 function rangesOverlap(aStart: number, aLen: number, bStart: number, bLen: number) {
   const aEnd = aStart + aLen
@@ -72,6 +77,7 @@ function createInitialProject(): ProjectState {
       volume: 0.7,
       muted: false,
       solo: false,
+      transposeSemitones: 0,
       clips: [
         {
           id: `clip-${i + 1}-1`,
@@ -96,7 +102,8 @@ function isValidProjectState(value: unknown): value is ProjectState {
       typeof t.name !== 'string' ||
       typeof t.volume !== 'number' ||
       typeof t.muted !== 'boolean' ||
-      typeof t.solo !== 'boolean'
+      typeof t.solo !== 'boolean' ||
+      typeof t.transposeSemitones !== 'number'
     )
       return false
     if (!Array.isArray(t.clips)) return false
@@ -151,6 +158,9 @@ declare global {
       audibleTrackCount: number
       soloTrackCount: number
       soloActive: boolean
+      transposedTrackCount: number
+      firstTrackTransposeSemitones: number | null
+      scheduledFrequencyPreviewHz: number[]
     }
   }
 }
@@ -195,6 +205,7 @@ function App() {
   const masterLevelRef = useRef<number>(0)
 
   const scheduledNodesRef = useRef<Array<{ osc: OscillatorNode; gain: GainNode }>>([])
+  const scheduledFrequencyPreviewRef = useRef<number[]>([])
   const startTimeRef = useRef<number>(0)
   const animationRef = useRef<number | null>(null)
   const loopRestartCountRef = useRef<number>(0)
@@ -208,6 +219,10 @@ function App() {
   )
   const mutedTrackCount = useMemo(() => project.tracks.filter((t) => t.muted).length, [project.tracks])
   const soloTrackCount = useMemo(() => project.tracks.filter((t) => t.solo).length, [project.tracks])
+  const transposedTrackCount = useMemo(
+    () => project.tracks.filter((t) => t.transposeSemitones !== 0).length,
+    [project.tracks],
+  )
   const soloActive = soloTrackCount > 0
 
   const ensureAudio = async () => {
@@ -231,6 +246,7 @@ function App() {
   }
 
   const clearScheduledNodes = () => {
+    scheduledFrequencyPreviewRef.current = []
     scheduledNodesRef.current.forEach(({ osc, gain }) => {
       try {
         osc.stop()
@@ -294,7 +310,8 @@ function App() {
         const clipEnd = clipStart + clipDurationSec
 
         osc.type = clip.wave
-        osc.frequency.value = clip.noteHz
+        const scheduledFrequencyHz = clip.noteHz * semitoneToRatio(track.transposeSemitones)
+        osc.frequency.value = scheduledFrequencyHz
 
         gain.gain.setValueAtTime(0.0001, clipStart)
         const isTrackAudible = !track.muted && (!soloActive || track.solo)
@@ -309,6 +326,7 @@ function App() {
         osc.start(clipStart)
         osc.stop(clipEnd)
 
+        scheduledFrequencyPreviewRef.current.push(scheduledFrequencyHz)
         scheduledNodesRef.current.push({ osc, gain })
       })
     })
@@ -438,6 +456,9 @@ function App() {
       audibleTrackCount: project.tracks.filter((t) => !t.muted && (!soloActive || t.solo)).length,
       soloTrackCount,
       soloActive,
+      transposedTrackCount,
+      firstTrackTransposeSemitones: project.tracks[0]?.transposeSemitones ?? null,
+      scheduledFrequencyPreviewHz: [...scheduledFrequencyPreviewRef.current],
     }
   }, [
     isPlaying,
@@ -451,6 +472,7 @@ function App() {
     mutedTrackCount,
     soloTrackCount,
     soloActive,
+    transposedTrackCount,
   ])
 
   useEffect(() => {
@@ -544,6 +566,20 @@ function App() {
     applyProjectUpdate((prev) => ({
       ...prev,
       tracks: prev.tracks.map((t) => (t.id === trackId ? { ...t, solo: !t.solo } : t)),
+    }))
+  }
+
+  const setTrackTranspose = (trackId: string, transposeSemitones: number) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) =>
+        t.id === trackId
+          ? {
+              ...t,
+              transposeSemitones: Math.max(-12, Math.min(12, Math.round(transposeSemitones))),
+            }
+          : t,
+      ),
     }))
   }
 
@@ -885,6 +921,20 @@ function App() {
                   onChange={(e) => setTrackVolume(track.id, Number(e.target.value))}
                   disabled={isPlaying}
                 />
+              </label>
+              <label>
+                Pitch
+                <input
+                  data-testid={`transpose-${track.id}`}
+                  type="range"
+                  min={-12}
+                  max={12}
+                  step={1}
+                  value={track.transposeSemitones}
+                  onChange={(e) => setTrackTranspose(track.id, Number(e.target.value))}
+                  disabled={isPlaying}
+                />
+                <span className="transpose-value">{track.transposeSemitones >= 0 ? '+' : ''}{track.transposeSemitones} st</span>
               </label>
               <button
                 data-testid={`mute-${track.id}`}

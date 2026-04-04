@@ -111,6 +111,13 @@ h1 {
   width: 120px;
 }
 
+.transpose-value {
+  min-width: 48px;
+  font-variant-numeric: tabular-nums;
+  color: #9fb4d2;
+  font-size: 12px;
+}
+
 .track-grid {
   position: relative;
   display: grid;
