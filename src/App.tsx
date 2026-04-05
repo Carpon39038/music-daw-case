@@ -296,6 +296,8 @@ declare global {
       selectedClipDuplicateBlockedReason: 'none' | 'playing' | 'trackLocked' | 'noSpace' | 'noSelection'
       selectedClipCanSplit: boolean
       selectedClipSplitBlockedReason: 'none' | 'playing' | 'trackLocked' | 'clipTooShort' | 'noSelection'
+      clipboardClipId: string | null
+      clipboardSourceTrackId: string | null
     }
   }
 }
@@ -320,6 +322,7 @@ function App() {
   const [selectedClipRef, setSelectedClipRef] = useState<{ trackId: string; clipId: string } | null>(null)
   const undoStackRef = useRef<ProjectState[]>([])
   const redoStackRef = useRef<ProjectState[]>([])
+  const [clipboard, setClipboard] = useState<{ clip: Clip; sourceTrackId: string } | null>(null)
   const dragStateRef = useRef<{
     trackId: string
     clipId: string
@@ -657,6 +660,8 @@ function App() {
       playheadBeat,
       undoDepth: undoStackRef.current.length,
       redoDepth: redoStackRef.current.length,
+      clipboardClipId: clipboard?.clip.id ?? null,
+      clipboardSourceTrackId: clipboard?.sourceTrackId ?? null,
       masterLevel: masterLevelRef.current,
       masterVolume,
       audioContextState: audioCtxRef.current?.state ?? 'uninitialized',
@@ -723,6 +728,7 @@ function App() {
     masterVolume,
     selectedTrackId,
     selectedClipData,
+    clipboard,
   ])
 
   useEffect(() => {
@@ -878,6 +884,45 @@ function App() {
       setSelectedTrackId(trackId)
       setSelectedClipRef({ trackId, clipId: rightClipId })
     }
+  }
+
+  const copyClip = (trackId: string, clipId: string) => {
+    const track = project.tracks.find((t) => t.id === trackId)
+    if (!track) return
+    const clip = track.clips.find((c) => c.id === clipId)
+    if (!clip) return
+    setClipboard({ clip: { ...clip }, sourceTrackId: trackId })
+  }
+
+  const pasteClip = (trackId: string) => {
+    if (!clipboard) return
+    const { clip: sourceClip } = clipboard
+    const targetTrack = project.tracks.find((t) => t.id === trackId)
+    if (!targetTrack || targetTrack.locked) return
+
+    applyProjectUpdate((prev) => {
+      const track = prev.tracks.find((t) => t.id === trackId)
+      if (!track || track.locked) return prev
+
+      const newClip: Clip = {
+        ...sourceClip,
+        id: `${trackId}-paste-${Date.now()}`,
+        startBeat: resolveNonOverlappingStart(track.clips, sourceClip.lengthBeats, sourceClip.startBeat),
+      }
+
+      // Check if resolved position conflicts (no space)
+      const stillConflicts = track.clips.some((c) =>
+        rangesOverlap(newClip.startBeat, newClip.lengthBeats, c.startBeat, c.lengthBeats),
+      )
+      if (stillConflicts) return prev
+
+      return {
+        ...prev,
+        tracks: prev.tracks.map((t) =>
+          t.id === trackId ? { ...t, clips: [...t.clips, newClip] } : t,
+        ),
+      }
+    })
   }
 
   const cycleClipWave = (trackId: string, clipId: string) => {
@@ -1318,6 +1363,23 @@ function App() {
       if (event.key.toLowerCase() === 's') {
         event.preventDefault()
         stopPlayback()
+        return
+      }
+
+      if (event.key.toLowerCase() === 'c' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
+        if (selectedClipRef) {
+          event.preventDefault()
+          copyClip(selectedClipRef.trackId, selectedClipRef.clipId)
+        }
+        return
+      }
+
+      if (event.key.toLowerCase() === 'v' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
+        if (selectedTrackId) {
+          event.preventDefault()
+          pasteClip(selectedTrackId)
+        }
+        return
       }
     }
 
@@ -1502,6 +1564,24 @@ function App() {
               Duplicate target beat: {selectedClipData.duplicateStartBeat}
             </div>
             <button
+              data-testid="selected-clip-copy-btn"
+              onClick={() => {
+                if (selectedClipData) copyClip(selectedClipData.track.id, selectedClipData.clip.id)
+              }}
+              disabled={!selectedClipData}
+            >
+              Copy Clip
+            </button>
+            <button
+              data-testid="paste-clip-btn"
+              onClick={() => {
+                if (selectedTrackId) pasteClip(selectedTrackId)
+              }}
+              disabled={!selectedTrackId || !clipboard || isPlaying}
+            >
+              Paste Clip
+            </button>
+            <button
               data-testid="selected-clip-duplicate-btn"
               onClick={() => duplicateClip(selectedClipData.track.id, selectedClipData.clip.id)}
               disabled={!selectedClipData.canDuplicate}
@@ -1677,7 +1757,7 @@ function App() {
         ))}
       </section>
 
-      <p className="hint">双击 clip 切换波形；Shift+双击或 Inspector 内 Duplicate Clip 可复制；⌘/Ctrl+双击或 Inspector 内 Split Clip 可对半切分；Alt+双击删除；Lock 可冻结轨道编辑。播放时禁用新增 clip 与 BPM 修改。快捷键：Space 播放/暂停，S 停止，⌘/Ctrl+Z 撤销，⌘/Ctrl+Shift+Z 重做。</p>
+      <p className="hint">双击 clip 切换波形；Shift+双击或 Inspector 内 Duplicate Clip 可复制；⌘/Ctrl+双击或 Inspector 内 Split Clip 可对半切分；Alt+双击删除；⌘/Ctrl+C 复制选中 clip，⌘/Ctrl+V 粘贴到选中轨道；Lock 可冻结轨道编辑。播放时禁用新增 clip 与 BPM 修改。快捷键：Space 播放/暂停，S 停止，⌘/Ctrl+Z 撤销，⌘/Ctrl+Shift+Z 重做。</p>
     </div>
   )
 }
