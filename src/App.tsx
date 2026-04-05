@@ -31,6 +31,7 @@ interface ProjectState {
 const TRACK_COUNT = 4
 const TIMELINE_BEATS = 16
 const PROJECT_STORAGE_KEY = 'music-daw-case.project.v1'
+const MASTER_VOLUME_KEY = 'music-daw-case.masterVolume.v1'
 
 function semitoneToRatio(semitones: number) {
   return 2 ** (semitones / 12)
@@ -265,6 +266,7 @@ declare global {
       undoDepth: number
       redoDepth: number
       masterLevel: number
+      masterVolume: number
       audioContextState: AudioContextState | 'uninitialized'
       beatDurationSec: number
       timelineDurationSec: number
@@ -302,8 +304,18 @@ function App() {
   const [project, setProject] = useState<ProjectState>(() => loadInitialProject())
   const [isPlaying, setIsPlaying] = useState(false)
   const [playheadBeat, setPlayheadBeat] = useState(0)
+  const [masterVolume, setMasterVolume] = useState(() => {
+    if (typeof window === 'undefined') return 0.8
+    try {
+      const stored = window.localStorage.getItem(MASTER_VOLUME_KEY)
+      return stored !== null ? Number(stored) : 0.8
+    } catch {
+      return 0.8
+    }
+  })
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [loopLengthBeats, setLoopLengthBeats] = useState(8)
+  const tapTempoRef = useRef<number[]>([])
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
   const [selectedClipRef, setSelectedClipRef] = useState<{ trackId: string; clipId: string } | null>(null)
   const undoStackRef = useRef<ProjectState[]>([])
@@ -387,13 +399,27 @@ function App() {
     }
   }, [project.tracks, selectedClipRef, isPlaying])
 
+  useEffect(() => {
+    if (masterGainRef.current) {
+      masterGainRef.current.gain.value = masterVolume
+    }
+  }, [masterVolume, masterGainRef])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(MASTER_VOLUME_KEY, String(masterVolume))
+    } catch {
+      // ignore
+    }
+  }, [masterVolume])
+
   const ensureAudio = async () => {
     if (!audioCtxRef.current) {
       const ctx = new AudioContext()
       const masterGain = ctx.createGain()
       const analyser = ctx.createAnalyser()
       analyser.fftSize = 256
-      masterGain.gain.value = 0.8
+      masterGain.gain.value = masterVolume
       masterGain.connect(analyser)
       analyser.connect(ctx.destination)
 
@@ -404,6 +430,26 @@ function App() {
 
     if (audioCtxRef.current?.state === 'suspended') {
       await audioCtxRef.current.resume()
+    }
+  }
+
+  const handleTapTempo = () => {
+    const now = performance.now()
+    const taps = tapTempoRef.current
+    // Remove taps older than 3 seconds
+    while (taps.length > 0 && now - taps[0] > 3000) taps.shift()
+    taps.push(now)
+
+    if (taps.length >= 2) {
+      const intervals: number[] = []
+      for (let i = 1; i < taps.length; i++) {
+        intervals.push(taps[i] - taps[i - 1])
+      }
+      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length
+      const bpm = Math.round(60000 / avgInterval)
+      if (bpm >= 60 && bpm <= 200) {
+        setProject((prev) => ({ ...prev, bpm }))
+      }
     }
   }
 
@@ -612,6 +658,7 @@ function App() {
       undoDepth: undoStackRef.current.length,
       redoDepth: redoStackRef.current.length,
       masterLevel: masterLevelRef.current,
+      masterVolume,
       audioContextState: audioCtxRef.current?.state ?? 'uninitialized',
       beatDurationSec: beatDuration,
       timelineDurationSec: totalDurationSec,
@@ -673,6 +720,7 @@ function App() {
     lockedTrackCount,
     transposedTrackCount,
     pannedTrackCount,
+    masterVolume,
     selectedTrackId,
     selectedClipData,
   ])
@@ -1374,6 +1422,28 @@ function App() {
         </label>
 
         <div className="status">Playhead: {playheadBeat.toFixed(2)} beat</div>
+
+        <label>
+          Master Vol
+          <input
+            data-testid="master-volume"
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={masterVolume}
+            onChange={(e) => setMasterVolume(Number(e.target.value))}
+          />
+          <span className="master-volume-value">{(masterVolume * 100).toFixed(0)}%</span>
+        </label>
+
+        <button
+          data-testid="tap-tempo-btn"
+          onClick={handleTapTempo}
+          disabled={isPlaying}
+        >
+          Tap Tempo
+        </button>
       </section>
 
       <section className="meter">
