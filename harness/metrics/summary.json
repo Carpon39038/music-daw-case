@@ -1,22 +1,22 @@
 {
-  "generatedAt": "2026-04-05T06:15:17.509Z",
-  "total": 21,
-  "pass": 19,
-  "fail": 2,
+  "generatedAt": "2026-04-05T12:11:29.556Z",
+  "total": 69,
+  "pass": 66,
+  "fail": 3,
   "failedSteps": {
     "lint": 0,
     "unit": 1,
-    "e2e": 1,
+    "e2e": 2,
     "build": 0
   },
   "failureTaxonomy": {
     "R3_rules_missing": 0,
     "R4_toolchain_or_build": 0,
-    "R6_validation_gap": 2
+    "R6_validation_gap": 3
   },
   "scoreSummary": {
-    "count": 19,
-    "avgTotal": 24.37,
+    "count": 66,
+    "avgTotal": 24.82,
     "maxTotal": 25,
     "latestTotal": 25
   },
@@ -40,7 +40,412 @@
       "totalScore": 25
     },
     {
-      "taskId": "daily-2026-03-31",
+      "taskId": "daily-2026-04-02",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-03-2045",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-03",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0000",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0020",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0040",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0100",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0120",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0140",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0200",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0220",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0240",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0300",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0320",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0340",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0400",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0420",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0440",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0500",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0520",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0540",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0640",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0741",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-0841",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-1330",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-1430",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04-1630",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-04",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-05-0300",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-05",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-04-1609",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-04-1707",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-04-1807",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-04-1909",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-04-2008",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-04-2106",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-04-2208",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-04-2314",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-04",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-05-0009",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-05-0110",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-05-0210",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-05-0212",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-05-0311",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-05-1104",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-05-1204",
       "verdict": "PASS",
       "lintFail": false,
       "unitFail": false,
@@ -50,6 +455,33 @@
     },
     {
       "taskId": "daily-dev-2026-04-05-1404",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-05-1854",
+      "verdict": "FAIL",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": true,
+      "buildFail": false,
+      "totalScore": null
+    },
+    {
+      "taskId": "daily-dev-2026-04-05-1906",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-05-2011",
       "verdict": "PASS",
       "lintFail": false,
       "unitFail": false,
@@ -211,5 +643,5 @@
       "totalScore": 25
     }
   ],
-  "passRate": 0.9048
+  "passRate": 0.9565
 }

@@ -23,7 +23,8 @@
     "harness:task-pack": "node scripts/task-pack.mjs",
     "harness:judge": "node scripts/judge.mjs",
     "harness:loop": "node scripts/run-loop.mjs",
-    "harness:gated": "node scripts/harness-gated-run.mjs"
+    "harness:gated": "node scripts/harness-gated-run.mjs",
+    "test:e2e:flaky": "playwright test --repeat-each=3 --retries=0"
   },
   "dependencies": {
     "react": "^19.2.4",

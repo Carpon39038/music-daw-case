@@ -273,6 +273,7 @@ declare global {
       loopEnabled: boolean
       loopLengthBeats: number
       loopRestartCount: number
+      metronomeEnabled: boolean
       mutedTrackCount: number
       audibleTrackCount: number
       soloTrackCount: number
@@ -305,6 +306,7 @@ declare global {
 function App() {
   const [project, setProject] = useState<ProjectState>(() => loadInitialProject())
   const [isPlaying, setIsPlaying] = useState(false)
+  const [metronomeEnabled, setMetronomeEnabled] = useState(false)
   const [playheadBeat, setPlayheadBeat] = useState(0)
   const [masterVolume, setMasterVolume] = useState(() => {
     if (typeof window === 'undefined') return 0.8
@@ -506,6 +508,30 @@ function App() {
     const startAt = ctx.currentTime + 0.05
     startTimeRef.current = startAt
 
+    
+    if (metronomeEnabled) {
+      for (let i = 0; i < loopBeats; i++) {
+        const beatTime = startAt + i * beatDuration
+        const clickOsc = ctx.createOscillator()
+        const clickGain = ctx.createGain()
+
+        clickOsc.type = 'square'
+        clickOsc.frequency.value = i % 4 === 0 ? 880 : 440
+
+        clickGain.gain.setValueAtTime(0, beatTime)
+        clickGain.gain.linearRampToValueAtTime(0.3, beatTime + 0.005)
+        clickGain.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.05)
+
+        clickOsc.connect(clickGain)
+        clickGain.connect(master)
+
+        clickOsc.start(beatTime)
+        clickOsc.stop(beatTime + 0.05)
+
+        scheduledNodesRef.current.push({ osc: clickOsc, gain: clickGain })
+      }
+    }
+
     project.tracks.forEach((track) => {
       track.clips.forEach((clip) => {
         if (clip.startBeat >= loopBeats) return
@@ -670,6 +696,7 @@ function App() {
       loopEnabled,
       loopLengthBeats: effectiveTimelineBeats,
       loopRestartCount: loopRestartCountRef.current,
+      metronomeEnabled,
       mutedTrackCount,
       audibleTrackCount: project.tracks.filter((t) => !t.muted && (!soloActive || t.solo)).length,
       soloTrackCount,
@@ -1431,6 +1458,7 @@ function App() {
         <button data-testid="play-btn" onClick={startPlayback} disabled={isPlaying}>Play</button>
         <button data-testid="pause-btn" onClick={pausePlayback} disabled={!isPlaying}>Pause</button>
         <button data-testid="stop-btn" onClick={stopPlayback}>Stop</button>
+        <button data-testid="metronome-btn" onClick={() => setMetronomeEnabled(v => !v)} aria-pressed={metronomeEnabled}>{metronomeEnabled ? 'Metronome: ON' : 'Metronome: OFF'}</button>
         <button data-testid="undo-btn" onClick={undo} disabled={undoStackRef.current.length === 0 || isPlaying}>Undo</button>
         <button data-testid="redo-btn" onClick={redo} disabled={redoStackRef.current.length === 0 || isPlaying}>Redo</button>
         <button
