@@ -4,7 +4,7 @@ test.describe('DAW MVP e2e', () => {
   test('transport + clip add/remove + playback debug state', async ({ page }) => {
     await page.goto('/')
 
-    await expect(page.getByRole('heading', { name: /Music DAW Case/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Music DAW.*Case/i })).toBeVisible()
 
     const initialClipCount = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
     expect(initialClipCount).toBeGreaterThanOrEqual(4)
