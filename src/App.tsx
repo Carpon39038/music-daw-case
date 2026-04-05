@@ -1077,6 +1077,33 @@ function App() {
     }
   }
 
+  const duplicateTrack = (trackId: string) => {
+    applyProjectUpdate((prev) => {
+      const trackIndex = prev.tracks.findIndex(t => t.id === trackId)
+      if (trackIndex === -1) return prev
+      const sourceTrack = prev.tracks[trackIndex]
+      const newTrackId = `track-${Date.now()}`
+      
+      const newTrack = {
+        ...sourceTrack,
+        id: newTrackId,
+        name: `${sourceTrack.name} (Copy)`,
+        clips: sourceTrack.clips.map((c, i) => ({
+          ...c,
+          id: `${newTrackId}-clip-${Date.now()}-${i}`
+        }))
+      }
+      
+      const newTracks = [...prev.tracks]
+      newTracks.splice(trackIndex + 1, 0, newTrack)
+      
+      return {
+        ...prev,
+        tracks: newTracks
+      }
+    })
+  }
+
   const setSelectedClipNote = (trackId: string, clipId: string, noteHz: number) => {
     applyProjectUpdate((prev) => ({
       ...prev,
@@ -1593,7 +1620,14 @@ function App() {
                 disabled={isPlaying}
               />
             </div>
-            <div className="inspector-row" style={{ marginTop: '12px' }}>
+                        <div className="inspector-row" style={{ marginTop: '12px', gap: '8px', display: 'flex' }}>
+              <button
+                data-testid="duplicate-track-btn"
+                onClick={() => duplicateTrack(selectedTrackId)}
+                disabled={isPlaying}
+              >
+                Duplicate Track
+              </button>
               <button
                 data-testid="delete-track-btn"
                 onClick={() => deleteTrack(selectedTrackId)}
