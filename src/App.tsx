@@ -20,6 +20,8 @@ interface Track {
   solo: boolean
   locked: boolean
   transposeSemitones: number
+  filterType: 'none' | 'lowpass' | 'highpass'
+  filterCutoff: number
   clips: Clip[]
 }
 
@@ -83,6 +85,8 @@ function createInitialProject(): ProjectState {
       solo: false,
       locked: false,
       transposeSemitones: 0,
+      filterType: 'none',
+      filterCutoff: 20000,
       clips: [
         {
           id: `clip-${i + 1}-1`,
@@ -212,7 +216,9 @@ function isValidProjectState(value: unknown): value is ProjectState {
       typeof t.muted !== 'boolean' ||
       typeof t.solo !== 'boolean' ||
       (typeof t.locked !== 'boolean' && typeof t.locked !== 'undefined') ||
-      typeof t.transposeSemitones !== 'number'
+      typeof t.transposeSemitones !== 'number' ||
+      (t.filterType && !['none', 'lowpass', 'highpass'].includes(t.filterType)) ||
+      (t.filterCutoff !== undefined && typeof t.filterCutoff !== 'number')
     )
       return false
     if (!Array.isArray(t.clips)) return false
@@ -243,6 +249,8 @@ function loadInitialProject(): ProjectState {
         ...track,
         locked: track.locked ?? false,
         pan: track.pan ?? 0,
+        filterType: track.filterType ?? 'none',
+        filterCutoff: track.filterCutoff ?? 20000,
       })),
     }
   } catch {
@@ -281,6 +289,7 @@ declare global {
       lockedTrackCount: number
       transposedTrackCount: number
       pannedTrackCount: number
+      filteredTrackCount: number
       firstTrackTransposeSemitones: number | null
       firstTrackPan: number | null
       scheduledFrequencyPreviewHz: number[]
@@ -376,6 +385,7 @@ function App() {
     () => project.tracks.filter((t) => t.transposeSemitones !== 0).length,
     [project.tracks],
   )
+  const filteredTrackCount = useMemo(() => project.tracks.filter((t) => t.filterType !== 'none').length, [project.tracks])
   const pannedTrackCount = useMemo(
     () => project.tracks.filter((t) => Math.abs(t.pan) > 0.001).length,
     [project.tracks],
@@ -543,6 +553,7 @@ function App() {
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
         const panner = ctx.createStereoPanner()
+        const filter = ctx.createBiquadFilter()
 
         const clipStart = startAt + clipOffsetSec
         const clipEnd = clipStart + clipDurationSec
@@ -558,10 +569,18 @@ function App() {
         gain.gain.setValueAtTime(effectiveTrackVolume * 0.15, Math.max(clipStart + 0.01, clipEnd - 0.02))
         gain.gain.linearRampToValueAtTime(0.0001, clipEnd)
         panner.pan.value = Math.max(-1, Math.min(1, track.pan))
+        
+        filter.type = track.filterType === 'highpass' ? 'highpass' : 'lowpass'
+        filter.frequency.value = track.filterCutoff ?? 20000
 
         osc.connect(gain)
         gain.connect(panner)
-        panner.connect(master)
+        if (track.filterType && track.filterType !== 'none') {
+          panner.connect(filter)
+          filter.connect(master)
+        } else {
+          panner.connect(master)
+        }
 
         osc.start(clipStart)
         osc.stop(clipEnd)
@@ -704,6 +723,7 @@ function App() {
       lockedTrackCount,
       transposedTrackCount,
       pannedTrackCount,
+      filteredTrackCount,
       firstTrackTransposeSemitones: project.tracks[0]?.transposeSemitones ?? null,
       firstTrackPan: project.tracks[0]?.pan ?? null,
       scheduledFrequencyPreviewHz: [...scheduledFrequencyPreviewRef.current],
@@ -1027,6 +1047,24 @@ function App() {
     }))
   }
 
+  const setTrackFilterType = (trackId: string, filterType: 'none' | 'lowpass' | 'highpass') => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) =>
+        t.id === trackId ? { ...t, filterType } : t
+      ),
+    }))
+  }
+
+  const setTrackFilterCutoff = (trackId: string, filterCutoff: number) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) =>
+        t.id === trackId ? { ...t, filterCutoff: Math.max(20, Math.min(20000, filterCutoff)) } : t
+      ),
+    }))
+  }
+
   const renameTrack = (trackId: string, name: string) => {
     applyProjectUpdate((prev) => ({
       ...prev,
@@ -1057,6 +1095,8 @@ function App() {
             solo: false,
             locked: false,
             transposeSemitones: 0,
+            filterType: 'none',
+            filterCutoff: 20000,
             clips: [],
           },
         ],
@@ -1767,6 +1807,31 @@ function App() {
                   disabled={isPlaying}
                 />
                 <span className="transpose-value">{track.transposeSemitones >= 0 ? '+' : ''}{track.transposeSemitones} st</span>
+              </label>
+              <label>
+                Filter
+                <select
+                  data-testid={`filter-type-${track.id}`}
+                  value={track.filterType}
+                  onChange={(e) => setTrackFilterType(track.id, e.target.value as 'none' | 'lowpass' | 'highpass')}
+                  disabled={isPlaying}
+                >
+                  <option value="none">None</option>
+                  <option value="lowpass">LPF</option>
+                  <option value="highpass">HPF</option>
+                </select>
+                {track.filterType !== 'none' && (
+                  <input
+                    data-testid={`filter-cutoff-${track.id}`}
+                    type="range"
+                    min={20}
+                    max={20000}
+                    step={1}
+                    value={track.filterCutoff}
+                    onChange={(e) => setTrackFilterCutoff(track.id, Number(e.target.value))}
+                    disabled={isPlaying}
+                  />
+                )}
               </label>
               <button
                 data-testid={`mute-${track.id}`}
