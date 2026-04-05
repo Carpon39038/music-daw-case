@@ -10,6 +10,7 @@ interface Clip {
   noteHz: number
   wave: WaveType
   muted?: boolean
+  gain?: number
 }
 
 interface Track {
@@ -273,6 +274,7 @@ declare global {
       firstTrackFirstClipStartBeat: number | null
       firstTrackFirstClipLengthBeats: number | null
       firstTrackFirstClipWave: WaveType | null
+      firstTrackFirstClipGain: number | null
       playheadBeat: number
       undoDepth: number
       redoDepth: number
@@ -569,7 +571,8 @@ function App() {
 
         gain.gain.setValueAtTime(0.0001, clipStart)
         const isTrackAudible = !track.muted && (!soloActive || track.solo)
-        const effectiveTrackVolume = isTrackAudible ? track.volume : 0
+        const clipGain = clip.gain ?? 1.0
+        const effectiveTrackVolume = isTrackAudible ? (track.volume * clipGain) : 0
         gain.gain.linearRampToValueAtTime(effectiveTrackVolume * 0.15, clipStart + 0.01)
         gain.gain.setValueAtTime(effectiveTrackVolume * 0.15, Math.max(clipStart + 0.01, clipEnd - 0.02))
         gain.gain.linearRampToValueAtTime(0.0001, clipEnd)
@@ -707,6 +710,7 @@ function App() {
       firstTrackFirstClipStartBeat: project.tracks[0]?.clips[0]?.startBeat ?? null,
       firstTrackFirstClipLengthBeats: project.tracks[0]?.clips[0]?.lengthBeats ?? null,
       firstTrackFirstClipWave: project.tracks[0]?.clips[0]?.wave ?? null,
+      firstTrackFirstClipGain: project.tracks[0]?.clips[0]?.gain ?? 1.0,
       playheadBeat,
       undoDepth: undoStackRef.current.length,
       redoDepth: redoStackRef.current.length,
@@ -1257,6 +1261,21 @@ function App() {
         return {
           ...t,
           clips: t.clips.map((c) => (c.id === clipId ? { ...c, startBeat: resolved } : c)),
+        }
+      }),
+    }))
+  }
+
+  const updateClipGain = (trackId: string, clipId: string, gain: number) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) =>
+            c.id === clipId ? { ...c, gain } : c
+          ),
         }
       }),
     }))
@@ -1821,6 +1840,20 @@ function App() {
                 <option value="sawtooth">Sawtooth</option>
                 <option value="triangle">Triangle</option>
               </select>
+            </div>
+            <div className="inspector-row">
+              <label htmlFor="selected-clip-gain">Gain</label>
+              <input
+                id="selected-clip-gain"
+                data-testid="selected-clip-gain-input"
+                type="number"
+                min={0}
+                max={2}
+                step={0.1}
+                value={selectedClipData.clip.gain ?? 1.0}
+                onChange={(e) => updateClipGain(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value))}
+                disabled={isPlaying || selectedClipData.track.locked}
+              />
             </div>
             <div className="inspector-row">
               <label htmlFor="selected-clip-length">Length (beats)</label>
