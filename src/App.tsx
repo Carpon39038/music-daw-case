@@ -19,6 +19,7 @@ interface Track {
   pan: number
   muted: boolean
   solo: boolean
+  color?: string
   locked: boolean
   transposeSemitones: number
   filterType: 'none' | 'lowpass' | 'highpass'
@@ -84,6 +85,7 @@ function createInitialProject(): ProjectState {
       pan: 0,
       muted: false,
       solo: false,
+            color: '#4a5568',
       locked: false,
       transposeSemitones: 0,
       filterType: 'none',
@@ -1051,6 +1053,14 @@ function App() {
     }))
   }
 
+  
+  const setTrackColor = (trackId: string, color: string) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => (t.id === trackId ? { ...t, color } : t)),
+    }))
+  }
+
   const toggleTrackMute = (trackId: string) => {
     applyProjectUpdate((prev) => ({
       ...prev,
@@ -1727,6 +1737,19 @@ function App() {
                 disabled={isPlaying}
               />
             </div>
+
+            <div className="inspector-row">
+              <label htmlFor="selected-track-color-input">Color</label>
+              <input
+                id="selected-track-color-input"
+                data-testid="selected-track-color-input"
+                type="color"
+                value={project.tracks.find((t) => t.id === selectedTrackId)?.color || '#4a5568'}
+                onChange={(e) => setTrackColor(selectedTrackId, e.target.value)}
+                disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked}
+              />
+            </div>
+
                         <div className="inspector-row" style={{ marginTop: '12px', gap: '8px', display: 'flex' }}>
               <button
                 data-testid="duplicate-track-btn"
@@ -1862,7 +1885,7 @@ function App() {
               }}
               aria-label={`Select ${track.name} track`}
             >
-              <div className="track-name">{track.name}</div>
+              <div className="track-name" style={{ color: track.color || "#e2e8f0" }}>{track.name}</div>
               <label>
                 Vol
                 <input
