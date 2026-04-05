@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import './App.css'
 
-type WaveType = 'sine' | 'square'
+type WaveType = 'sine' | 'square' | 'sawtooth' | 'triangle'
 
 interface Clip {
   id: string
@@ -1210,6 +1210,22 @@ function App() {
     })
   }
 
+  
+  const setSelectedClipWave = (trackId: string, clipId: string, wave: WaveType) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) =>
+            c.id === clipId ? { ...c, wave } : c
+          ),
+        }
+      }),
+    }))
+  }
+
   const setSelectedClipNote = (trackId: string, clipId: string, noteHz: number) => {
     applyProjectUpdate((prev) => ({
       ...prev,
@@ -1790,7 +1806,37 @@ function App() {
           <div className="inspector-group" data-testid="inspector-clip">
             <div className="inspector-subtitle">Clip</div>
             <div className="inspector-row">
-              <label htmlFor="selected-clip-note">Note (Hz)</label>
+              
+            <div className="inspector-row">
+              <label htmlFor="selected-clip-wave">Waveform</label>
+              <select
+                id="selected-clip-wave"
+                data-testid="selected-clip-wave-select"
+                value={selectedClipData.clip.wave}
+                onChange={(e) => setSelectedClipWave(selectedClipData.track.id, selectedClipData.clip.id, e.target.value as WaveType)}
+                disabled={isPlaying || selectedClipData.track.locked}
+              >
+                <option value="sine">Sine</option>
+                <option value="square">Square</option>
+                <option value="sawtooth">Sawtooth</option>
+                <option value="triangle">Triangle</option>
+              </select>
+            </div>
+            <div className="inspector-row">
+              <label htmlFor="selected-clip-length">Length (beats)</label>
+              <input
+                id="selected-clip-length"
+                data-testid="selected-clip-length-input"
+                type="number"
+                min={1}
+                max={32}
+                step={1}
+                value={selectedClipData.clip.lengthBeats}
+                onChange={(e) => updateClipLengthBeats(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value))}
+                disabled={isPlaying || selectedClipData.track.locked}
+              />
+            </div>
+            <label htmlFor="selected-clip-note">Note (Hz)</label>
               <input
                 id="selected-clip-note"
                 data-testid="selected-clip-note-input"
