@@ -9,6 +9,7 @@ interface Clip {
   lengthBeats: number
   noteHz: number
   wave: WaveType
+  muted?: boolean
 }
 
 interface Track {
@@ -282,6 +283,7 @@ declare global {
       loopLengthBeats: number
       loopRestartCount: number
       metronomeEnabled: boolean
+      mutedClipCount: number
       mutedTrackCount: number
       audibleTrackCount: number
       soloTrackCount: number
@@ -378,6 +380,7 @@ function App() {
     () => project.tracks.reduce((sum, t) => sum + t.clips.length, 0),
     [project.tracks],
   )
+  const mutedClipCount = useMemo(() => project.tracks.reduce((sum, t) => sum + t.clips.filter((c) => c.muted).length, 0), [project.tracks])
   const mutedTrackCount = useMemo(() => project.tracks.filter((t) => t.muted).length, [project.tracks])
   const soloTrackCount = useMemo(() => project.tracks.filter((t) => t.solo).length, [project.tracks])
   const lockedTrackCount = useMemo(() => project.tracks.filter((t) => t.locked).length, [project.tracks])
@@ -716,6 +719,7 @@ function App() {
       loopLengthBeats: effectiveTimelineBeats,
       loopRestartCount: loopRestartCountRef.current,
       metronomeEnabled,
+      mutedClipCount,
       mutedTrackCount,
       audibleTrackCount: project.tracks.filter((t) => !t.muted && (!soloActive || t.solo)).length,
       soloTrackCount,
@@ -766,7 +770,8 @@ function App() {
     totalDurationSec,
     loopEnabled,
     effectiveTimelineBeats,
-    mutedTrackCount,
+    
+      mutedTrackCount,
     soloTrackCount,
     soloActive,
     lockedTrackCount,
@@ -1006,6 +1011,20 @@ function App() {
           ? {
               ...t,
               pan: Math.max(-1, Math.min(1, pan)),
+            }
+          : t,
+      ),
+    }))
+  }
+
+  const toggleClipMute = (trackId: string, clipId: string) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) =>
+        t.id === trackId
+          ? {
+              ...t,
+              clips: t.clips.map((c) => (c.id === clipId ? { ...c, muted: !c.muted } : c)),
             }
           : t,
       ),
@@ -1743,6 +1762,14 @@ function App() {
               Duplicate target beat: {selectedClipData.duplicateStartBeat}
             </div>
             <button
+              data-testid="selected-clip-mute-btn"
+              onClick={() => toggleClipMute(selectedClipData.track.id, selectedClipData.clip.id)}
+              disabled={isPlaying || selectedClipData.track.locked}
+              aria-pressed={selectedClipData.clip.muted}
+            >
+              {selectedClipData.clip.muted ? 'Unmute Clip' : 'Mute Clip'}
+            </button>
+            <button
               data-testid="selected-clip-copy-btn"
               onClick={() => {
                 if (selectedClipData) copyClip(selectedClipData.track.id, selectedClipData.clip.id)
@@ -1906,7 +1933,7 @@ function App() {
                 <button
                   key={clip.id}
                   data-testid={`clip-${track.id}-${clip.id}`}
-                  className={`clip ${clip.wave} ${track.locked ? 'locked' : ''} ${selectedClipRef?.clipId === clip.id && selectedClipRef.trackId === track.id ? 'selected' : ''}`}
+                  className={`clip ${clip.wave} ${track.locked ? 'locked' : ''} ${clip.muted ? 'muted' : ''} ${selectedClipRef?.clipId === clip.id && selectedClipRef.trackId === track.id ? 'selected' : ''}`}
                   style={{
                     left: `${(clip.startBeat / TIMELINE_BEATS) * 100}%`,
                     width: `${(clip.lengthBeats / TIMELINE_BEATS) * 100}%`,
