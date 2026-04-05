@@ -280,3 +280,41 @@ h1 {
   color: #8ea2bf;
   font-size: 0.9rem;
 }
+
+.add-track-row {
+  padding: 8px 16px;
+  background: #152233;
+  border-top: 1px solid #2c3f59;
+  display: flex;
+  align-items: center;
+}
+
+.add-track-btn {
+  background: transparent;
+  border: 1px dashed #4b6a97;
+  color: #a4c2f4;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  font-weight: 500;
+}
+
+.add-track-btn:hover:not(:disabled) {
+  background: #1c2c42;
+  border-color: #6d93d3;
+  color: #c9defe;
+}
+
+.danger-btn {
+  background: #5d2a2a;
+  border: 1px solid #8f3b3b;
+  color: #ffcccc;
+}
+
+.danger-btn:hover:not(:disabled) {
+  background: #7a3535;
+  border-color: #ba4a4a;
+}
+

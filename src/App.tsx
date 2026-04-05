@@ -1014,6 +1014,42 @@ function App() {
     }))
   }
 
+  const addTrack = () => {
+    applyProjectUpdate((prev) => {
+      const newTrackId = `track-${Date.now()}`
+      return {
+        ...prev,
+        tracks: [
+          ...prev.tracks,
+          {
+            id: newTrackId,
+            name: `Track ${prev.tracks.length + 1}`,
+            volume: 0.7,
+            pan: 0,
+            muted: false,
+            solo: false,
+            locked: false,
+            transposeSemitones: 0,
+            clips: [],
+          },
+        ],
+      }
+    })
+  }
+
+  const deleteTrack = (trackId: string) => {
+    applyProjectUpdate((prev) => {
+      if (prev.tracks.length <= 1) return prev
+      return {
+        ...prev,
+        tracks: prev.tracks.filter((t) => t.id !== trackId),
+      }
+    })
+    if (selectedTrackId === trackId) {
+      setSelectedTrackId(null)
+    }
+  }
+
   const setSelectedClipNote = (trackId: string, clipId: string, noteHz: number) => {
     applyProjectUpdate((prev) => ({
       ...prev,
@@ -1529,6 +1565,16 @@ function App() {
                 disabled={isPlaying}
               />
             </div>
+            <div className="inspector-row" style={{ marginTop: '12px' }}>
+              <button
+                data-testid="delete-track-btn"
+                onClick={() => deleteTrack(selectedTrackId)}
+                disabled={isPlaying || project.tracks.length <= 1}
+                className="danger-btn"
+              >
+                Delete Track
+              </button>
+            </div>
           </div>
         ) : (
           <div className="inspector-empty" data-testid="inspector-track-empty">Select a track header to edit track name.</div>
@@ -1755,6 +1801,16 @@ function App() {
             </div>
           </div>
         ))}
+        <div className="add-track-row">
+          <button
+            data-testid="add-track-btn"
+            onClick={addTrack}
+            disabled={isPlaying}
+            className="add-track-btn"
+          >
+            + Add Track
+          </button>
+        </div>
       </section>
 
       <p className="hint">双击 clip 切换波形；Shift+双击或 Inspector 内 Duplicate Clip 可复制；⌘/Ctrl+双击或 Inspector 内 Split Clip 可对半切分；Alt+双击删除；⌘/Ctrl+C 复制选中 clip，⌘/Ctrl+V 粘贴到选中轨道；Lock 可冻结轨道编辑。播放时禁用新增 clip 与 BPM 修改。快捷键：Space 播放/暂停，S 停止，⌘/Ctrl+Z 撤销，⌘/Ctrl+Shift+Z 重做。</p>
