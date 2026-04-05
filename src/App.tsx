@@ -938,6 +938,26 @@ function App() {
     }
   }
 
+
+  const deleteClip = (trackId: string, clipId: string) => {
+    if (isPlaying) return
+    applyProjectUpdate((prev) => {
+      return {
+        ...prev,
+        tracks: prev.tracks.map((t) => {
+          if (t.id === trackId && !t.locked) {
+            return {
+              ...t,
+              clips: t.clips.filter((c) => c.id !== clipId),
+            }
+          }
+          return t
+        }),
+      }
+    })
+    setSelectedClipRef(null)
+  }
+
   const copyClip = (trackId: string, clipId: string) => {
     const track = project.tracks.find((t) => t.id === trackId)
     if (!track) return
@@ -1547,11 +1567,22 @@ function App() {
         }
         return
       }
+
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        if (selectedClipRef) {
+          const track = project.tracks.find((t) => t.id === selectedClipRef.trackId)
+          if (track && !track.locked && !isPlaying) {
+            event.preventDefault()
+            deleteClip(selectedClipRef.trackId, selectedClipRef.clipId)
+          }
+        }
+        return
+      }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [isPlaying, project])
+  }, [isPlaying, project, copyClip, deleteClip, pasteClip, pausePlayback, redo, selectedClipRef, selectedTrackId, startPlayback, stopPlayback, undo])
 
   return (
     <div className="app">
@@ -1768,6 +1799,13 @@ function App() {
               aria-pressed={selectedClipData.clip.muted}
             >
               {selectedClipData.clip.muted ? 'Unmute Clip' : 'Mute Clip'}
+            </button>
+            <button
+              data-testid="selected-clip-delete-btn"
+              onClick={() => deleteClip(selectedClipData.track.id, selectedClipData.clip.id)}
+              disabled={isPlaying || selectedClipData.track.locked}
+            >
+              Delete Clip
             </button>
             <button
               data-testid="selected-clip-copy-btn"
