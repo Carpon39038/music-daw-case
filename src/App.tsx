@@ -95,6 +95,108 @@ function createInitialProject(): ProjectState {
   }
 }
 
+// MIDI parsing and conversion utilities
+function midiNoteToFrequency(noteNumber: number): number {
+  return 440 * Math.pow(2, (noteNumber - 69) / 12)
+}
+
+function frequencyToMIDINote(frequency: number): number {
+  return Math.round(12 * Math.log2(frequency / 440) + 69)
+}
+
+function buildMIDIHeader(bpm: number): ArrayBuffer {
+  const midiHeader = new ArrayBuffer(14)
+  const headerView = new DataView(midiHeader)
+
+  // MIDI header: MThd
+  headerView.setUint8(0, 0x4D) // 'M'
+  headerView.setUint8(1, 0x54) // 'T'
+  headerView.setUint8(2, 0x68) // 'h'
+  headerView.setUint8(3, 0x64) // 'd'
+  headerView.setUint32(4, 6, false) // Header length
+  headerView.setUint16(8, 0, false) // Format type 0
+  headerView.setUint16(10, 1, false) // Number of tracks
+  headerView.setUint16(12, Math.round((60 / bpm) * 500000), false) // Time division (ticks per beat)
+
+  return midiHeader
+}
+
+function buildMIDITrack(clips: Clip[], bpm: number): ArrayBuffer {
+  // Build MIDI track data from clips
+  const ticksPerBeat = Math.round((60 / bpm) * 500000)
+  const events: Uint8Array[] = []
+
+  // Program change event
+  events.push(new Uint8Array([0x00, 0xC0, 0x00]))
+
+  for (const clip of clips) {
+    const startTick = Math.round(clip.startBeat * ticksPerBeat)
+    const endTick = Math.round((clip.startBeat + clip.lengthBeats) * ticksPerBeat)
+    const noteNumber = frequencyToMIDINote(clip.noteHz)
+
+    // Variable-length quantity encoding for MIDI ticks
+    const encodeVLQ = (value: number): Uint8Array => {
+      if (value < 0x80) return new Uint8Array([value])
+      const bytes: number[] = []
+      bytes.unshift(value & 0x7F)
+      value >>= 7
+      while (value > 0) {
+        bytes.unshift((value & 0x7F) | 0x80)
+        value >>= 7
+      }
+      return new Uint8Array(bytes)
+    }
+
+    // Note on event
+    events.push(new Uint8Array([...encodeVLQ(startTick), 0x90, noteNumber, 0x60]))
+    // Note off event
+    events.push(new Uint8Array([...encodeVLQ(endTick - startTick), 0x80, noteNumber, 0x00]))
+  }
+
+  // End of track
+  events.push(new Uint8Array([0x00, 0xFF, 0x2F, 0x00]))
+
+  // Calculate total track length
+  const trackDataLength = events.reduce((sum, e) => sum + e.length, 0)
+  const trackHeader = new Uint8Array([
+    0x4D, 0x54, 0x72, 0x6B, // 'MTrk'
+    (trackDataLength >> 24) & 0xFF,
+    (trackDataLength >> 16) & 0xFF,
+    (trackDataLength >> 8) & 0xFF,
+    trackDataLength & 0xFF,
+  ])
+
+  // Combine track header and events
+  const result = new Uint8Array(trackHeader.length + trackDataLength)
+  result.set(trackHeader, 0)
+  let offset = trackHeader.length
+  for (const event of events) {
+    result.set(event, offset)
+    offset += event.length
+  }
+
+  return result.buffer
+}
+
+function buildMIDIFromProject(tracks: Track[], bpm: number): ArrayBuffer {
+  // Combine all clips from all tracks into a single MIDI track
+  const allClips = tracks.flatMap((track, index) =>
+    track.clips.map((clip) => ({
+      ...clip,
+      startBeat: clip.startBeat + index * TIMELINE_BEATS, // Offset tracks to avoid overlap
+    })),
+  )
+
+  const header = buildMIDIHeader(bpm)
+  const trackData = buildMIDITrack(allClips, bpm)
+
+  const result = new Uint8Array(header.byteLength + trackData.byteLength)
+  result.set(new Uint8Array(header), 0)
+  result.set(new Uint8Array(trackData), header.byteLength)
+
+  return result.buffer
+}
+
 function isValidProjectState(value: unknown): value is ProjectState {
   if (!value || typeof value !== 'object') return false
   const p = value as Partial<ProjectState>
@@ -876,6 +978,92 @@ function App() {
     }))
   }
 
+  // MIDI import functionality
+  const handleMIDIImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const midiData = e.target?.result as ArrayBuffer
+        if (!midiData) return
+
+        // Import MIDI file and convert to clips
+        applyProjectUpdate((prev) => {
+          const newTracks = prev.tracks.map((track, index) => {
+            // Parse MIDI header to extract note events
+            const midiBytes = new Uint8Array(midiData)
+            const midiClips: { time: number; duration: number; noteNumber: number }[] = []
+
+            // Simple MIDI parser: find Note On/Off events in first track
+            let i = 22 // Skip header
+            const dataLength = midiBytes.length
+            while (i < dataLength - 2) {
+              // Look for Note On (0x90-0x9F) and Note Off (0x80-0x8F)
+              if (midiBytes[i] >= 0x90 && midiBytes[i] <= 0x9F && i + 2 < dataLength) {
+                const noteNum = midiBytes[i + 1]
+                // Find corresponding Note Off
+                let j = i + 3
+                while (j < dataLength - 2) {
+                  if ((midiBytes[j] === 0x80 || midiBytes[j] === midiBytes[i]) && midiBytes[j + 1] === noteNum) {
+                    midiClips.push({ time: i - 22, duration: j - i, noteNumber: noteNum })
+                    break
+                  }
+                  j++
+                }
+              }
+              i++
+            }
+
+            return {
+              ...track,
+              clips: [
+                ...track.clips,
+                ...midiClips.slice(index, index + 1).map((midiEvent, clipIndex) => ({
+                  id: `midi-import-${track.id}-${Date.now()}-${clipIndex}`,
+                  startBeat: Math.min(TIMELINE_BEATS - 1, Math.max(0, Math.round(midiEvent.noteNumber / 10))),
+                  lengthBeats: Math.max(1, Math.min(TIMELINE_BEATS, Math.ceil(midiEvent.duration / 3))),
+                  noteHz: midiNoteToFrequency(midiEvent.noteNumber),
+                  wave: (index % 2 === 0 ? 'sine' : 'square') as WaveType,
+                })),
+              ],
+            }
+          })
+
+          return {
+            ...prev,
+            tracks: newTracks,
+          }
+        })
+
+        // Reset file input
+        event.target.value = ''
+      } catch (error) {
+        console.error('Failed to import MIDI file:', error)
+      }
+    }
+    reader.readAsArrayBuffer(file)
+  }
+
+  const handleMIDIExport = () => {
+    try {
+      const midiData = buildMIDIFromProject(project.tracks, project.bpm)
+      const blob = new Blob([midiData], { type: 'application/octet-stream' })
+      const url = URL.createObjectURL(blob)
+      
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `project-${Date.now()}.mid`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Failed to export MIDI file:', error)
+    }
+  }
+
   const undo = () => {
     const prev = undoStackRef.current.pop()
     if (!prev) return
@@ -1114,6 +1302,35 @@ function App() {
           disabled={isPlaying}
         >
           Reset
+        </button>
+
+        <label>
+          Import MIDI
+          <input
+            data-testid="midi-import-input"
+            type="file"
+            accept=".mid,.midi"
+            onChange={handleMIDIImport}
+            disabled={isPlaying}
+            style={{ display: 'none' }}
+          />
+          <button
+            data-testid="midi-import-btn"
+            onClick={() => {
+              document.querySelector<HTMLInputElement>('[data-testid="midi-import-input"]')?.click()
+            }}
+            disabled={isPlaying}
+          >
+            Import MIDI
+          </button>
+        </label>
+
+        <button
+          data-testid="midi-export-btn"
+          onClick={handleMIDIExport}
+          disabled={isPlaying}
+        >
+          Export MIDI
         </button>
 
         <label>
