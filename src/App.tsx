@@ -1981,6 +1981,7 @@ function App() {
     <div className="app">
       <h1>Music DAW Case (Harness MVP)</h1>
 
+      <div className="top-bar" style={{ display: "flex", gap: "24px", alignItems: "flex-start", marginBottom: "16px", padding: "12px", background: "#0f1724", borderRadius: "10px", border: "1px solid #2a3f5b" }}>
       <section className="transport" data-testid="transport" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div className="transport-primary" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button data-testid="play-btn" onClick={startPlayback} disabled={isPlaying}>Play</button>
@@ -2072,7 +2073,9 @@ function App() {
           </div>
         </details>
       </section>
+      </div>
 
+      <div className="workspace" style={{ display: "flex", gap: "16px", alignItems: "flex-start", marginTop: "16px", width: "100%" }}>
       <section className="inspector" data-testid="inspector-panel">
         <div className="inspector-title">Inspector</div>
         {selectedTrackId ? (
@@ -2938,7 +2941,7 @@ function App() {
         )}
       </section>
 
-      <section className="timeline">
+      <section className="timeline" style={{ flex: 1, minWidth: 0, overflowX: "auto" }}>
         {project.tracks.map((track) => (
           <div className="track-row" key={track.id}>
             <div
@@ -3044,6 +3047,7 @@ function App() {
           </button>
         </div>
       </section>
+      </div>
 
       <p className="hint">双击 clip 切换波形；Shift+双击或 Inspector 内 Duplicate Clip 可复制；⌘/Ctrl+双击或 Inspector 内 Split Clip 可对半切分；Alt+双击删除；⌘/Ctrl+C 复制选中 clip，⌘/Ctrl+V 粘贴到选中轨道；Lock 可冻结轨道编辑。播放时禁用新增 clip 与 BPM 修改。快捷键：Space 播放/暂停，S 停止，⌘/Ctrl+Z 撤销，⌘/Ctrl+Shift+Z 重做。</p>
     </div>

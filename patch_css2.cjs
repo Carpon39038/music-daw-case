@@ -1,11 +1,7 @@
 const fs = require('fs');
 let css = fs.readFileSync('src/App.css', 'utf-8');
 
-if (!css.includes('.track-header.selected')) {
-  console.log("No track header selected?");
-}
-
-// Enhance selected states
+// 1. Highlight selected track header
 css = css.replace(
   /\.track-header\.selected \{([^}]*)\}/,
   `.track-header.selected {
@@ -16,26 +12,27 @@ css = css.replace(
 }`
 );
 
+// 2. Highlight selected clip
 if (css.includes('.clip.selected')) {
   css = css.replace(
     /\.clip\.selected \{([^}]*)\}/,
     `.clip.selected {
   border: 2px solid #fff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8), inset 0 0 4px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8), inset 0 0 4px rgba(255, 255, 255, 0.4);
   z-index: 10;
+  filter: brightness(1.2);
 }`
   );
 } else {
-  css += `
-.clip.selected {
+  css += `\n.clip.selected {
   border: 2px solid #fff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8), inset 0 0 4px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8), inset 0 0 4px rgba(255, 255, 255, 0.4);
   z-index: 10;
-}
-`;
+  filter: brightness(1.2);
+}\n`;
 }
 
-// Hide scrollbars for cleaner timeline
+// 3. Make the timeline cleaner
 css += `
 .timeline::-webkit-scrollbar {
   height: 8px;
@@ -43,6 +40,17 @@ css += `
 .timeline::-webkit-scrollbar-thumb {
   background: #2d3748;
   border-radius: 4px;
+}
+.track-header-main {
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+}
+.track-header button {
+  transition: all 0.2s ease;
+}
+.track-header button:hover {
+  filter: brightness(1.2);
 }
 `;
 

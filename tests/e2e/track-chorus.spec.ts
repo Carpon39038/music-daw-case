@@ -8,10 +8,7 @@ test.describe('Track Chorus Effect', () => {
     await page.click('text=Track 2');
 
     // Expand effects
-    const effectsHeader = page.locator('.inspector-section h3:has-text("Effects")');
-    if (await effectsHeader.count() > 0) {
-      await effectsHeader.click();
-    }
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: any) => d.open = true));
 
     const chorusCheckbox = page.getByTestId('chorus-enabled-track-2');
     await expect(chorusCheckbox).not.toBeChecked();
