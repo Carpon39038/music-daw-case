@@ -28,6 +28,7 @@ interface Track {
   delayEnabled?: boolean
   delayTime?: number
   delayFeedback?: number
+  distortionEnabled?: boolean
   compressorEnabled?: boolean
   compressorThreshold?: number
   compressorRatio?: number
@@ -104,6 +105,7 @@ function createInitialProject(): ProjectState {
       filterType: 'none',
       filterCutoff: 20000,
       reverbEnabled: false,
+      distortionEnabled: false,
       reverbMix: 0.3,
       reverbDecay: 2,
       clips: [
@@ -279,6 +281,7 @@ function loadInitialProject(): ProjectState {
         compressorThreshold: track.compressorThreshold ?? -24,
         compressorRatio: track.compressorRatio ?? 12,
         reverbEnabled: track.reverbEnabled ?? false,
+        distortionEnabled: track.distortionEnabled ?? false,
         reverbMix: track.reverbMix ?? 0.3,
         reverbDecay: track.reverbDecay ?? 2,
         filterCutoff: track.filterCutoff ?? 20000,
@@ -337,6 +340,7 @@ declare global {
       pannedTrackCount: number
       filteredTrackCount: number
       reverbEnabledTrackCount: number
+      distortionEnabledTrackCount: number
       firstTrackReverbMix: number | null
       firstTrackReverbDecay: number | null
       firstTrackTransposeSemitones: number | null
@@ -436,6 +440,7 @@ function App() {
     [project.tracks],
   )
   const filteredTrackCount = useMemo(() => project.tracks.filter((t) => t.filterType !== 'none').length, [project.tracks])
+  const distortionEnabledTrackCount = useMemo(() => project.tracks.filter((t) => t.distortionEnabled).length, [project.tracks])
   const reverbEnabledTrackCount = useMemo(() => project.tracks.filter((t) => t.reverbEnabled).length, [project.tracks])
   const pannedTrackCount = useMemo(
     () => project.tracks.filter((t) => Math.abs(t.pan) > 0.001).length,
@@ -655,6 +660,24 @@ function App() {
           delayNode.connect(master)
         }
 
+        if (track.distortionEnabled) {
+          const distortion = ctx.createWaveShaper()
+          function makeDistortionCurve(amount = 50) {
+            const k = typeof amount === 'number' ? amount : 50
+            const n_samples = 44100
+            const curve = new Float32Array(n_samples)
+            const deg = Math.PI / 180
+            for (let i = 0; i < n_samples; ++i) {
+              const x = (i * 2) / n_samples - 1
+              curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x))
+            }
+            return curve
+          }
+          distortion.curve = makeDistortionCurve(400)
+          distortion.oversample = '4x'
+          trackOutput.connect(distortion)
+          trackOutput = distortion
+        }
         if (track.reverbEnabled) {
           const convolver = ctx.createConvolver()
           const decay = Math.max(0.1, track.reverbDecay ?? 2)
@@ -813,6 +836,7 @@ function App() {
       pannedTrackCount,
       filteredTrackCount,
       reverbEnabledTrackCount,
+      distortionEnabledTrackCount,
       firstTrackReverbMix: project.tracks[0]?.reverbMix ?? null,
       firstTrackReverbDecay: project.tracks[0]?.reverbDecay ?? null,
       firstTrackTransposeSemitones: project.tracks[0]?.transposeSemitones ?? null,
@@ -865,6 +889,7 @@ function App() {
     transposedTrackCount,
     pannedTrackCount,
     reverbEnabledTrackCount,
+      distortionEnabledTrackCount,
     masterVolume,
     selectedTrackId,
     selectedClipData,
@@ -1233,6 +1258,7 @@ function App() {
             filterType: 'none',
             filterCutoff: 20000,
             reverbEnabled: false,
+      distortionEnabled: false,
             reverbMix: 0.3,
             reverbDecay: 2,
             clips: [],
@@ -2364,6 +2390,26 @@ function App() {
                       />
                     </>
                   )}
+                </div>
+                <div className="track-distortion-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      data-testid={`track-distortion-toggle-${track.id}`}
+                      checked={!!track.distortionEnabled}
+                      disabled={isPlaying}
+                      onChange={(e) => {
+                        applyProjectUpdate((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                            t.id === track.id ? { ...t, distortionEnabled: e.target.checked } : t
+                          ),
+                        }))
+                      }}
+                      style={{ margin: 0, marginRight: '4px' }}
+                    />
+                    Distortion
+                  </label>
                 </div>
 
                 <select
