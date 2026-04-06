@@ -4,6 +4,7 @@ import './App.css'
 type WaveType = 'sine' | 'square' | 'sawtooth' | 'triangle'
 
 interface Clip {
+  name?: string
   id: string
   startBeat: number
   lengthBeats: number
@@ -1267,6 +1268,20 @@ function App() {
     }))
   }
 
+  const setClipName = (trackId: string, clipId: string, name: string) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) =>
+        t.id === trackId
+          ? {
+              ...t,
+              clips: t.clips.map((c) => (c.id === clipId ? { ...c, name } : c)),
+            }
+          : t,
+      ),
+    }))
+  }
+
   const updateClipGain = (trackId: string, clipId: string, gain: number) => {
     applyProjectUpdate((prev) => ({
       ...prev,
@@ -1843,7 +1858,19 @@ function App() {
             <div className="inspector-row">
               
             <div className="inspector-row">
-              <label htmlFor="selected-clip-wave">Waveform</label>
+              <div className="inspector-row">
+              <label htmlFor="selected-clip-name">Name</label>
+              <input
+                id="selected-clip-name"
+                data-testid="selected-clip-name-input"
+                type="text"
+                placeholder="Custom Clip Name"
+                value={selectedClipData.clip.name ?? ''}
+                onChange={(e) => setClipName(selectedClipData.track.id, selectedClipData.clip.id, e.target.value)}
+                disabled={isPlaying || selectedClipData.track.locked}
+              />
+            </div>
+            <label htmlFor="selected-clip-wave">Waveform</label>
               <select
                 id="selected-clip-wave"
                 data-testid="selected-clip-wave-select"
@@ -2137,8 +2164,7 @@ function App() {
                   }}
                 >
                   <span className="clip-label">
-                    {clip.wave} {Math.round(clip.noteHz)}Hz · {clip.lengthBeats} beat
-                    {clip.lengthBeats > 1 ? 's' : ''}
+                    {clip.name ? clip.name : `${clip.wave} ${Math.round(clip.noteHz)}Hz · ${clip.lengthBeats} beat${clip.lengthBeats > 1 ? 's' : ''}`}
                   </span>
                   <span
                     className="clip-resize-handle"
