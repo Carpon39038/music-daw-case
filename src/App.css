@@ -353,3 +353,22 @@ h1 {
 }
 
 .track-header-main { display: flex; align-items: center; gap: 10px; width: 100%; }
+
+details.inspector-group summary {
+  list-style: none;
+  outline: none;
+  user-select: none;
+}
+details.inspector-group summary::-webkit-details-marker {
+  display: none;
+}
+details.inspector-group summary::before {
+  content: '▶';
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 0.8em;
+  transition: transform 0.2s;
+}
+details.inspector-group[open] summary::before {
+  transform: rotate(90deg);
+}

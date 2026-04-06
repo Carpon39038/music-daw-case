@@ -2119,8 +2119,8 @@ function App() {
       <section className="inspector" data-testid="inspector-panel">
         <div className="inspector-title">Inspector</div>
         {selectedTrackId ? (
-          <div className="inspector-group" data-testid="inspector-track">
-            <div className="inspector-subtitle">Track</div>
+          <details className="inspector-group" data-testid="inspector-track" open>
+            <summary className="inspector-subtitle" style={{cursor: "pointer"}}>Track Settings</summary>
             <div className="inspector-row">
               <label htmlFor="selected-track-name-input">Name</label>
               <input
@@ -2176,14 +2176,14 @@ function App() {
                 Delete Track
               </button>
             </div>
-          </div>
+          </details>
         ) : (
           <div className="inspector-empty" data-testid="inspector-track-empty">Select a track header to edit track name.</div>
         )}
 
         {selectedClipData ? (
-          <div className="inspector-group" data-testid="inspector-clip">
-            <div className="inspector-subtitle">Clip</div>
+          <details className="inspector-group" data-testid="inspector-clip" open>
+            <summary className="inspector-subtitle" style={{cursor: "pointer"}}>Clip Settings</summary>
             <div className="inspector-row">
               
             <div className="inspector-row">
@@ -2366,7 +2366,7 @@ function App() {
             >
               Split Clip
             </button>
-          </div>
+          </details>
         ) : (
           <div className="inspector-empty" data-testid="inspector-clip-empty">Select a clip to edit note pitch.</div>
         )}
