@@ -13,6 +13,7 @@ interface Clip {
   muted?: boolean
   gain?: number
   transposeSemitones?: number
+  color?: string
 }
 
 interface Track {
@@ -1286,6 +1287,26 @@ function App() {
     }))
   }
 
+  const setClipColor = (trackId: string, clipId: string, color: string) => {
+    if (isPlaying) return
+    setProject((prev) => {
+      undoStackRef.current.push(structuredClone(prev))
+      if (undoStackRef.current.length > 100) undoStackRef.current.shift()
+      redoStackRef.current = []
+      return {
+        ...prev,
+        tracks: prev.tracks.map((t) =>
+          t.id === trackId
+            ? {
+                ...t,
+                clips: t.clips.map((c) => (c.id === clipId ? { ...c, color } : c)),
+              }
+            : t,
+        ),
+      }
+    })
+  }
+
   const setClipName = (trackId: string, clipId: string, name: string) => {
     applyProjectUpdate((prev) => ({
       ...prev,
@@ -1877,6 +1898,16 @@ function App() {
               
             <div className="inspector-row">
               <div className="inspector-row">
+              <label htmlFor="selected-clip-color">Color</label>
+              <input
+                id="selected-clip-color"
+                data-testid="selected-clip-color-picker"
+                type="color"
+                value={selectedClipData.clip.color || '#4299e1'}
+                onChange={(e) => setClipColor(selectedClipData.track.id, selectedClipData.clip.id, e.target.value)}
+              />
+            </div>
+            <div className="inspector-row">
               <label htmlFor="selected-clip-name">Name</label>
               <input
                 id="selected-clip-name"
