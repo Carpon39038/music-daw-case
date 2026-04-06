@@ -32,6 +32,9 @@ interface Track {
   compressorEnabled?: boolean
   compressorThreshold?: number
   compressorRatio?: number
+  chorusEnabled?: boolean
+  chorusDepth?: number
+  chorusRate?: number
   reverbEnabled?: boolean
   reverbMix?: number
   reverbDecay?: number
@@ -241,6 +244,9 @@ function isValidProjectState(value: unknown): value is ProjectState {
       (t.compressorEnabled !== undefined && typeof t.compressorEnabled !== 'boolean') ||
       (t.compressorThreshold !== undefined && typeof t.compressorThreshold !== 'number') ||
       (t.compressorRatio !== undefined && typeof t.compressorRatio !== 'number') ||
+      (t.chorusEnabled !== undefined && typeof t.chorusEnabled !== 'boolean') ||
+      (t.chorusDepth !== undefined && typeof t.chorusDepth !== 'number') ||
+      (t.chorusRate !== undefined && typeof t.chorusRate !== 'number') ||
       (t.reverbEnabled !== undefined && typeof t.reverbEnabled !== 'boolean') ||
       (t.reverbMix !== undefined && typeof t.reverbMix !== 'number') ||
       (t.reverbDecay !== undefined && typeof t.reverbDecay !== 'number') ||
@@ -280,6 +286,9 @@ function loadInitialProject(): ProjectState {
         compressorEnabled: track.compressorEnabled ?? false,
         compressorThreshold: track.compressorThreshold ?? -24,
         compressorRatio: track.compressorRatio ?? 12,
+        chorusEnabled: track.chorusEnabled ?? false,
+        chorusDepth: track.chorusDepth ?? 0.5,
+        chorusRate: track.chorusRate ?? 1.5,
         reverbEnabled: track.reverbEnabled ?? false,
         distortionEnabled: track.distortionEnabled ?? false,
         reverbMix: track.reverbMix ?? 0.3,
@@ -635,6 +644,38 @@ function App() {
         
         let trackOutput: AudioNode = panner;
         
+        if (track.chorusEnabled) {
+          const chorus = ctx.createDelay();
+          chorus.delayTime.value = 0.03;
+          
+          const depth = ctx.createGain();
+          depth.gain.value = track.chorusDepth ?? 0.5;
+          
+          const lfo = ctx.createOscillator();
+          lfo.type = 'sine';
+          lfo.frequency.value = track.chorusRate ?? 1.5;
+          
+          lfo.connect(depth);
+          depth.connect(chorus.delayTime);
+          lfo.start(clipStart);
+          lfo.stop(clipEnd);
+          
+          const dryGain = ctx.createGain();
+          dryGain.gain.value = 1;
+          const wetGain = ctx.createGain();
+          wetGain.gain.value = 0.5;
+          
+          trackOutput.connect(dryGain);
+          trackOutput.connect(chorus);
+          chorus.connect(wetGain);
+          
+          const mix = ctx.createGain();
+          dryGain.connect(mix);
+          wetGain.connect(mix);
+          
+          trackOutput = mix;
+        }
+
         if (track.compressorEnabled) {
           const compressor = ctx.createDynamicsCompressor();
           compressor.threshold.value = track.compressorThreshold ?? -24;
@@ -2205,6 +2246,71 @@ function App() {
               </label>
               <label>
                 Filter
+                <div className="track-chorus-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                    <input
+                      type="checkbox"
+                      data-testid={`chorus-enabled-${track.id}`}
+                      checked={!!track.chorusEnabled}
+                      onChange={(e) => {
+                        setProject((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                            t.id === track.id ? { ...t, chorusEnabled: e.target.checked } : t
+                          ),
+                        }))
+                      }}
+                    />
+                    Chorus
+                  </label>
+                  
+                  {track.chorusEnabled && (
+                    <>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af', marginLeft: '8px' }}>
+                        Rate
+                        <input
+                          type="range"
+                          data-testid={`chorus-rate-${track.id}`}
+                          min="0.1"
+                          max="10"
+                          step="0.1"
+                          value={track.chorusRate ?? 1.5}
+                          style={{ width: '40px' }}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value)
+                            setProject((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                                t.id === track.id ? { ...t, chorusRate: val } : t
+                              ),
+                            }))
+                          }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                        Depth
+                        <input
+                          type="range"
+                          data-testid={`chorus-depth-${track.id}`}
+                          min="0.1"
+                          max="5"
+                          step="0.1"
+                          value={track.chorusDepth ?? 0.5}
+                          style={{ width: '40px' }}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value)
+                            setProject((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                                t.id === track.id ? { ...t, chorusDepth: val } : t
+                              ),
+                            }))
+                          }}
+                        />
+                      </label>
+                    </>
+                  )}
+                </div>
                 <div className="track-compressor-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
                   <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
                     <input
