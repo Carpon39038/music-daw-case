@@ -24,6 +24,9 @@ interface Track {
   solo: boolean
   color?: string
   locked: boolean
+  delayEnabled?: boolean
+  delayTime?: number
+  delayFeedback?: number
   transposeSemitones: number
   filterType: 'none' | 'lowpass' | 'highpass'
   filterCutoff: number
@@ -585,12 +588,27 @@ function App() {
 
         osc.connect(gain)
         gain.connect(panner)
+        
+        let trackOutput: AudioNode = panner;
+        
         if (track.filterType && track.filterType !== 'none') {
           panner.connect(filter)
-          filter.connect(master)
-        } else {
-          panner.connect(master)
+          trackOutput = filter;
         }
+        
+        if (track.delayEnabled) {
+          const delayNode = ctx.createDelay(5.0)
+          delayNode.delayTime.value = track.delayTime ?? 0.3
+          const feedbackGain = ctx.createGain()
+          feedbackGain.gain.value = track.delayFeedback ?? 0.4
+          
+          trackOutput.connect(delayNode)
+          delayNode.connect(feedbackGain)
+          feedbackGain.connect(delayNode)
+          delayNode.connect(master)
+        }
+        
+        trackOutput.connect(master)
 
         osc.start(clipStart)
         osc.stop(clipEnd)
@@ -2066,6 +2084,69 @@ function App() {
               </label>
               <label>
                 Filter
+                <div className="track-delay-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      data-testid={`delay-enable-${track.id}`}
+                      checked={!!track.delayEnabled}
+                      disabled={isPlaying}
+                      onChange={(e) => {
+                        applyProjectUpdate((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                            t.id === track.id ? { ...t, delayEnabled: e.target.checked } : t
+                          ),
+                        }))
+                      }}
+                      style={{ margin: 0, marginRight: '4px' }}
+                    />
+                    Delay
+                  </label>
+                  {track.delayEnabled && (
+                    <>
+                      <input
+                        type="range"
+                        min="0.1"
+                        max="2.0"
+                        step="0.1"
+                        data-testid={`delay-time-${track.id}`}
+                        value={track.delayTime ?? 0.3}
+                        disabled={isPlaying}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value)
+                          applyProjectUpdate((prev) => ({
+                            ...prev,
+                            tracks: prev.tracks.map((t) =>
+                              t.id === track.id ? { ...t, delayTime: val } : t
+                            ),
+                          }))
+                        }}
+                        style={{ width: '40px' }}
+                      />
+                      <input
+                        type="range"
+                        min="0"
+                        max="0.9"
+                        step="0.1"
+                        data-testid={`delay-fb-${track.id}`}
+                        value={track.delayFeedback ?? 0.4}
+                        disabled={isPlaying}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value)
+                          applyProjectUpdate((prev) => ({
+                            ...prev,
+                            tracks: prev.tracks.map((t) =>
+                              t.id === track.id ? { ...t, delayFeedback: val } : t
+                            ),
+                          }))
+                        }}
+                        style={{ width: '40px' }}
+                      />
+                    </>
+                  )}
+                </div>
+
                 <select
                   data-testid={`filter-type-${track.id}`}
                   value={track.filterType}
