@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('clipboard copy/paste', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
     await page.waitForSelector('[data-testid="transport"]')
     // Reset project
     await page.click('[data-testid="reset-project-btn"]')

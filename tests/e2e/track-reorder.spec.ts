@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('Track Reordering', () => {
   test('should move track up and down', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // Get track names initially
     const initialNames = await page.locator('.track-name').allInnerTexts()

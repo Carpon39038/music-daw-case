@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Clip Fades', () => {
   test('should allow setting and persisting clip fadeIn and fadeOut via inspector', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));;
   await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
 
     // Select the first track and its first clip

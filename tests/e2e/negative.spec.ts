@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 test('play button is disabled while playing', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
   const playBtn = page.getByTestId('play-btn')
   const pauseBtn = page.getByTestId('pause-btn')
   
@@ -18,7 +18,7 @@ test('play button is disabled while playing', async ({ page }) => {
 })
 
 test('cannot undo or redo while playing', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
   
   // Make a change to enable Undo
   const addTrackBtn = page.getByTestId('add-track-btn')
@@ -39,7 +39,7 @@ test('cannot undo or redo while playing', async ({ page }) => {
 })
 
   test('negative: should reject invalid master volume input by fallback', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
     
     // Evaluate to override master volume forcibly into negative
     await page.evaluate(() => {
@@ -60,7 +60,7 @@ test('cannot undo or redo while playing', async ({ page }) => {
   })
 
   test('negative: should ignore duplicate clip action when track is locked', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
     
     // Lock track 1
     const lockBtn = page.locator('[data-testid="lock-track-1"]')

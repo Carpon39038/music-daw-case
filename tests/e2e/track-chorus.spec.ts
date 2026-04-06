@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Track Chorus Effect', () => {
   test('should toggle track chorus effect', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));;
   await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
     await page.click('button:has-text("Add Track")');
     await page.click('text=Track 2');

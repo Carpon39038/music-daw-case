@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('UI/UX interaction improvements', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));;
   await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
 
   // Metronome button should have visual toggle state

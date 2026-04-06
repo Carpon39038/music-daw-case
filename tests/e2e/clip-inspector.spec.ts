@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Clip Inspector', () => {
   test('can edit clip waveform and length from inspector', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // Wait for the app to load
     await expect(page.locator('.app')).toBeVisible()

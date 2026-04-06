@@ -2431,6 +2431,9 @@ function App() {
                 />
                 <span className="transpose-value">{track.transposeSemitones >= 0 ? '+' : ''}{track.transposeSemitones} st</span>
               </label>
+              <details className="track-effects-details" style={{ marginTop: '8px' }}>
+                <summary style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', color: '#a0aec0' }}>Effects & Filters</summary>
+                <div style={{ padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px', marginTop: '4px' }}>
               <label>
                 Filter
                 <div className="track-chorus-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
@@ -2994,6 +2997,8 @@ function App() {
                 )}
                             </div>
               </label>
+              </div>
+              </details>
               <button
                 data-testid={`mute-${track.id}`}
                 onClick={() => toggleTrackMute(track.id)}

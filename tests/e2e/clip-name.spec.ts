@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Clip Name Feature', () => {
   test('should allow setting and displaying a custom clip name', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // 1. Add a clip on Track 1
     await page.getByTestId('add-clip-track-1').click()

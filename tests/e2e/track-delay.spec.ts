@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Track Delay e2e', () => {
   test('should toggle delay and adjust parameters', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // Wait for the.track-header header to load
     await page.waitForSelector('.track-header');

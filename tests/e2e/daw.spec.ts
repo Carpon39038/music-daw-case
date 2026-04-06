@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('DAW MVP e2e', () => {
   test('transport + clip add/remove + playback debug state', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     await expect(page.getByRole('heading', { name: /Music DAW.*Case/i })).toBeVisible()
 
@@ -38,7 +38,7 @@ test.describe('DAW MVP e2e', () => {
   })
 
   test('bpm and volume controls are editable when stopped', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const bpmInput = page.getByTestId('bpm-input')
     await bpmInput.fill('140')
@@ -51,7 +51,7 @@ test.describe('DAW MVP e2e', () => {
   })
 
   test('editing guards should apply during playback and restore after stop', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const bpmInput = page.getByTestId('bpm-input')
     const addClipBtn = page.getByTestId('add-clip-track-1')
@@ -74,7 +74,7 @@ test.describe('DAW MVP e2e', () => {
   })
 
   test('transport rapid toggles should end in a stable stopped state', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const playBtn = page.getByTestId('play-btn')
     const pauseBtn = page.getByTestId('pause-btn')
@@ -94,7 +94,7 @@ test.describe('DAW MVP e2e', () => {
   })
 
   test('bpm invalid input should fallback to default guard value', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const bpmInput = page.getByTestId('bpm-input')
     await bpmInput.fill('')
@@ -106,7 +106,7 @@ test.describe('DAW MVP e2e', () => {
   })
 
   test('clip drag should snap to beat and clamp within both timeline bounds', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const clip = page.locator('[data-testid^="clip-track-1-"]').first()
     const beforeLeft = await clip.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
@@ -149,7 +149,7 @@ test.describe('DAW MVP e2e', () => {
   })
 
   test('clip drag position should be reflected in playback schedule state', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const clip = page.locator('[data-testid^="clip-track-1-"]').first()
     const box = await clip.boundingBox()
@@ -173,7 +173,7 @@ test.describe('DAW MVP e2e', () => {
   })
 
   test('clip drag should revert on Escape (cancel consistency)', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const clip = page.locator('[data-testid^="clip-track-1-"]').first()
     const beforeLeft = await clip.evaluate((el) => Number.parseFloat((el as HTMLElement).style.left))
@@ -194,7 +194,7 @@ test.describe('DAW MVP e2e', () => {
   })
 
   test('undo/redo should restore clip add operation state', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const before = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
 
@@ -212,7 +212,7 @@ test.describe('DAW MVP e2e', () => {
   })
 
   test('project should persist clip edits across reload', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const before = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
     await page.getByTestId('add-clip-track-1').click()
@@ -228,7 +228,7 @@ test.describe('DAW MVP e2e', () => {
   })
 
   test('clip drag should avoid overlap by auto-resolving to nearest free slot', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const clipList = page.locator('[data-testid^="clip-track-1-"]')
     await expect(clipList).toHaveCount(1)
@@ -260,7 +260,7 @@ test.describe('DAW MVP e2e', () => {
   })
 
   test('audio runtime should clear scheduled nodes on pause and stop', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     await page.getByTestId('play-btn').click()
     await expect(page.getByTestId('pause-btn')).toBeEnabled()

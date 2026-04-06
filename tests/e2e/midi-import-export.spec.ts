@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('MIDI Import/Export Functionality', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
   })
 
   test('should render MIDI import and export buttons in transport', async ({ page }) => {

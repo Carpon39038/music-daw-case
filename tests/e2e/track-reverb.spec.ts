@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Track Reverb e2e', () => {
   test('should toggle reverb and adjust mix and decay parameters', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     await page.waitForSelector('.track-header');
     await page.locator('.track-header').first().click();
@@ -45,7 +45,7 @@ test.describe('Track Reverb e2e', () => {
   })
 
   test('should expose reverb state via debug interface', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     await page.waitForSelector('.track-header');
     await page.locator('.track-header').first().click();
