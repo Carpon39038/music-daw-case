@@ -56,6 +56,7 @@ const TRACK_COUNT = 4
 const TIMELINE_BEATS = 16
 const PROJECT_STORAGE_KEY = 'music-daw-case.project.v1'
 const MASTER_VOLUME_KEY = 'music-daw-case.masterVolume.v1'
+const MASTER_EQ_KEY = 'music-daw-case.masterEQ.v1'
 
 function semitoneToRatio(semitones: number) {
   return 2 ** (semitones / 12)
@@ -341,6 +342,7 @@ declare global {
       redoDepth: number
       masterLevel: number
       masterVolume: number
+      masterEQ: { low: number; mid: number; high: number }
       audioContextState: AudioContextState | 'uninitialized'
       beatDurationSec: number
       timelineDurationSec: number
@@ -397,6 +399,14 @@ function App() {
     } catch {
       return 0.8
     }
+  })
+  const [masterEQ, setMasterEQ] = useState(() => {
+    if (typeof window === 'undefined') return { low: 0, mid: 0, high: 0 }
+    try {
+      const stored = window.localStorage.getItem(MASTER_EQ_KEY)
+      if (stored) return JSON.parse(stored)
+    } catch { /* ignore */ }
+    return { low: 0, mid: 0, high: 0 }
   })
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [loopLengthBeats, setLoopLengthBeats] = useState(8)
@@ -503,6 +513,11 @@ function App() {
       // ignore
     }
   }, [masterVolume])
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(MASTER_EQ_KEY, JSON.stringify(masterEQ))
+    } catch { /* ignore */ }
+  }, [masterEQ])
 
   const ensureAudio = async () => {
     if (!audioCtxRef.current) {
@@ -891,6 +906,7 @@ function App() {
       clipboardSourceTrackId: clipboard?.sourceTrackId ?? null,
       masterLevel: masterLevelRef.current,
       masterVolume,
+    masterEQ,
       audioContextState: audioCtxRef.current?.state ?? 'uninitialized',
       beatDurationSec: beatDuration,
       timelineDurationSec: totalDurationSec,
@@ -965,9 +981,13 @@ function App() {
       distortionEnabledTrackCount,
     tremoloEnabledTrackCount,
     masterVolume,
+      masterEQ,
     selectedTrackId,
     selectedClipData,
     clipboard,
+    filteredTrackCount,
+    metronomeEnabled,
+    mutedClipCount,
   ])
 
   useEffect(() => {
@@ -1986,6 +2006,18 @@ function App() {
       </section>
 
       <section className="meter">
+        <div className="master-eq-controls" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span>Master EQ:</span>
+          <label>L: 
+            <input type="range" min="-12" max="12" value={masterEQ.low} onChange={e => setMasterEQ((prev: { low: number; mid: number; high: number }) => ({...prev, low: Number(e.target.value)}))} data-testid="master-eq-low" />
+          </label>
+          <label>M: 
+            <input type="range" min="-12" max="12" value={masterEQ.mid} onChange={e => setMasterEQ((prev: { low: number; mid: number; high: number }) => ({...prev, mid: Number(e.target.value)}))} data-testid="master-eq-mid" />
+          </label>
+          <label>H: 
+            <input type="range" min="-12" max="12" value={masterEQ.high} onChange={e => setMasterEQ((prev: { low: number; mid: number; high: number }) => ({...prev, high: Number(e.target.value)}))} data-testid="master-eq-high" />
+          </label>
+        </div>
         <div className="meter-label">Master Output Meter</div>
         <canvas ref={meterCanvasRef} width={320} height={16} />
       </section>
