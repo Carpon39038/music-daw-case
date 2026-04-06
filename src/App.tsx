@@ -34,6 +34,10 @@ interface Track {
   flangerSpeed?: number
   flangerDepth?: number
   flangerFeedback?: number
+  eqEnabled?: boolean
+  eqLow?: number
+  eqMid?: number
+  eqHigh?: number
   distortionEnabled?: boolean
   compressorEnabled?: boolean
   compressorThreshold?: number
@@ -728,6 +732,30 @@ function App() {
         }
         
         
+        
+        if (track.eqEnabled) {
+          const eqLow = ctx.createBiquadFilter()
+          eqLow.type = 'lowshelf'
+          eqLow.frequency.value = 250
+          eqLow.gain.value = track.eqLow ?? 0
+
+          const eqMid = ctx.createBiquadFilter()
+          eqMid.type = 'peaking'
+          eqMid.frequency.value = 1000
+          eqMid.Q.value = 1
+          eqMid.gain.value = track.eqMid ?? 0
+
+          const eqHigh = ctx.createBiquadFilter()
+          eqHigh.type = 'highshelf'
+          eqHigh.frequency.value = 4000
+          eqHigh.gain.value = track.eqHigh ?? 0
+
+          trackOutput.connect(eqLow)
+          eqLow.connect(eqMid)
+          eqMid.connect(eqHigh)
+          trackOutput = eqHigh
+        }
+
         if (track.flangerEnabled) {
           const flangerDelay = ctx.createDelay(0.02)
           flangerDelay.delayTime.value = 0.005
@@ -2600,6 +2628,75 @@ function App() {
                   )}
                 </div>
                 
+                
+                <div className="track-eq-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '4px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input
+                      type="checkbox"
+                      data-testid={`eq-enable-${track.id}`}
+                      checked={!!track.eqEnabled}
+                      onChange={(e) => setProject(prev => ({
+                        ...prev,
+                        tracks: prev.tracks.map(t =>
+                            t.id === track.id ? { ...t, eqEnabled: e.target.checked } : t
+                        )
+                      }))}
+                    />
+                    EQ3
+                  </label>
+                  {track.eqEnabled && (
+                    <>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        Low:
+                        <input
+                          type="range"
+                          data-testid={`eq-low-${track.id}`}
+                          min="-24" max="24" step="1"
+                          value={track.eqLow ?? 0}
+                          onChange={(e) => setProject(prev => ({
+                            ...prev,
+                            tracks: prev.tracks.map(t =>
+                                t.id === track.id ? { ...t, eqLow: parseFloat(e.target.value) } : t
+                            )
+                          }))}
+                          style={{ width: '40px' }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        Mid:
+                        <input
+                          type="range"
+                          data-testid={`eq-mid-${track.id}`}
+                          min="-24" max="24" step="1"
+                          value={track.eqMid ?? 0}
+                          onChange={(e) => setProject(prev => ({
+                            ...prev,
+                            tracks: prev.tracks.map(t =>
+                                t.id === track.id ? { ...t, eqMid: parseFloat(e.target.value) } : t
+                            )
+                          }))}
+                          style={{ width: '40px' }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        High:
+                        <input
+                          type="range"
+                          data-testid={`eq-high-${track.id}`}
+                          min="-24" max="24" step="1"
+                          value={track.eqHigh ?? 0}
+                          onChange={(e) => setProject(prev => ({
+                            ...prev,
+                            tracks: prev.tracks.map(t =>
+                                t.id === track.id ? { ...t, eqHigh: parseFloat(e.target.value) } : t
+                            )
+                          }))}
+                          style={{ width: '40px' }}
+                        />
+                      </label>
+                    </>
+                  )}
+                </div>
                 <div className="track-flanger-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <input
