@@ -28,6 +28,9 @@ interface Track {
   delayEnabled?: boolean
   delayTime?: number
   delayFeedback?: number
+  compressorEnabled?: boolean
+  compressorThreshold?: number
+  compressorRatio?: number
   transposeSemitones: number
   filterType: 'none' | 'lowpass' | 'highpass'
   filterCutoff: number
@@ -227,6 +230,9 @@ function isValidProjectState(value: unknown): value is ProjectState {
       typeof t.solo !== 'boolean' ||
       (typeof t.locked !== 'boolean' && typeof t.locked !== 'undefined') ||
       typeof t.transposeSemitones !== 'number' ||
+      (t.compressorEnabled !== undefined && typeof t.compressorEnabled !== 'boolean') ||
+      (t.compressorThreshold !== undefined && typeof t.compressorThreshold !== 'number') ||
+      (t.compressorRatio !== undefined && typeof t.compressorRatio !== 'number') ||
       (t.filterType && !['none', 'lowpass', 'highpass'].includes(t.filterType)) ||
       (t.filterCutoff !== undefined && typeof t.filterCutoff !== 'number')
     )
@@ -260,6 +266,9 @@ function loadInitialProject(): ProjectState {
         locked: track.locked ?? false,
         pan: track.pan ?? 0,
         filterType: track.filterType ?? 'none',
+        compressorEnabled: track.compressorEnabled ?? false,
+        compressorThreshold: track.compressorThreshold ?? -24,
+        compressorRatio: track.compressorRatio ?? 12,
         filterCutoff: track.filterCutoff ?? 20000,
       })),
     }
@@ -592,6 +601,14 @@ function App() {
         
         let trackOutput: AudioNode = panner;
         
+        if (track.compressorEnabled) {
+          const compressor = ctx.createDynamicsCompressor();
+          compressor.threshold.value = track.compressorThreshold ?? -24;
+          compressor.ratio.value = track.compressorRatio ?? 12;
+          trackOutput.connect(compressor);
+          trackOutput = compressor;
+        }
+
         if (track.filterType && track.filterType !== 'none') {
           panner.connect(filter)
           trackOutput = filter;
@@ -2115,6 +2132,68 @@ function App() {
               </label>
               <label>
                 Filter
+                <div className="track-compressor-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      data-testid={`compressor-enabled-${track.id}`}
+                      checked={!!track.compressorEnabled}
+                      disabled={isPlaying}
+                      onChange={(e) => {
+                        applyProjectUpdate((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                            t.id === track.id ? { ...t, compressorEnabled: e.target.checked } : t
+                          ),
+                        }))
+                      }}
+                      style={{ margin: 0, marginRight: '4px' }}
+                    />
+                    Comp
+                  </label>
+                  {track.compressorEnabled && (
+                    <>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="0"
+                        step="1"
+                        data-testid={`compressor-threshold-${track.id}`}
+                        value={track.compressorThreshold ?? -24}
+                        disabled={isPlaying}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value)
+                          applyProjectUpdate((prev) => ({
+                            ...prev,
+                            tracks: prev.tracks.map((t) =>
+                              t.id === track.id ? { ...t, compressorThreshold: val } : t
+                            ),
+                          }))
+                        }}
+                        style={{ width: '40px' }}
+                      />
+                      <input
+                        type="range"
+                        min="1"
+                        max="20"
+                        step="0.1"
+                        data-testid={`compressor-ratio-${track.id}`}
+                        value={track.compressorRatio ?? 12}
+                        disabled={isPlaying}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value)
+                          applyProjectUpdate((prev) => ({
+                            ...prev,
+                            tracks: prev.tracks.map((t) =>
+                              t.id === track.id ? { ...t, compressorRatio: val } : t
+                            ),
+                          }))
+                        }}
+                        style={{ width: '40px' }}
+                      />
+                    </>
+                  )}
+                </div>
                 <div className="track-delay-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
                     <input
