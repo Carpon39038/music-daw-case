@@ -2103,7 +2103,7 @@ function App() {
             </div>
 
             
-            <details className="inspector-group" data-testid="inspector-track-effects" open>
+            <details className="inspector-group" data-testid="inspector-track-effects">
               <summary className="inspector-subtitle" style={{cursor: "pointer"}}>Track Effects & Params</summary>
               {(() => {
                 const selectedTrack = project.tracks.find(t => t.id === selectedTrackId);
@@ -2883,6 +2883,7 @@ function App() {
             <div className="inspector-meta" data-testid="selected-clip-duplicate-target-beat">
               Duplicate target beat: {selectedClipData.duplicateStartBeat}
             </div>
+            <div className="clip-actions-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px', borderTop: '1px solid #2d3748', paddingTop: '12px' }}>
             <button
               data-testid="selected-clip-mute-btn"
               onClick={() => toggleClipMute(selectedClipData.track.id, selectedClipData.clip.id)}
@@ -2930,6 +2931,7 @@ function App() {
             >
               Split Clip
             </button>
+            </div>
           </details>
         ) : (
           <div className="inspector-empty" data-testid="inspector-clip-empty">Select a clip to edit note pitch.</div>
