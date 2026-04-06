@@ -31,6 +31,9 @@ interface Track {
   compressorEnabled?: boolean
   compressorThreshold?: number
   compressorRatio?: number
+  reverbEnabled?: boolean
+  reverbMix?: number
+  reverbDecay?: number
   transposeSemitones: number
   filterType: 'none' | 'lowpass' | 'highpass'
   filterCutoff: number
@@ -100,6 +103,9 @@ function createInitialProject(): ProjectState {
       transposeSemitones: 0,
       filterType: 'none',
       filterCutoff: 20000,
+      reverbEnabled: false,
+      reverbMix: 0.3,
+      reverbDecay: 2,
       clips: [
         {
           id: `clip-${i + 1}-1`,
@@ -233,6 +239,9 @@ function isValidProjectState(value: unknown): value is ProjectState {
       (t.compressorEnabled !== undefined && typeof t.compressorEnabled !== 'boolean') ||
       (t.compressorThreshold !== undefined && typeof t.compressorThreshold !== 'number') ||
       (t.compressorRatio !== undefined && typeof t.compressorRatio !== 'number') ||
+      (t.reverbEnabled !== undefined && typeof t.reverbEnabled !== 'boolean') ||
+      (t.reverbMix !== undefined && typeof t.reverbMix !== 'number') ||
+      (t.reverbDecay !== undefined && typeof t.reverbDecay !== 'number') ||
       (t.filterType && !['none', 'lowpass', 'highpass'].includes(t.filterType)) ||
       (t.filterCutoff !== undefined && typeof t.filterCutoff !== 'number')
     )
@@ -269,12 +278,28 @@ function loadInitialProject(): ProjectState {
         compressorEnabled: track.compressorEnabled ?? false,
         compressorThreshold: track.compressorThreshold ?? -24,
         compressorRatio: track.compressorRatio ?? 12,
+        reverbEnabled: track.reverbEnabled ?? false,
+        reverbMix: track.reverbMix ?? 0.3,
+        reverbDecay: track.reverbDecay ?? 2,
         filterCutoff: track.filterCutoff ?? 20000,
       })),
     }
   } catch {
     return createInitialProject()
   }
+}
+
+function createReverbIR(ctx: AudioContext, durationSec: number, sampleRate?: number): AudioBuffer {
+  const sr = sampleRate ?? ctx.sampleRate
+  const length = Math.max(1, Math.floor(sr * durationSec))
+  const buffer = ctx.createBuffer(2, length, sr)
+  for (let ch = 0; ch < 2; ch++) {
+    const data = buffer.getChannelData(ch)
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2)
+    }
+  }
+  return buffer
 }
 
 declare global {
@@ -311,6 +336,9 @@ declare global {
       transposedTrackCount: number
       pannedTrackCount: number
       filteredTrackCount: number
+      reverbEnabledTrackCount: number
+      firstTrackReverbMix: number | null
+      firstTrackReverbDecay: number | null
       firstTrackTransposeSemitones: number | null
       firstTrackPan: number | null
       scheduledFrequencyPreviewHz: number[]
@@ -408,6 +436,7 @@ function App() {
     [project.tracks],
   )
   const filteredTrackCount = useMemo(() => project.tracks.filter((t) => t.filterType !== 'none').length, [project.tracks])
+  const reverbEnabledTrackCount = useMemo(() => project.tracks.filter((t) => t.reverbEnabled).length, [project.tracks])
   const pannedTrackCount = useMemo(
     () => project.tracks.filter((t) => Math.abs(t.pan) > 0.001).length,
     [project.tracks],
@@ -619,13 +648,24 @@ function App() {
           delayNode.delayTime.value = track.delayTime ?? 0.3
           const feedbackGain = ctx.createGain()
           feedbackGain.gain.value = track.delayFeedback ?? 0.4
-          
+
           trackOutput.connect(delayNode)
           delayNode.connect(feedbackGain)
           feedbackGain.connect(delayNode)
           delayNode.connect(master)
         }
-        
+
+        if (track.reverbEnabled) {
+          const convolver = ctx.createConvolver()
+          const decay = Math.max(0.1, track.reverbDecay ?? 2)
+          convolver.buffer = createReverbIR(ctx, decay)
+          const wetGain = ctx.createGain()
+          wetGain.gain.value = track.reverbMix ?? 0.3
+          trackOutput.connect(convolver)
+          convolver.connect(wetGain)
+          wetGain.connect(master)
+        }
+
         trackOutput.connect(master)
 
         osc.start(clipStart)
@@ -772,6 +812,9 @@ function App() {
       transposedTrackCount,
       pannedTrackCount,
       filteredTrackCount,
+      reverbEnabledTrackCount,
+      firstTrackReverbMix: project.tracks[0]?.reverbMix ?? null,
+      firstTrackReverbDecay: project.tracks[0]?.reverbDecay ?? null,
       firstTrackTransposeSemitones: project.tracks[0]?.transposeSemitones ?? null,
       firstTrackPan: project.tracks[0]?.pan ?? null,
       scheduledFrequencyPreviewHz: [...scheduledFrequencyPreviewRef.current],
@@ -821,6 +864,7 @@ function App() {
     lockedTrackCount,
     transposedTrackCount,
     pannedTrackCount,
+    reverbEnabledTrackCount,
     masterVolume,
     selectedTrackId,
     selectedClipData,
@@ -1188,6 +1232,9 @@ function App() {
             transposeSemitones: 0,
             filterType: 'none',
             filterCutoff: 20000,
+            reverbEnabled: false,
+            reverbMix: 0.3,
+            reverbDecay: 2,
             clips: [],
           },
         ],
@@ -2248,6 +2295,68 @@ function App() {
                             ...prev,
                             tracks: prev.tracks.map((t) =>
                               t.id === track.id ? { ...t, delayFeedback: val } : t
+                            ),
+                          }))
+                        }}
+                        style={{ width: '40px' }}
+                      />
+                    </>
+                  )}
+                </div>
+                <div className="track-reverb-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      data-testid={`reverb-enable-${track.id}`}
+                      checked={!!track.reverbEnabled}
+                      disabled={isPlaying}
+                      onChange={(e) => {
+                        applyProjectUpdate((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                            t.id === track.id ? { ...t, reverbEnabled: e.target.checked } : t
+                          ),
+                        }))
+                      }}
+                      style={{ margin: 0, marginRight: '4px' }}
+                    />
+                    Reverb
+                  </label>
+                  {track.reverbEnabled && (
+                    <>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        data-testid={`reverb-mix-${track.id}`}
+                        value={track.reverbMix ?? 0.3}
+                        disabled={isPlaying}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value)
+                          applyProjectUpdate((prev) => ({
+                            ...prev,
+                            tracks: prev.tracks.map((t) =>
+                              t.id === track.id ? { ...t, reverbMix: val } : t
+                            ),
+                          }))
+                        }}
+                        style={{ width: '40px' }}
+                      />
+                      <input
+                        type="range"
+                        min="0.1"
+                        max="5"
+                        step="0.1"
+                        data-testid={`reverb-decay-${track.id}`}
+                        value={track.reverbDecay ?? 2}
+                        disabled={isPlaying}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value)
+                          applyProjectUpdate((prev) => ({
+                            ...prev,
+                            tracks: prev.tracks.map((t) =>
+                              t.id === track.id ? { ...t, reverbDecay: val } : t
                             ),
                           }))
                         }}
