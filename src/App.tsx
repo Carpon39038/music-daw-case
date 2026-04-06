@@ -30,6 +30,10 @@ interface Track {
   delayEnabled?: boolean
   delayTime?: number
   delayFeedback?: number
+  flangerEnabled?: boolean
+  flangerSpeed?: number
+  flangerDepth?: number
+  flangerFeedback?: number
   distortionEnabled?: boolean
   compressorEnabled?: boolean
   compressorThreshold?: number
@@ -723,6 +727,45 @@ function App() {
           trackOutput = filter;
         }
         
+        
+        if (track.flangerEnabled) {
+          const flangerDelay = ctx.createDelay(0.02)
+          flangerDelay.delayTime.value = 0.005
+          
+          const flangerLfo = ctx.createOscillator()
+          flangerLfo.type = 'sine'
+          flangerLfo.frequency.value = track.flangerSpeed ?? 0.5
+          
+          const flangerDepthNode = ctx.createGain()
+          flangerDepthNode.gain.value = track.flangerDepth ?? 0.002
+          
+          flangerLfo.connect(flangerDepthNode)
+          flangerDepthNode.connect(flangerDelay.delayTime)
+          flangerLfo.start(clipStart)
+          flangerLfo.stop(clipEnd)
+          
+          const fbGain = ctx.createGain()
+          fbGain.gain.value = track.flangerFeedback ?? 0.5
+          
+          trackOutput.connect(flangerDelay)
+          flangerDelay.connect(fbGain)
+          fbGain.connect(flangerDelay)
+          
+          const wetGain = ctx.createGain()
+          wetGain.gain.value = 0.5
+          const dryGain = ctx.createGain()
+          dryGain.gain.value = 0.5
+          
+          trackOutput.connect(dryGain)
+          flangerDelay.connect(wetGain)
+          
+          const mix = ctx.createGain()
+          dryGain.connect(mix)
+          wetGain.connect(mix)
+          
+          trackOutput = mix
+        }
+
         if (track.delayEnabled) {
           const delayNode = ctx.createDelay(5.0)
           delayNode.delayTime.value = track.delayTime ?? 0.3
@@ -2556,6 +2599,64 @@ function App() {
                     </>
                   )}
                 </div>
+                
+                <div className="track-flanger-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input
+                      type="checkbox"
+                      data-testid={`flanger-enable-${track.id}`}
+                      checked={!!track.flangerEnabled}
+                      onChange={(e) => setProject(prev => ({
+                        ...prev,
+                        tracks: prev.tracks.map(t =>
+                            t.id === track.id ? { ...t, flangerEnabled: e.target.checked } : t
+                        )
+                      }))}
+                    />
+                    Flanger
+                  </label>
+                  {track.flangerEnabled && (
+                    <>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        Spd:
+                        <input
+                          type="range"
+                          min="0.1" max="5.0" step="0.1"
+                          data-testid={`flanger-speed-${track.id}`}
+                          value={track.flangerSpeed ?? 0.5}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setProject(prev => ({
+                              ...prev,
+                              tracks: prev.tracks.map(t =>
+                                t.id === track.id ? { ...t, flangerSpeed: val } : t
+                              )
+                            }))
+                          }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        Dep:
+                        <input
+                          type="range"
+                          min="0.001" max="0.01" step="0.001"
+                          data-testid={`flanger-depth-${track.id}`}
+                          value={track.flangerDepth ?? 0.002}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setProject(prev => ({
+                              ...prev,
+                              tracks: prev.tracks.map(t =>
+                                t.id === track.id ? { ...t, flangerDepth: val } : t
+                              )
+                            }))
+                          }}
+                        />
+                      </label>
+                    </>
+                  )}
+                </div>
+
                 <div className="track-delay-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
                     <input
