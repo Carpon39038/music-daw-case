@@ -35,6 +35,9 @@ interface Track {
   chorusEnabled?: boolean
   chorusDepth?: number
   chorusRate?: number
+  tremoloEnabled?: boolean
+  tremoloDepth?: number
+  tremoloRate?: number
   reverbEnabled?: boolean
   reverbMix?: number
   reverbDecay?: number
@@ -247,6 +250,9 @@ function isValidProjectState(value: unknown): value is ProjectState {
       (t.chorusEnabled !== undefined && typeof t.chorusEnabled !== 'boolean') ||
       (t.chorusDepth !== undefined && typeof t.chorusDepth !== 'number') ||
       (t.chorusRate !== undefined && typeof t.chorusRate !== 'number') ||
+      (t.tremoloEnabled !== undefined && typeof t.tremoloEnabled !== 'boolean') ||
+      (t.tremoloDepth !== undefined && typeof t.tremoloDepth !== 'number') ||
+      (t.tremoloRate !== undefined && typeof t.tremoloRate !== 'number') ||
       (t.reverbEnabled !== undefined && typeof t.reverbEnabled !== 'boolean') ||
       (t.reverbMix !== undefined && typeof t.reverbMix !== 'number') ||
       (t.reverbDecay !== undefined && typeof t.reverbDecay !== 'number') ||
@@ -289,6 +295,9 @@ function loadInitialProject(): ProjectState {
         chorusEnabled: track.chorusEnabled ?? false,
         chorusDepth: track.chorusDepth ?? 0.5,
         chorusRate: track.chorusRate ?? 1.5,
+        tremoloEnabled: track.tremoloEnabled ?? false,
+        tremoloDepth: track.tremoloDepth ?? 0.5,
+        tremoloRate: track.tremoloRate ?? 5.0,
         reverbEnabled: track.reverbEnabled ?? false,
         distortionEnabled: track.distortionEnabled ?? false,
         reverbMix: track.reverbMix ?? 0.3,
@@ -350,6 +359,7 @@ declare global {
       filteredTrackCount: number
       reverbEnabledTrackCount: number
       distortionEnabledTrackCount: number
+      tremoloEnabledTrackCount: number
       firstTrackReverbMix: number | null
       firstTrackReverbDecay: number | null
       firstTrackTransposeSemitones: number | null
@@ -450,6 +460,7 @@ function App() {
   )
   const filteredTrackCount = useMemo(() => project.tracks.filter((t) => t.filterType !== 'none').length, [project.tracks])
   const distortionEnabledTrackCount = useMemo(() => project.tracks.filter((t) => t.distortionEnabled).length, [project.tracks])
+  const tremoloEnabledTrackCount = useMemo(() => project.tracks.filter((t) => t.tremoloEnabled).length, [project.tracks])
   const reverbEnabledTrackCount = useMemo(() => project.tracks.filter((t) => t.reverbEnabled).length, [project.tracks])
   const pannedTrackCount = useMemo(
     () => project.tracks.filter((t) => Math.abs(t.pan) > 0.001).length,
@@ -701,6 +712,26 @@ function App() {
           delayNode.connect(master)
         }
 
+        if (track.tremoloEnabled) {
+          const tremoloGain = ctx.createGain();
+          tremoloGain.gain.value = 1 - (track.tremoloDepth ?? 0.5) / 2;
+          
+          const lfo = ctx.createOscillator();
+          lfo.type = 'sine';
+          lfo.frequency.value = track.tremoloRate ?? 5.0;
+          
+          const lfoGain = ctx.createGain();
+          lfoGain.gain.value = (track.tremoloDepth ?? 0.5) / 2;
+          
+          lfo.connect(lfoGain);
+          lfoGain.connect(tremoloGain.gain);
+          
+          lfo.start(clipStart);
+          lfo.stop(clipEnd);
+          
+          trackOutput.connect(tremoloGain);
+          trackOutput = tremoloGain;
+        }
         if (track.distortionEnabled) {
           const distortion = ctx.createWaveShaper()
           function makeDistortionCurve(amount = 50) {
@@ -878,6 +909,7 @@ function App() {
       filteredTrackCount,
       reverbEnabledTrackCount,
       distortionEnabledTrackCount,
+      tremoloEnabledTrackCount,
       firstTrackReverbMix: project.tracks[0]?.reverbMix ?? null,
       firstTrackReverbDecay: project.tracks[0]?.reverbDecay ?? null,
       firstTrackTransposeSemitones: project.tracks[0]?.transposeSemitones ?? null,
@@ -931,6 +963,7 @@ function App() {
     pannedTrackCount,
     reverbEnabledTrackCount,
       distortionEnabledTrackCount,
+    tremoloEnabledTrackCount,
     masterVolume,
     selectedTrackId,
     selectedClipData,
@@ -2311,6 +2344,73 @@ function App() {
                     </>
                   )}
                 </div>
+
+                <div className="track-tremolo-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                    <input
+                      type="checkbox"
+                      data-testid={`tremolo-enabled-${track.id}`}
+                      checked={!!track.tremoloEnabled}
+                      onChange={(e) => {
+                        setProject((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                            t.id === track.id ? { ...t, tremoloEnabled: e.target.checked } : t
+                          ),
+                        }))
+                      }}
+                    />
+                    Tremolo
+                  </label>
+                  
+                  {track.tremoloEnabled && (
+                    <>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af', marginLeft: '8px' }}>
+                        Rate
+                        <input
+                          type="range"
+                          data-testid={`tremolo-rate-${track.id}`}
+                          min="0.1"
+                          max="20"
+                          step="0.1"
+                          value={track.tremoloRate ?? 5.0}
+                          style={{ width: '40px' }}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value)
+                            setProject((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                                t.id === track.id ? { ...t, tremoloRate: val } : t
+                              ),
+                            }))
+                          }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af', marginLeft: '4px' }}>
+                        Depth
+                        <input
+                          type="range"
+                          data-testid={`tremolo-depth-${track.id}`}
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={track.tremoloDepth ?? 0.5}
+                          style={{ width: '40px' }}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value)
+                            setProject((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                                t.id === track.id ? { ...t, tremoloDepth: val } : t
+                              ),
+                            }))
+                          }}
+                        />
+                      </label>
+                    </>
+                  )}
+                </div>
+
                 <div className="track-compressor-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
                   <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
                     <input
@@ -2435,7 +2535,77 @@ function App() {
                     </>
                   )}
                 </div>
-                <div className="track-reverb-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+                
+                <div className="track-tremolo-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                    <input
+                      type="checkbox"
+                      data-testid={`tremolo-enabled-${track.id}`}
+                      checked={!!track.tremoloEnabled}
+                      disabled={isPlaying}
+                      onChange={(e) => {
+                        setProject((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                            t.id === track.id ? { ...t, tremoloEnabled: e.target.checked } : t
+                          ),
+                        }))
+                      }}
+                    />
+                    Tremolo
+                  </label>
+                  
+                  {track.tremoloEnabled && (
+                    <>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af', marginLeft: '8px' }}>
+                        Rate
+                        <input
+                          type="range"
+                          data-testid={`tremolo-rate-${track.id}`}
+                          min="0.1"
+                          max="20"
+                          step="0.1"
+                          value={track.tremoloRate ?? 5.0}
+                          disabled={isPlaying}
+                          style={{ width: '40px' }}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value)
+                            setProject((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                                t.id === track.id ? { ...t, tremoloRate: val } : t
+                              ),
+                            }))
+                          }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af', marginLeft: '4px' }}>
+                        Depth
+                        <input
+                          type="range"
+                          data-testid={`tremolo-depth-${track.id}`}
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={track.tremoloDepth ?? 0.5}
+                          disabled={isPlaying}
+                          style={{ width: '40px' }}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value)
+                            setProject((prev) => ({
+                          ...prev,
+                          tracks: prev.tracks.map((t) =>
+                                t.id === track.id ? { ...t, tremoloDepth: val } : t
+                              ),
+                            }))
+                          }}
+                        />
+                      </label>
+                    </>
+                  )}
+                </div>
+
+<div className="track-reverb-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
                     <input
                       type="checkbox"
