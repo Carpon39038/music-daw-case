@@ -7,6 +7,7 @@ test.describe('Inspector Panel Collapsibility', () => {
     // First select a track
     const trackHeader = page.locator('.track-header').first();
     await trackHeader.click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // Verify track inspector uses details
     const trackDetails = page.locator('details[data-testid="inspector-track"]');

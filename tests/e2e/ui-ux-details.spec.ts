@@ -14,6 +14,7 @@ test.describe('UI/UX Details Panel', () => {
 
     // Check selected state
     await trackHeader.click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
     await expect(trackHeader).toHaveClass(/selected/);
 
     // Advanced effects should NOT be in track header anymore

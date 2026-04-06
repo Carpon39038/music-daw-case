@@ -4,6 +4,7 @@ test.describe('Track Distortion e2e', () => {
   test('should toggle distortion and expose via debug state', async ({ page }) => {
     await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));;
     await page.locator('.track-header').first().click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 const initial = await page.evaluate(() => window.__DAW_DEBUG__?.distortionEnabledTrackCount ?? 0)
     
     // Toggle on the first track

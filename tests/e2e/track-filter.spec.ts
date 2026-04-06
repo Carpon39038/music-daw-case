@@ -4,6 +4,7 @@ test.describe('Track Filter e2e', () => {
   test('should display filter select and change filter type', async ({ page }) => {
     await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));;
     await page.locator('.track-header').first().click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 // Default should be none
     const filterSelect = page.locator('[data-testid="filter-type-track-1"]')
     await expect(filterSelect).toHaveValue('none')
@@ -31,6 +32,7 @@ test.describe('Track Filter e2e', () => {
   test('audio runtime should register filter in debug state', async ({ page }) => {
     await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));;
     await page.locator('.track-header').first().click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 // Change track 1 to lowpass
     const filterSelect = page.locator('[data-testid="filter-type-track-1"]')
     await filterSelect.selectOption('lowpass')

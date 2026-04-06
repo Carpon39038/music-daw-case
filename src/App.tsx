@@ -2145,7 +2145,7 @@ function App() {
               </label>
                 </div>
               </details>
-<details open className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "#9cb4d8", fontSize: "11px" }}>Modulation & Time</summary><div style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "8px 0" }}>
+<details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "#9cb4d8", fontSize: "11px" }}>Modulation & Time</summary><div style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "8px 0" }}>
                 <div className="track-chorus-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af' }}>
                     <input
@@ -2279,7 +2279,7 @@ function App() {
                 </div>
 
                 </div></details>
-<details open className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "#9cb4d8", fontSize: "11px" }}>Dynamics & EQ</summary>
+<details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "#9cb4d8", fontSize: "11px" }}>Dynamics & EQ</summary>
 <div className="track-effects-details" style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "8px 0" }}>
                 <div className="track-compressor-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
                   <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
@@ -2852,7 +2852,7 @@ function App() {
               </div>
             </details>
 
-            <details open className="inspector-subgroup" style={{ marginBottom: '8px' }}>
+            <details className="inspector-subgroup" style={{ marginBottom: '8px' }}>
               <summary style={{ cursor: 'pointer', color: '#9cb4d8', fontSize: '11px' }}>Timing & Fades</summary>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
                 <div className="inspector-row">

@@ -8,13 +8,12 @@ declare global {
 
 test.describe('Track Flanger', () => {
   test('should allow enabling flanger and setting parameters', async ({ page }) => {
-    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));;
-  await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
-
+    await page.goto('/'); 
     await page.waitForSelector('.track-row');
 
     // Click track header to select it and show in inspector
     await page.locator('.track-header').first().click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // Flanger controls should exist in inspector
     const enableCb = page.locator('[data-testid^="flanger-enable-"]').first();

@@ -8,6 +8,7 @@ test.describe('Clip Fades', () => {
     // Select the first track and its first clip
     const trackHeader = page.getByTestId(/track-header-/).first();
     await trackHeader.click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
     
     // Select clip
     const firstClip = page.locator('.clip').first();

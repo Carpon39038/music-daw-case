@@ -11,7 +11,8 @@ test.describe('Track Tremolo e2e', () => {
     await page.waitForSelector('.track-row')
     
     // Click track header to select track so inspector effects show up
-    await page.locator('.track-header').first().click()
+    await page.locator('.track-header').first().click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
     
     // Use the toggle testid
     const toggle = page.locator('[data-testid^="tremolo-enabled-"]').first()
@@ -31,7 +32,8 @@ test.describe('Track Tremolo e2e', () => {
     await page.waitForSelector('.track-row')
 
     // Click track header to select track
-    await page.locator('.track-header').first().click()
+    await page.locator('.track-header').first().click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const toggle = page.locator('[data-testid^="tremolo-enabled-"]').first()
     await toggle.check()

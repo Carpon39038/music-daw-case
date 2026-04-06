@@ -11,6 +11,7 @@ test.describe('Track Color', () => {
     // Select the first track header to reveal inspector track properties
     const trackHeader = page.locator('.track-header').first();
     await trackHeader.click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
     
     // Verify the color input exists in inspector
     const colorInput = page.getByTestId('selected-track-color-input');

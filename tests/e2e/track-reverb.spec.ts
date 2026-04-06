@@ -6,6 +6,7 @@ test.describe('Track Reverb e2e', () => {
 
     await page.waitForSelector('.track-header');
     await page.locator('.track-header').first().click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // Reverb toggle should be unchecked by default
     const reverbToggle = page.locator('[data-testid^="reverb-enable-"]').first()
@@ -33,6 +34,7 @@ test.describe('Track Reverb e2e', () => {
     await page.reload()
     await page.waitForSelector('.track-header');
     await page.locator('.track-header').first().click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const newToggle = page.locator('[data-testid^="reverb-enable-"]').first()
     await expect(newToggle).toBeChecked()
@@ -49,6 +51,7 @@ test.describe('Track Reverb e2e', () => {
 
     await page.waitForSelector('.track-header');
     await page.locator('.track-header').first().click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // Initially no tracks have reverb enabled
     const initialCount = await page.evaluate(() => window.__DAW_DEBUG__?.reverbEnabledTrackCount)

@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 test('track eq3 effect can be enabled and configured', async ({ page }) => {
   await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));;
     await page.locator('.track-header').first().click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 ;
   await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
 

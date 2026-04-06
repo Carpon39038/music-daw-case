@@ -8,6 +8,7 @@ test.describe('Track Compressor', () => {
     // 1. Ensure track is selected
     const trackHeader = page.locator('.track-header').first();
     await trackHeader.click();
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // 2. Enable compressor
     const compressorCheckbox = page.getByTestId(/compressor-enabled-.+/).first();
