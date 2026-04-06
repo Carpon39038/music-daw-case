@@ -14,6 +14,8 @@ interface Clip {
   gain?: number
   transposeSemitones?: number
   color?: string
+  fadeIn?: number
+  fadeOut?: number
 }
 
 interface Track {
@@ -657,8 +659,14 @@ function App() {
         const isTrackAudible = !track.muted && (!soloActive || track.solo)
         const clipGain = clip.gain ?? 1.0
         const effectiveTrackVolume = isTrackAudible ? (track.volume * clipGain) : 0
-        gain.gain.linearRampToValueAtTime(effectiveTrackVolume * 0.15, clipStart + 0.01)
-        gain.gain.setValueAtTime(effectiveTrackVolume * 0.15, Math.max(clipStart + 0.01, clipEnd - 0.02))
+        
+        const fadeInSec = (clip.fadeIn || 0) * beatDuration
+        const fadeOutSec = (clip.fadeOut || 0) * beatDuration
+        const actualFadeIn = fadeInSec > 0 ? fadeInSec : 0.01;
+        const actualFadeOut = fadeOutSec > 0 ? fadeOutSec : 0.02;
+
+        gain.gain.linearRampToValueAtTime(effectiveTrackVolume * 0.15, Math.min(clipStart + actualFadeIn, clipEnd))
+        gain.gain.setValueAtTime(effectiveTrackVolume * 0.15, Math.max(clipStart + actualFadeIn, clipEnd - actualFadeOut))
         gain.gain.linearRampToValueAtTime(0.0001, clipEnd)
         panner.pan.value = Math.max(-1, Math.min(1, track.pan))
         
@@ -1520,6 +1528,21 @@ function App() {
     }))
   }
 
+    const updateClipFades = (trackId: string, clipId: string, fadeIn: number, fadeOut: number) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) =>
+            c.id === clipId ? { ...c, fadeIn, fadeOut } : c
+          ),
+        }
+      }),
+    }))
+  }
+
   const updateClipTranspose = (trackId: string, clipId: string, transposeSemitones: number) => {
     applyProjectUpdate((prev) => ({
       ...prev,
@@ -2169,6 +2192,34 @@ function App() {
                 step={1}
                 value={selectedClipData.clip.lengthBeats}
                 onChange={(e) => updateClipLengthBeats(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value))}
+                disabled={isPlaying || selectedClipData.track.locked}
+              />
+            </div>
+            <div className="inspector-row">
+              <label htmlFor="selected-clip-fade-in">Fade In</label>
+              <input
+                id="selected-clip-fade-in"
+                data-testid="selected-clip-fade-in-input"
+                type="number"
+                min={0}
+                max={selectedClipData.clip.lengthBeats / 2}
+                step={0.1}
+                value={selectedClipData.clip.fadeIn ?? 0}
+                onChange={(e) => updateClipFades(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value), selectedClipData.clip.fadeOut ?? 0)}
+                disabled={isPlaying || selectedClipData.track.locked}
+              />
+            </div>
+            <div className="inspector-row">
+              <label htmlFor="selected-clip-fade-out">Fade Out</label>
+              <input
+                id="selected-clip-fade-out"
+                data-testid="selected-clip-fade-out-input"
+                type="number"
+                min={0}
+                max={selectedClipData.clip.lengthBeats / 2}
+                step={0.1}
+                value={selectedClipData.clip.fadeOut ?? 0}
+                onChange={(e) => updateClipFades(selectedClipData.track.id, selectedClipData.clip.id, selectedClipData.clip.fadeIn ?? 0, Number(e.target.value))}
                 disabled={isPlaying || selectedClipData.track.locked}
               />
             </div>
