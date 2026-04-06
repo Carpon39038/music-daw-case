@@ -25,7 +25,7 @@ test.describe('Inspector Panel Collapsibility', () => {
     await expect(clipDetails).toHaveAttribute('open', '');
 
     // Check we can toggle them
-    const clipSummary = clipDetails.locator('summary');
+    const clipSummary = clipDetails.locator('summary').first();
     await clipSummary.click();
     // It shouldn't have open attribute anymore
     // Playwright evaluates attribute correctly

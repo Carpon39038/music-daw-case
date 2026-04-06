@@ -409,3 +409,25 @@ details.inspector-group[open] summary::before {
   margin-top: 16px;
   width: 100%;
 }
+
+.inspector-subgroup {
+  background: #162032;
+  border-radius: 6px;
+  padding: 8px 10px;
+  border: 1px solid #2a3f5b;
+}
+.inspector-subgroup summary {
+  outline: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.danger-btn {
+  background: #7f1d1d !important;
+  color: #fca5a5 !important;
+  border-color: #991b1b !important;
+}
+.danger-btn:hover {
+  background: #991b1b !important;
+}

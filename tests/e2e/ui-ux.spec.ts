@@ -12,7 +12,7 @@ test('UI/UX interaction improvements', async ({ page }) => {
 
   // Track selection should update CSS class
   const track1 = page.getByTestId('track-header-track-1');
-  await track1.click();
+  await track1.click(); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
   await expect(track1).toHaveClass(/selected/);
 
   // Inspector should be visible when clip selected

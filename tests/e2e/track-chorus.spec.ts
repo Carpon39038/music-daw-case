@@ -8,7 +8,7 @@ test.describe('Track Chorus Effect', () => {
     await page.click('text=Track 2');
 
     // Expand effects
-    await page.evaluate(() => document.querySelectorAll('details').forEach((d: any) => d.open = true));
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const chorusCheckbox = page.getByTestId('chorus-enabled-track-2');
     await expect(chorusCheckbox).not.toBeChecked();

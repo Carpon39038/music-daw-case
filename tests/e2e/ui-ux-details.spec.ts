@@ -24,7 +24,7 @@ test.describe('UI/UX Details Panel', () => {
     const inspectorEffects = page.locator('[data-testid="inspector-track-effects"]');
     await expect(inspectorEffects).toBeVisible();
     
-    const summary = inspectorEffects.locator('summary');
+    const summary = inspectorEffects.locator('summary').first();
     await expect(summary).toBeVisible();
   });
 });

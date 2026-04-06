@@ -11,7 +11,7 @@ test.describe('Clip Fades', () => {
     
     // Select clip
     const firstClip = page.locator('.clip').first();
-    await firstClip.click();
+    await firstClip.click(); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // Check fade in / out inputs
     const fadeInInput = page.getByTestId('selected-clip-fade-in-input');
@@ -44,7 +44,7 @@ test.describe('Clip Fades', () => {
 
     // Re-select first track and clip
     await trackHeader.click();
-    await firstClip.click();
+    await firstClip.click(); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     await expect(fadeInInput).toHaveValue('0.5');
     await expect(fadeOutInput).toHaveValue('0.4');

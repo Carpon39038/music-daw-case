@@ -9,7 +9,7 @@ test.describe('Clip Inspector', () => {
 
     // Select the first clip
     const firstClip = page.locator('.clip').first()
-    await firstClip.click()
+    await firstClip.click(); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true))
 
     // Ensure inspector clip panel is visible
     const inspectorClip = page.locator('[data-testid="inspector-clip"]')

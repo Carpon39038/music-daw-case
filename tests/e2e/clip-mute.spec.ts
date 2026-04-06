@@ -13,7 +13,7 @@ test.describe('Clip Mute', () => {
   test('can mute and unmute a clip from the inspector', async ({ page }) => {
     // 1. Select the first clip
     const firstClip = page.locator('.clip').first()
-    await firstClip.click()
+    await firstClip.click(); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true))
 
     // 2. Assert clip inspector is visible
     const inspectorClip = page.getByTestId('inspector-clip')
