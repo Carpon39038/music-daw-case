@@ -8,14 +8,14 @@ test.describe('Track Solo Feature', () => {
     // Check initial state
     const soloBtn = page.getByTestId('solo-track-1');
     await expect(soloBtn).toHaveAttribute('aria-pressed', 'false');
-    await expect(soloBtn).toHaveText('Solo');
+    await expect(soloBtn).toHaveText('S');
     
     // Click solo on track 1
     await soloBtn.click();
     
     // The button should indicate solo
     await expect(soloBtn).toHaveAttribute('aria-pressed', 'true');
-    await expect(soloBtn).toHaveText('Unsolo');
+    await expect(soloBtn).toHaveText('S');
     
     // Unsolo
     await soloBtn.click();

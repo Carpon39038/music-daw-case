@@ -219,7 +219,7 @@ test.describe('DAW MVP e2e', () => {
     const afterAdd = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
     expect(afterAdd).toBe(before + 1)
 
-    await page.reload()
+    await page.reload(); await page.waitForSelector('[data-testid="transport"]'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const afterReload = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
     expect(afterReload).toBe(before + 1)
