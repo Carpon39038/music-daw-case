@@ -11,6 +11,7 @@ interface Clip {
   wave: WaveType
   muted?: boolean
   gain?: number
+  transposeSemitones?: number
 }
 
 interface Track {
@@ -405,7 +406,7 @@ function App() {
     if (!track) return null
     const clip = track.clips.find((c) => c.id === selectedClipRef.clipId)
     if (!clip) return null
-    const scheduledFrequencyHz = clip.noteHz * semitoneToRatio(track.transposeSemitones)
+    const scheduledFrequencyHz = clip.noteHz * semitoneToRatio(track.transposeSemitones + (clip.transposeSemitones || 0))
     const desiredStart = clip.startBeat + clip.lengthBeats
     const duplicateStartBeat = resolveNonOverlappingStart(track.clips, clip.lengthBeats, desiredStart, clip.id)
     const canDuplicate = !track.locked && !isPlaying && duplicateStartBeat + clip.lengthBeats <= TIMELINE_BEATS
@@ -566,7 +567,7 @@ function App() {
         const clipEnd = clipStart + clipDurationSec
 
         osc.type = clip.wave
-        const scheduledFrequencyHz = clip.noteHz * semitoneToRatio(track.transposeSemitones)
+        const scheduledFrequencyHz = clip.noteHz * semitoneToRatio(track.transposeSemitones + (clip.transposeSemitones || 0))
         osc.frequency.value = scheduledFrequencyHz
 
         gain.gain.setValueAtTime(0.0001, clipStart)
@@ -1281,6 +1282,21 @@ function App() {
     }))
   }
 
+  const updateClipTranspose = (trackId: string, clipId: string, transposeSemitones: number) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) =>
+            c.id === clipId ? { ...c, transposeSemitones } : c
+          ),
+        }
+      }),
+    }))
+  }
+
   const updateClipLengthBeats = (trackId: string, clipId: string, lengthBeats: number) => {
     setProject((prev) => ({
       ...prev,
@@ -1852,6 +1868,21 @@ function App() {
                 step={0.1}
                 value={selectedClipData.clip.gain ?? 1.0}
                 onChange={(e) => updateClipGain(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value))}
+                disabled={isPlaying || selectedClipData.track.locked}
+              />
+            </div>
+
+            <div className="inspector-row">
+              <label htmlFor="selected-clip-transpose">Transpose (st)</label>
+              <input
+                id="selected-clip-transpose"
+                data-testid="selected-clip-transpose-input"
+                type="number"
+                min={-24}
+                max={24}
+                step={1}
+                value={selectedClipData.clip.transposeSemitones ?? 0}
+                onChange={(e) => updateClipTranspose(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value))}
                 disabled={isPlaying || selectedClipData.track.locked}
               />
             </div>
