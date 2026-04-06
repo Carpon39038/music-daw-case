@@ -154,8 +154,8 @@ h1 {
 
 .track-header {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
   margin-bottom: 8px;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -351,3 +351,5 @@ h1 {
   box-shadow: 0 0 10px rgba(99, 179, 237, 0.3);
   background: rgba(45, 55, 72, 0.8);
 }
+
+.track-header-main { display: flex; align-items: center; gap: 10px; width: 100%; }

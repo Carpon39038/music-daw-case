@@ -2389,6 +2389,7 @@ function App() {
               }}
               aria-label={`Select ${track.name} track`}
             >
+              <div className="track-header-main" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
               <div className="track-name" style={{ color: track.color || "#e2e8f0" }}>{track.name}</div>
               <label>
                 Vol
@@ -2403,7 +2404,45 @@ function App() {
                   disabled={isPlaying}
                 />
               </label>
-              <label>
+              
+              
+                <button
+                data-testid={`mute-${track.id}`}
+                onClick={() => toggleTrackMute(track.id)}
+                disabled={isPlaying}
+                aria-pressed={track.muted}
+              >
+                {track.muted ? 'Unmute' : 'Mute'}
+              </button>
+              <button
+                data-testid={`solo-${track.id}`}
+                onClick={() => toggleTrackSolo(track.id)}
+                disabled={isPlaying}
+                aria-pressed={track.solo}
+              >
+                {track.solo ? 'Unsolo' : 'Solo'}
+              </button>
+              <button
+                data-testid={`lock-${track.id}`}
+                onClick={() => toggleTrackLock(track.id)}
+                disabled={isPlaying}
+                aria-pressed={track.locked}
+              >
+                {track.locked ? 'Unlock' : 'Lock'}
+              </button>
+              <button
+                data-testid={`add-clip-${track.id}`}
+                onClick={() => addClip(track.id)}
+                disabled={isPlaying || track.locked}
+              >
+                + Clip
+              </button>
+            </div>
+            <details className="track-effects-details" style={{ width: '100%', marginTop: '4px' }}>
+                <summary style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', color: '#a0aec0' }}>Parameters & Effects</summary>
+                <div style={{ padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <label>
                 Pan
                 <input
                   data-testid={`pan-${track.id}`}
@@ -2417,7 +2456,7 @@ function App() {
                 />
                 <span className="pan-value">{track.pan.toFixed(2)}</span>
               </label>
-              <label>
+                  <label>
                 Pitch
                 <input
                   data-testid={`transpose-${track.id}`}
@@ -2431,9 +2470,7 @@ function App() {
                 />
                 <span className="transpose-value">{track.transposeSemitones >= 0 ? '+' : ''}{track.transposeSemitones} st</span>
               </label>
-              <details className="track-effects-details" style={{ marginTop: '8px' }}>
-                <summary style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', color: '#a0aec0' }}>Effects & Filters</summary>
-                <div style={{ padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px', marginTop: '4px' }}>
+                </div>
               <label>
                 Filter
                 <div className="track-chorus-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
@@ -2999,37 +3036,6 @@ function App() {
               </label>
               </div>
               </details>
-              <button
-                data-testid={`mute-${track.id}`}
-                onClick={() => toggleTrackMute(track.id)}
-                disabled={isPlaying}
-                aria-pressed={track.muted}
-              >
-                {track.muted ? 'Unmute' : 'Mute'}
-              </button>
-              <button
-                data-testid={`solo-${track.id}`}
-                onClick={() => toggleTrackSolo(track.id)}
-                disabled={isPlaying}
-                aria-pressed={track.solo}
-              >
-                {track.solo ? 'Unsolo' : 'Solo'}
-              </button>
-              <button
-                data-testid={`lock-${track.id}`}
-                onClick={() => toggleTrackLock(track.id)}
-                disabled={isPlaying}
-                aria-pressed={track.locked}
-              >
-                {track.locked ? 'Unlock' : 'Lock'}
-              </button>
-              <button
-                data-testid={`add-clip-${track.id}`}
-                onClick={() => addClip(track.id)}
-                disabled={isPlaying || track.locked}
-              >
-                + Clip
-              </button>
             </div>
 
             <div className="track-grid" ref={timelineRef}>
