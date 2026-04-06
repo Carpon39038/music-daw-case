@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Track Color', () => {
   test('should allow changing track color and apply to track header', async ({ page }) => {
     await page.goto('/');
+  await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
     
     // Add a track
     await page.click('button:has-text("Add Track")');

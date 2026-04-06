@@ -2,9 +2,9 @@ import { expect, test } from '@playwright/test'
 
 test.describe('Track Distortion e2e', () => {
   test('should toggle distortion and expose via debug state', async ({ page }) => {
-    await page.goto('/')
-
-    const initial = await page.evaluate(() => window.__DAW_DEBUG__?.distortionEnabledTrackCount ?? 0)
+    await page.goto('/');
+    await page.locator('.track-header').first().click();
+const initial = await page.evaluate(() => window.__DAW_DEBUG__?.distortionEnabledTrackCount ?? 0)
     
     // Toggle on the first track
     // Wait for at least one track to appear

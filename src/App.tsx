@@ -2565,6 +2565,7 @@ function App() {
                   )}
                 </div>
 
+                <div className="track-effects-details" style={{ display: selectedTrackId === track.id ? "block" : "none" }}>
                 <div className="track-compressor-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
                   <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
                     <input
@@ -2991,6 +2992,7 @@ function App() {
                     disabled={isPlaying}
                   />
                 )}
+                            </div>
               </label>
               <button
                 data-testid={`mute-${track.id}`}

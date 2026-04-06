@@ -4,7 +4,8 @@ test.describe('Track Reverb e2e', () => {
   test('should toggle reverb and adjust mix and decay parameters', async ({ page }) => {
     await page.goto('/')
 
-    await page.waitForSelector('.track-header')
+    await page.waitForSelector('.track-header');
+    await page.locator('.track-header').first().click();
 
     // Reverb toggle should be unchecked by default
     const reverbToggle = page.locator('[data-testid^="reverb-enable-"]').first()
@@ -30,7 +31,8 @@ test.describe('Track Reverb e2e', () => {
 
     // Verify persistence on reload
     await page.reload()
-    await page.waitForSelector('.track-header')
+    await page.waitForSelector('.track-header');
+    await page.locator('.track-header').first().click();
 
     const newToggle = page.locator('[data-testid^="reverb-enable-"]').first()
     await expect(newToggle).toBeChecked()
@@ -45,7 +47,8 @@ test.describe('Track Reverb e2e', () => {
   test('should expose reverb state via debug interface', async ({ page }) => {
     await page.goto('/')
 
-    await page.waitForSelector('.track-header')
+    await page.waitForSelector('.track-header');
+    await page.locator('.track-header').first().click();
 
     // Initially no tracks have reverb enabled
     const initialCount = await page.evaluate(() => window.__DAW_DEBUG__?.reverbEnabledTrackCount)

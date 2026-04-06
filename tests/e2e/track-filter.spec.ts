@@ -2,9 +2,9 @@ import { expect, test } from '@playwright/test'
 
 test.describe('Track Filter e2e', () => {
   test('should display filter select and change filter type', async ({ page }) => {
-    await page.goto('/')
-    
-    // Default should be none
+    await page.goto('/');
+    await page.locator('.track-header').first().click();
+// Default should be none
     const filterSelect = page.locator('[data-testid="filter-type-track-1"]')
     await expect(filterSelect).toHaveValue('none')
     
@@ -29,9 +29,9 @@ test.describe('Track Filter e2e', () => {
   })
 
   test('audio runtime should register filter in debug state', async ({ page }) => {
-    await page.goto('/')
-    
-    // Change track 1 to lowpass
+    await page.goto('/');
+    await page.locator('.track-header').first().click();
+// Change track 1 to lowpass
     const filterSelect = page.locator('[data-testid="filter-type-track-1"]')
     await filterSelect.selectOption('lowpass')
     

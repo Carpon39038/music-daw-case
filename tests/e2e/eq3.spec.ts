@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 
 test('track eq3 effect can be enabled and configured', async ({ page }) => {
   await page.goto('/');
+    await page.locator('.track-header').first().click();
+;
+  await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
 
   // Create a new track
   await page.click('data-testid=add-track-btn');

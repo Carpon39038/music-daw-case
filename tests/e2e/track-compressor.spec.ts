@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Track Compressor', () => {
   test('should allow enabling and configuring track compressor via inspector', async ({ page }) => {
     await page.goto('/');
+  await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
 
     // 1. Ensure track is selected
     const trackHeader = page.locator('.track-header').first();

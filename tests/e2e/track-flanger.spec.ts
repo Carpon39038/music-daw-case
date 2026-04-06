@@ -9,6 +9,7 @@ declare global {
 test.describe('Track Flanger', () => {
   test('should allow enabling flanger and setting parameters', async ({ page }) => {
     await page.goto('/');
+  await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
 
     await page.waitForSelector('.track-row');
 

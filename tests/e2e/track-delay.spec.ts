@@ -5,7 +5,8 @@ test.describe('Track Delay e2e', () => {
     await page.goto('/')
 
     // Wait for the.track-header header to load
-    await page.waitForSelector('.track-header')
+    await page.waitForSelector('.track-header');
+    await page.locator('.track-header').first().click();
     
     // Check if the delay toggle exists
     const delayToggle = page.locator('[data-testid^="delay-enable-"]').first()
@@ -31,7 +32,8 @@ test.describe('Track Delay e2e', () => {
 
     // Verify it persists on reload
     await page.reload()
-    await page.waitForSelector('.track-header')
+    await page.waitForSelector('.track-header');
+    await page.locator('.track-header').first().click();
 
     const newDelayToggle = page.locator('[data-testid^="delay-enable-"]').first()
     await expect(newDelayToggle).toBeChecked()

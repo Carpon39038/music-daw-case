@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Duplicate Track', () => {
   test('should duplicate track with its clips', async ({ page }) => {
     await page.goto('/');
+  await page.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
     
     // Select the first track
     await page.click('[data-testid="track-header-track-1"]');
