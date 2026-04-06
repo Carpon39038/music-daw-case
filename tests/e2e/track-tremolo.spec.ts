@@ -2,12 +2,16 @@ import { expect, test } from '@playwright/test'
 
 test.describe('Track Tremolo e2e', () => {
   test('should toggle tremolo and expose via debug state', async ({ page }) => {
-    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
+    await page.goto('/'); 
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const initial = await page.evaluate(() => window.__DAW_DEBUG__?.tremoloEnabledTrackCount ?? 0)
     
     // Wait for at least one track to appear
     await page.waitForSelector('.track-row')
+    
+    // Click track header to select track so inspector effects show up
+    await page.locator('.track-header').first().click()
     
     // Use the toggle testid
     const toggle = page.locator('[data-testid^="tremolo-enabled-"]').first()
@@ -22,8 +26,12 @@ test.describe('Track Tremolo e2e', () => {
   })
 
   test('should adjust tremolo rate and depth', async ({ page }) => {
-    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
+    await page.goto('/'); 
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
     await page.waitForSelector('.track-row')
+
+    // Click track header to select track
+    await page.locator('.track-header').first().click()
 
     const toggle = page.locator('[data-testid^="tremolo-enabled-"]').first()
     await toggle.check()
