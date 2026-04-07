@@ -19,7 +19,7 @@ test.describe('UX Debloat & Information Hierarchy', () => {
     await expect(transportAdvanced).toBeVisible();
     
     // Check if Playwright evaluates the open attribute
-    let isAdvancedOpen = await transportAdvanced.evaluate((node: HTMLDetailsElement) => node.open);
+    const isAdvancedOpen = await transportAdvanced.evaluate((node: HTMLDetailsElement) => node.open);
     expect(isAdvancedOpen).toBe(false);
 
     // Track header key buttons
@@ -29,7 +29,7 @@ test.describe('UX Debloat & Information Hierarchy', () => {
 
     // Track header advanced params should be hidden by default
     const trackParams = trackHeader.locator('details.track-header-params');
-    let isParamsOpen = await trackParams.evaluate((node: HTMLDetailsElement) => node.open);
+    const isParamsOpen = await trackParams.evaluate((node: HTMLDetailsElement) => node.open);
     expect(isParamsOpen).toBe(false);
 
     // Inspector selected states
@@ -42,7 +42,7 @@ test.describe('UX Debloat & Information Hierarchy', () => {
     // Check if basic FX is collapsed
     const trackEffects = page.getByTestId('inspector-track-effects');
     const firstSubgroup = trackEffects.locator('.inspector-subgroup').first();
-    let isSubgroupOpen = await firstSubgroup.evaluate((node: HTMLDetailsElement) => node.open);
+    const isSubgroupOpen = await firstSubgroup.evaluate((node: HTMLDetailsElement) => node.open);
     expect(isSubgroupOpen).toBe(false);
   });
 });
