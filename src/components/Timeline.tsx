@@ -75,7 +75,9 @@ export function Timeline({
         )}
 
         {/* Clips */}
-        {track.clips.map((clip) => (
+        {track.clips.map((clip) => {
+          const colorValue = clip.color || track.color || 'var(--color-emerald)'
+          return (
           <button
             key={clip.id}
             data-testid={`clip-${track.id}-${clip.id}`}
@@ -83,8 +85,9 @@ export function Timeline({
             style={{
               left: `${(clip.startBeat / TIMELINE_BEATS) * 100}%`,
               width: `${(clip.lengthBeats / TIMELINE_BEATS) * 100}%`,
-              backgroundColor: clip.color || track.color || 'rgba(61, 58, 57, 0.4)',
-            }}
+              '--track-color': colorValue,
+              backgroundColor: `color-mix(in srgb, ${colorValue} 30%, transparent)`
+            } as any}
             title={`${clip.wave} ${clip.noteHz.toFixed(2)}Hz @ beat ${clip.startBeat}${track.locked ? '（轨道已锁定）' : '（双击切换波形，Alt+双击删除）'}`}
             onMouseDown={(e) => {
               setSelectedTrackId(track.id)
@@ -122,7 +125,7 @@ export function Timeline({
               cycleClipWave(track.id, clip.id)
             }}
           >
-            <WaveformSVG wave={clip.wave} color={clip.color || track.color || '#00d992'} />
+            <WaveformSVG wave={clip.wave} color={colorValue} />
             <span className="clip-label">
               {clip.name ? clip.name : `${clip.wave} ${Math.round(clip.noteHz)}Hz · ${clip.lengthBeats} beat${clip.lengthBeats > 1 ? 's' : ''}`}
             </span>
@@ -141,7 +144,7 @@ export function Timeline({
               aria-valuenow={clip.lengthBeats}
             />
           </button>
-        ))}
+        )})}
 
         {/* Playhead */}
         <div

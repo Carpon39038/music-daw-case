@@ -5,9 +5,9 @@
 
 :root {
   /* Core palette */
-  --color-abyss: #050507;
-  --color-carbon: #101010;
-  --color-charcoal: #3d3a39;
+  --color-abyss: #111111;
+  --color-carbon: #0a0a0a;
+  --color-charcoal: #1f2937;
   --color-emerald: #00d992;
   --color-mint: #2fd6a1;
   --color-snow: #f2f2f2;
@@ -37,11 +37,11 @@
 
   /* DAW Layout sizes */
   --transport-height: auto;
-  --tracklist-width: 180px;
-  --inspector-width: 340px;
+  --tracklist-width: 256px;
+  --inspector-width: 320px;
   --mixer-height: auto;
   --timeline-header-height: 28px;
-  --track-row-height: 54px;
+  --track-row-height: 96px;
 }
 
 *, *::before, *::after {
@@ -844,4 +844,155 @@ select {
   font-size: 11px;
   color: var(--color-slate);
   min-width: 40px;
+}
+
+/* TrackList additions */
+.tracklist-header {
+  justify-content: space-between;
+}
+.add-track-btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--color-slate);
+  padding: 4px;
+  font-size: 14px;
+}
+.add-track-btn-icon:hover {
+  color: var(--color-emerald);
+  background: transparent;
+  border: none;
+}
+.track-name-input {
+  background: transparent;
+  border: none;
+  color: var(--color-snow);
+  font-size: 14px;
+  font-weight: 500;
+  width: 80px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.track-name-input:focus {
+  outline: none;
+  color: var(--color-emerald);
+}
+.track-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.track-header-volume {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+}
+.track-header-volume input {
+  width: 100%;
+}
+
+/* Transport height */
+.transport {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-charcoal);
+  min-height: 48px;
+  justify-content: center;
+}
+.transport-primary {
+  padding-bottom: 0;
+  border-bottom: none;
+  gap: 8px;
+}
+.transport-advanced {
+  /* removed display: none */
+}
+
+/* Inspector Effects Cards */
+.inspector-subgroup {
+  background: #1a1a1a;
+  border: 1px solid var(--color-charcoal);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.inspector-subgroup > summary {
+  background: transparent;
+  padding: 8px 12px;
+  border-bottom: none;
+}
+.inspector-subgroup[open] > summary {
+  border-bottom: 1px solid var(--color-charcoal);
+}
+.inspector-subgroup > div {
+  padding: 12px;
+}
+.track-effects-details > div {
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+/* EQ and other effect containers */
+.track-eq-controls,
+.track-flanger-controls,
+.track-delay-controls,
+.track-tremolo-controls,
+.track-reverb-controls,
+.track-compressor-controls {
+  background: #1a1a1a;
+  border: 1px solid var(--color-charcoal);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Mixer styles */
+.meter {
+  min-height: 192px;
+  align-items: flex-start;
+  padding: 16px;
+  background: #111;
+  border-top: 1px solid var(--color-charcoal);
+  gap: 32px;
+}
+.meter-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.meter-label {
+  font-size: 11px;
+  color: var(--color-slate);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.master-eq-collapse {
+  background: transparent;
+  border: none;
+}
+.master-eq-collapse summary {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 8px;
+}
+.master-eq-controls {
+  display: flex;
+  gap: 16px;
+}
+.master-eq-controls label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--color-slate);
+}
+.master-eq-controls input[type='range'] {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  height: 100px;
+  width: 16px;
+  accent-color: var(--color-emerald);
 }
