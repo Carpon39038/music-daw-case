@@ -2010,7 +2010,7 @@ function App() {
   <span className="master-volume-value">{(masterVolume * 100).toFixed(0)}%</span>
 </label>
 
-          <div className="status" style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: "16px", color: "var(--color-mint)", background: "rgba(0,0,0,0.3)", padding: "4px 8px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.1)" }}>{playheadBeat.toFixed(2)}</div>
+          <div className="status" style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: "16px", color: "var(--color-mint)", background: "rgba(0,0,0,0.3)", padding: "4px 8px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.1)" }}>{Math.floor((playheadBeat * 60 / project.bpm) / 60).toString().padStart(2, '0')}:{((playheadBeat * 60 / project.bpm) % 60).toFixed(2).padStart(5, '0')} | {playheadBeat.toFixed(2)}</div>
         </div>
 
         <details className="transport-advanced">
