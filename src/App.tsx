@@ -2965,15 +2965,19 @@ function App() {
               aria-label={`Select ${track.name} track`}
             >
               <div className="track-header-main" style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-              <div className="track-header-row1" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="track-header-row1" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+    
                 <div className="track-name" style={{ color: track.color || "#e2e8f0", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px', fontWeight: 'bold' }}>{track.name}</div>
-              </div>
-              <div className="track-header-row2" style={{ display: 'flex', gap: '4px' }}>
+              
+    <div className="track-header-buttons" style={{ display: 'flex', gap: '4px', flex: 1, minWidth: '100px' }}>
+      
                 <button data-testid={`mute-${track.id}`} onClick={() => toggleTrackMute(track.id)} disabled={isPlaying} aria-pressed={track.muted} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.muted ? '#ff5d5d' : undefined, color: track.muted ? '#fff' : undefined }}>{track.muted ? 'M' : 'M'}</button>
                 <button data-testid={`solo-${track.id}`} onClick={() => toggleTrackSolo(track.id)} disabled={isPlaying} aria-pressed={track.solo} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.solo ? '#eab308' : undefined, color: track.solo ? '#fff' : undefined }}>{track.solo ? 'S' : 'S'}</button>
                 <button data-testid={`lock-${track.id}`} onClick={() => toggleTrackLock(track.id)} disabled={isPlaying} aria-pressed={track.locked} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.locked ? '#ef4444' : undefined, color: track.locked ? '#fff' : undefined }}>{track.locked ? 'L' : 'L'}</button>
                 <button data-testid={`add-clip-${track.id}`} onClick={() => addClip(track.id)} disabled={isPlaying || track.locked} style={{ padding: '4px 6px', fontSize: '11px', flex: 1 }}>+</button>
-              </div>
+              
+    </div>
+  </div>
               <details className="track-header-params">
                 <summary style={{ fontSize: '10px', color: '#9cb4d8', cursor: 'pointer', marginTop: '4px' }}>More Params</summary>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', marginTop: '4px' }}>

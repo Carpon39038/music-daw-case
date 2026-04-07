@@ -462,3 +462,37 @@ details.inspector-group[open] summary::before {
 .stop-btn:hover:not(:disabled) {
   background: #c53030 !important;
 }
+
+/* UI Optimization enhancements */
+.track-header.selected {
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6) !important;
+  background: rgba(30, 58, 138, 0.4) !important;
+  border-left: 6px solid #3b82f6 !important;
+}
+
+.clip.selected {
+  border: 2px solid #fff !important;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.9), inset 0 0 6px rgba(255, 255, 255, 0.6) !important;
+  z-index: 20 !important;
+  transform: scaleY(1.05);
+}
+
+.transport-advanced summary {
+  padding: 6px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.inspector-group > summary {
+  background: rgba(255,255,255,0.05);
+  padding: 6px;
+  border-radius: 4px;
+}
+
+.play-btn {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
