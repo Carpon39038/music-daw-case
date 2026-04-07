@@ -10,15 +10,18 @@ function App() {
   const daw = useDAWActions()
 
   return (
-    <div className="daw-root" data-testid="daw-root">
-      <h1 className="daw-title">Music DAW Case</h1>
+    <div
+      className="daw-root flex flex-col h-screen bg-[#0a0a0a] text-gray-200 font-sans overflow-hidden select-none"
+      data-testid="daw-root"
+    >
+      <h1 className="daw-title sr-only">Music DAW Case</h1>
       {/* Top: Transport */}
       <Transport {...daw} />
 
       {/* Main area: TrackList | Timeline | Inspector */}
-      <div className="daw-main">
-        <div className="daw-center">
-          <div className="daw-tracks">
+      <div className="daw-main flex flex-1 overflow-hidden">
+        <div className="daw-center flex flex-col flex-1 border-r border-gray-800">
+          <div className="daw-tracks flex flex-1 overflow-hidden">
             <TrackListPanel {...daw} />
             <TimelineSection {...daw} />
           </div>

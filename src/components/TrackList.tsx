@@ -11,7 +11,7 @@ export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackI
 
   return (
     <div
-      className={`track-header ${selectedTrackId === track.id ? 'selected' : ''}`}
+      className={`track-header h-24 border-b border-gray-800 flex flex-col p-2 cursor-pointer transition-colors ${selectedTrackId === track.id ? 'selected bg-[#1a1a1a]' : 'hover:bg-[#151515]'}`}
       data-testid={`track-header-${track.id}`}
       onClick={() => setSelectedTrackId(track.id)}
       role="button"
@@ -24,14 +24,15 @@ export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackI
       }}
       aria-label={`Select ${track.name} track`}
     >
-      <div className="track-header-main">
-        <div className="track-header-row1">
-          <div className="track-name-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div className="track-color-dot" style={{ backgroundColor: track.color || 'var(--color-emerald)' }} />
-            <div 
+      <div className="track-header-main flex flex-col gap-1 w-full">
+        <div className="track-header-row1 flex justify-between items-center gap-1">
+          <div className="track-name-container flex items-center gap-2">
+            <div className="track-color-dot w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: track.color || '#6366f1' }} />
+            <div
               className="track-name track-name-input"
               contentEditable
               suppressContentEditableWarning
+              onClick={() => setSelectedTrackId(track.id)}
               onBlur={(e) => updateProject(prev => ({
                 ...prev,
                 tracks: prev.tracks.map(t => t.id === track.id ? { ...t, name: e.currentTarget.textContent || '' } : t)
@@ -42,20 +43,61 @@ export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackI
                   e.currentTarget.blur()
                 }
               }}
-              style={{ color: track.color || "var(--color-snow)", outline: 'none', cursor: 'text' }}
+              style={{ color: track.color || '#f2f2f2', outline: 'none', cursor: 'text' }}
             >
               {track.name}
             </div>
           </div>
-          <div className="track-header-buttons">
-            <button className={`track-btn ${track.muted ? "active" : ""}`} data-testid={`mute-${track.id}`} onClick={(e) => { e.stopPropagation(); toggleTrackMute(track.id); }} disabled={isPlaying} aria-pressed={track.muted}>M</button>
-            <button className={`track-btn ${track.solo ? "active-emerald" : ""}`} data-testid={`solo-${track.id}`} onClick={(e) => { e.stopPropagation(); toggleTrackSolo(track.id); }} disabled={isPlaying} aria-pressed={track.solo}>S</button>
-            <button className={`track-btn ${track.locked ? "active" : ""}`} data-testid={`lock-${track.id}`} onClick={(e) => { e.stopPropagation(); toggleTrackLock(track.id); }} disabled={isPlaying} aria-pressed={track.locked}>L</button>
-            <button className="track-btn" data-testid={`add-clip-${track.id}`} onClick={(e) => { e.stopPropagation(); addClip(track.id); }} disabled={isPlaying || track.locked}>+</button>
+          <div className="track-header-buttons flex gap-0.5">
+            <button
+              className={`track-btn w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${track.muted ? 'active bg-red-900/50 text-red-400' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+              data-testid={`mute-${track.id}`}
+              onClick={(e) => { e.stopPropagation(); toggleTrackMute(track.id); }}
+              disabled={isPlaying}
+              aria-pressed={track.muted}
+            >
+              M
+            </button>
+            <button
+              className={`track-btn w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${track.solo ? 'active-emerald bg-yellow-900/50 text-yellow-400' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+              data-testid={`solo-${track.id}`}
+              onClick={(e) => { e.stopPropagation(); toggleTrackSolo(track.id); }}
+              disabled={isPlaying}
+              aria-pressed={track.solo}
+            >
+              S
+            </button>
+            <button
+              className={`track-btn w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${track.locked ? 'active bg-orange-900/50 text-orange-400' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+              data-testid={`lock-${track.id}`}
+              onClick={(e) => { e.stopPropagation(); toggleTrackLock(track.id); }}
+              disabled={isPlaying}
+              aria-pressed={track.locked}
+            >
+              L
+            </button>
+            <button
+              className="track-btn w-6 h-6 rounded flex items-center justify-center text-xs font-bold bg-gray-800 text-gray-400 hover:bg-gray-700"
+              data-testid={`add-clip-${track.id}`}
+              onClick={(e) => { e.stopPropagation(); addClip(track.id); }}
+              disabled={isPlaying || track.locked}
+            >
+              +
+            </button>
           </div>
         </div>
-        <div className="track-header-volume">
-          <input data-testid={`vol-${track.id}`} type="range" min={0} max={1} step={0.01} value={track.volume} onChange={(e) => setTrackVolume(track.id, Number(e.target.value))} disabled={isPlaying} />
+        <div className="track-header-volume mt-auto flex items-center">
+          <input
+            data-testid={`vol-${track.id}`}
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={track.volume}
+            onChange={(e) => setTrackVolume(track.id, Number(e.target.value))}
+            disabled={isPlaying}
+            className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+          />
         </div>
         <details className="track-header-params" style={{ opacity: 0.01, position: 'absolute', width: 1, height: 1, overflow: 'hidden' }}>
           <summary>More Params</summary>
@@ -69,17 +111,19 @@ type TrackListPanelProps = Pick<DAWActions, 'project' | 'selectedTrackId' | 'isP
 
 export function TrackListPanel({ project, addTrack, ...rest }: TrackListPanelProps) {
   return (
-    <div className="tracklist-panel">
-      <div className="tracklist-header" data-testid="tracklist-header">
-        <span>TRACKS</span>
+    <div className="tracklist-panel w-64 bg-[#111] border-r border-gray-800 flex flex-col overflow-y-auto overflow-x-hidden flex-shrink-0">
+      <div
+        className="tracklist-header h-8 border-b border-gray-800 flex items-center px-3 justify-between bg-[#0a0a0a] sticky top-0 z-10"
+        data-testid="tracklist-header"
+      >
+        <span className="text-xs text-gray-500 font-medium">TRACKS</span>
         <button
           data-testid="add-track-btn"
           onClick={addTrack}
           disabled={rest.isPlaying}
-          className="add-track-btn-icon"
-          style={{ fontSize: 0 }}
+          className="add-track-btn-icon add-track-btn text-gray-500 hover:text-emerald-400 p-1"
         >
-          <span style={{ fontSize: '18px' }}>+</span>
+          <span style={{ fontSize: 18 }}>+</span>
           <span style={{ fontSize: 0, opacity: 0 }}>Add Track</span>
         </button>
       </div>
