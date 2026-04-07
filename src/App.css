@@ -52,13 +52,13 @@ body {
 /* ── Layout ── */
 
 .app {
-  max-width: 1100px;
-  margin: 40px auto;
-  padding: 24px;
-  background: var(--color-carbon);
-  border: 1px solid var(--color-charcoal);
-  border-radius: 8px;
-  box-shadow: var(--shadow-warm);
+  max-width: 1200px; /* §5: Desktop >1440px max-width container centered */
+  margin: 0 auto;
+  padding: 32px; /* §5: generous internal padding */
+  background: var(--color-carbon); /* §6 Level 1 */
+  border: 1px solid var(--color-charcoal); /* §6 Level 1 */
+  border-radius: 8px; /* §5: Comfortably rounded */
+  box-shadow: var(--shadow-warm); /* §6 Level 4 */
 }
 
 h1, h2, h3, .inspector-title {
@@ -115,16 +115,17 @@ h1 {
 
 /* ── Buttons (Ghost system) ── */
 
+/* §4: Ghost button — transparent bg, Snow White text, 1px charcoal, 6px radius, 12px 16px padding */
 button {
   background: transparent;
   color: var(--color-white);
   border: 1px solid var(--color-charcoal);
-  border-radius: 6px;
-  padding: 6px 12px;
+  border-radius: 6px; /* §5: Subtly rounded */
+  padding: 12px 16px; /* §4: comfortable padding */
   cursor: pointer;
   font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px; /* §3: Body/Button 16px */
+  font-weight: 500; /* §3: Body 500 */
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
 }
 
@@ -182,12 +183,13 @@ button:disabled {
   background: var(--color-danger-bg);
 }
 
-/* Track header mini buttons */
+/* Track header mini buttons — §5: smaller, compact */
 .track-btn {
   padding: 4px 6px;
-  font-size: 11px;
+  font-size: 11px; /* §3: Micro */
   flex: 1;
   min-width: 0;
+  border-radius: 4px; /* §5: Nearly squared */
 }
 
 .track-btn.active {
@@ -223,8 +225,8 @@ button:disabled {
 }
 
 .transport-primary label {
-  font-size: 14px;
-  color: var(--color-parchment);
+  font-size: 14px; /* §3: Caption/Label 14px */
+  color: var(--color-parchment); /* §2: Warm Parchment for secondary text */
   gap: 8px;
 }
 
@@ -328,8 +330,9 @@ button:disabled {
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
+/* §6 Level 3: Accent — 2px emerald border */
 .track-header.selected {
-  border-color: var(--color-emerald);
+  border: 2px solid var(--color-emerald);
   box-shadow: var(--shadow-emerald);
   background: var(--color-emerald-bg);
 }
@@ -426,11 +429,11 @@ button:disabled {
   position: absolute;
   top: 7px;
   height: 40px;
-  border-radius: 4px;
-  border: 1px solid var(--color-charcoal);
+  border-radius: 4px; /* §5: Nearly squared */
+  border: 1px solid var(--color-charcoal); /* §6 Level 1 */
   color: var(--color-snow);
   font-size: 12px;
-  font-family: var(--font-mono);
+  font-family: var(--font-mono); /* §3: SFMono for technical data */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -438,7 +441,7 @@ button:disabled {
   cursor: pointer;
   overflow: hidden;
   white-space: nowrap;
-  padding-left: 8px;
+  padding: 0 0 0 8px; /* Override button default — compact left-only padding */
   background: rgba(61, 58, 57, 0.4);
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
@@ -496,20 +499,21 @@ button:disabled {
   border-style: dashed;
 }
 
+/* §6 Level 3: Accent — 2px emerald border */
 .clip.selected {
-  border-color: var(--color-emerald) !important;
-  box-shadow: 0 0 4px var(--color-emerald), inset 0 0 2px var(--color-emerald);
+  border: 2px solid var(--color-emerald) !important;
+  box-shadow: 0 0 4px var(--color-emerald);
   z-index: 20;
-  background: rgba(0, 217, 146, 0.1);
+  background: rgba(0, 217, 146, 0.08);
 }
 
 /* ── Inspector ── */
 
 .inspector {
-  border: 1px solid var(--color-charcoal);
-  border-radius: 8px;
+  border: 1px solid var(--color-charcoal); /* §6 Level 1 */
+  border-radius: 8px; /* §5: Comfortably rounded */
   background: var(--color-carbon);
-  padding: 16px;
+  padding: 24px; /* §5: generous internal padding */
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -518,7 +522,7 @@ button:disabled {
   top: 24px;
   max-height: calc(100vh - 48px);
   overflow-y: auto;
-  box-shadow: var(--shadow-warm);
+  box-shadow: var(--shadow-warm); /* §6 Level 4: Ambient Glow */
 }
 
 .inspector-title {
@@ -677,12 +681,12 @@ details.sm summary {
   font-family: var(--font-mono);
 }
 
-/* Compact label (for effect params) */
+/* §3: Micro 12px for compact effect labels */
 .fx-label {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 12px; /* §3: Micro 12px */
   color: var(--color-parchment);
 }
 
@@ -690,7 +694,7 @@ details.sm summary {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-parchment);
   margin-left: 8px;
 }
@@ -699,7 +703,7 @@ details.sm summary {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-parchment);
   margin-left: 4px;
 }
@@ -729,10 +733,11 @@ details.sm summary {
 
 /* ── Hint ── */
 
+/* §3: Micro SFMono 12px */
 .hint {
   margin-top: 16px;
   color: var(--color-slate);
-  font-size: 13px;
+  font-size: 12px;
   font-family: var(--font-mono);
 }
 
