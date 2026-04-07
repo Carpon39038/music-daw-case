@@ -9,7 +9,7 @@ test.describe('Track Management', () => {
     })
     await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
     // Wait for initial render
-    await expect(page.locator('.app')).toBeVisible()
+    await expect(page.locator(".daw-root")).toBeVisible()
   })
 
   test('can add a new track', async ({ page }) => {

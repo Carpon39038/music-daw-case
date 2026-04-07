@@ -5,7 +5,7 @@ test.describe('Clip Gain', () => {
     await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // Wait for the app to load
-    await expect(page.locator('.app')).toBeVisible()
+    await expect(page.locator(".daw-root")).toBeVisible()
 
     const firstClip = page.locator('.clip').first()
     await firstClip.click(); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true))

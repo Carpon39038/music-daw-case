@@ -2,6 +2,13 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { ClipboardState, MasterEQ, ProjectState, SelectedClipRef, WaveType } from '../types'
 
+export interface PlayheadDragState {
+  isDragging: boolean
+  originClientX: number
+  originBeat: number
+  beatWidthPx: number
+}
+
 const TRACK_COUNT = 4
 const STORE_STORAGE_KEY = 'music-daw-case.store.v1'
 const LEGACY_PROJECT_STORAGE_KEY = 'music-daw-case.project.v1'
@@ -22,9 +29,11 @@ interface DAWState extends PersistedDAWState {
   playheadBeat: number
   selectedTrackId: string | null
   selectedClipRef: SelectedClipRef | null
+  selectedClipRefs: SelectedClipRef[]
   clipboard: ClipboardState | null
   past: ProjectState[]
   future: ProjectState[]
+  playheadDrag: PlayheadDragState | null
   setProject: (project: ProjectState, options?: { saveHistory?: boolean }) => void
   updateProject: (updater: (prev: ProjectState) => ProjectState, options?: { saveHistory?: boolean }) => void
   setIsPlaying: (value: boolean) => void
@@ -36,7 +45,11 @@ interface DAWState extends PersistedDAWState {
   setLoopLengthBeats: (value: number) => void
   setSelectedTrackId: (value: string | null) => void
   setSelectedClipRef: (value: SelectedClipRef | null) => void
+  setSelectedClipRefs: (value: SelectedClipRef[]) => void
+  addSelectedClipRef: (value: SelectedClipRef) => void
+  removeSelectedClipRef: (value: SelectedClipRef) => void
   setClipboard: (value: ClipboardState | null) => void
+  setPlayheadDrag: (value: PlayheadDragState | null) => void
   pushHistory: (snapshot?: ProjectState) => void
   clearHistory: () => void
   undo: () => void
@@ -230,9 +243,11 @@ export const useDAWStore = create<DAWState>()(
       playheadBeat: 0,
       selectedTrackId: null,
       selectedClipRef: null,
+      selectedClipRefs: [],
       clipboard: null,
       past: [],
       future: [],
+      playheadDrag: null,
       setProject: (project, options) =>
         set((state) => {
           const nextProject = normalizeProject(project)
@@ -264,7 +279,17 @@ export const useDAWStore = create<DAWState>()(
       setLoopLengthBeats: (value) => set({ loopLengthBeats: value }),
       setSelectedTrackId: (value) => set({ selectedTrackId: value }),
       setSelectedClipRef: (value) => set({ selectedClipRef: value }),
+      setSelectedClipRefs: (value) => set({ selectedClipRefs: value }),
+      addSelectedClipRef: (value) => set((state) => {
+        const exists = state.selectedClipRefs.some(r => r.trackId === value.trackId && r.clipId === value.clipId)
+        if (exists) return state
+        return { selectedClipRefs: [...state.selectedClipRefs, value] }
+      }),
+      removeSelectedClipRef: (value) => set((state) => ({
+        selectedClipRefs: state.selectedClipRefs.filter(r => !(r.trackId === value.trackId && r.clipId === value.clipId))
+      })),
       setClipboard: (value) => set({ clipboard: value }),
+      setPlayheadDrag: (value) => set({ playheadDrag: value }),
       pushHistory: (snapshot) =>
         set((state) => ({
           past: [...state.past, cloneProject(snapshot ?? state.project)].slice(-100),

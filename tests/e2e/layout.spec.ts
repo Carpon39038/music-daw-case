@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Layout & UI Organization', () => {
-  test('should render inspector and timeline side-by-side in workspace', async ({ page }) => {
+  test('should render inspector and timeline side-by-side in DAW layout', async ({ page }) => {
     await page.goto('/');
 
-    const workspace = page.locator('.workspace');
-    await expect(workspace).toBeVisible();
+    const dawMain = page.locator('.daw-main');
+    await expect(dawMain).toBeVisible();
 
     const inspector = page.locator('.inspector');
     const timeline = page.locator('.timeline');
@@ -20,15 +20,12 @@ test.describe('Layout & UI Organization', () => {
     expect(inspectorBox).not.toBeNull();
     expect(timelineBox).not.toBeNull();
 
-    // Timeline should be to the right of inspector (with some gap)
-    expect(timelineBox!.x).toBeGreaterThan(inspectorBox!.x + inspectorBox!.width);
+    // Inspector should be to the right of timeline (standard DAW layout)
+    expect(inspectorBox!.x).toBeGreaterThan(timelineBox!.x);
   });
 
-  test('should render top-bar with transport and meter', async ({ page }) => {
+  test('should render transport at top and meter at bottom', async ({ page }) => {
     await page.goto('/');
-
-    const topBar = page.locator('.top-bar');
-    await expect(topBar).toBeVisible();
 
     const transport = page.locator('.transport');
     const meter = page.locator('.meter');
@@ -42,7 +39,7 @@ test.describe('Layout & UI Organization', () => {
     expect(transportBox).not.toBeNull();
     expect(meterBox).not.toBeNull();
 
-    // They should be side-by-side or inside the flex container horizontally
-    expect(meterBox!.x).toBeGreaterThan(transportBox!.x + transportBox!.width);
+    // Meter should be below transport (vertical stacking)
+    expect(meterBox!.y).toBeGreaterThan(transportBox!.y);
   });
 });

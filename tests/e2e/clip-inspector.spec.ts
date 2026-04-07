@@ -5,7 +5,7 @@ test.describe('Clip Inspector', () => {
     await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // Wait for the app to load
-    await expect(page.locator('.app')).toBeVisible()
+    await expect(page.locator(".daw-root")).toBeVisible()
 
     // Select the first clip
     const firstClip = page.locator('.clip').first()

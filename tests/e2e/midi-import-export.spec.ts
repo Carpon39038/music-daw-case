@@ -53,7 +53,7 @@ test.describe('MIDI Import/Export Functionality', () => {
     })
 
     // App should still be functional after import
-    await expect(page.locator('h1')).toContainText('Music DAW')
+    await expect(page.locator('.daw-root')).toBeVisible()
     const tracks = await page.locator('[data-testid^="track-header-"]').count()
     expect(tracks).toBe(4)
   })

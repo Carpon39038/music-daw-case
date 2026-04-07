@@ -7,7 +7,7 @@ test.describe('Clip Mute', () => {
       window.localStorage.clear()
     })
     await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
-    await expect(page.locator('.app')).toBeVisible()
+    await expect(page.locator(".daw-root")).toBeVisible()
   })
 
   test('can mute and unmute a clip from the inspector', async ({ page }) => {

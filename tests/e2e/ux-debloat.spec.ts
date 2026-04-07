@@ -5,8 +5,8 @@ test.describe('UX Debloat & Information Hierarchy', () => {
     await page.goto('/');
 
     // Main workspace layout check
-    const workspace = page.locator('.workspace');
-    await expect(workspace).toBeVisible();
+    const dawMain = page.locator('.daw-main');
+    await expect(dawMain).toBeVisible();
 
     // Transport primary area
     const transportPrimary = page.locator('.transport-primary');

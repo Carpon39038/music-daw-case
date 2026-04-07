@@ -5,7 +5,7 @@ test.describe('Master EQ features', () => {
     await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     // Wait for the app to be ready
-    await page.waitForSelector('.app')
+    await page.waitForSelector(".daw-root")
 
     // Find the Master EQ sliders
     const lowEq = page.getByTestId('master-eq-low')
@@ -29,7 +29,7 @@ test.describe('Master EQ features', () => {
 
     // Reload to verify persistence
     await page.reload()
-    await page.waitForSelector('.app')
+    await page.waitForSelector(".daw-root")
 
     // The EQ values should have persisted
     const lowEqValue = await page.getByTestId('master-eq-low').inputValue()
