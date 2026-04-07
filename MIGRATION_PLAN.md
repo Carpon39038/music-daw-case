@@ -4,15 +4,15 @@
 
 ## 迁移步骤（严格按顺序）
 
-### Step 1: 状态管理迁移到 zustand ✅/⬜
-- [ ] 安装 zustand (`pnpm add zustand`)
-- [ ] 创建 src/store/useDAWStore.ts，参考 /tmp/zip_inspect/zip/src/store/useDAWStore.ts
-- [ ] 创建 src/types.ts，参考 /tmp/zip_inspect/zip/src/types.ts
-- [ ] App.tsx 中所有 useState 状态迁移到 zustand store
-- [ ] 保留 persist middleware（localStorage 持久化）
-- [ ] 保留 undo/redo (past/future)、copy/cut/paste
-- [ ] **不改动 UI 布局和组件结构**
-- [ ] 验证：69 e2e 全通过
+### Step 1: 状态管理迁移到 zustand ✅
+- [x] 安装 zustand (`pnpm add zustand`)
+- [x] 创建 src/store/useDAWStore.ts，参考 /tmp/zip_inspect/zip/src/store/useDAWStore.ts
+- [x] 创建 src/types.ts，参考 /tmp/zip_inspect/zip/src/types.ts
+- [x] App.tsx 中所有 useState 状态迁移到 zustand store
+- [x] 保留 persist middleware（localStorage 持久化）
+- [x] 保留 undo/redo (past/future)、copy/cut/paste
+- [x] **不改动 UI 布局和组件结构**
+- [x] 验证：69 e2e 全通过
 
 ### Step 2: AudioEngine 独立化 ✅/⬜
 - [ ] 创建 src/audio/AudioEngine.ts，参考 /tmp/zip_inspect/zip/src/audio/AudioEngine.ts

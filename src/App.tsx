@@ -1,72 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import './App.css'
+import type { Clip, MasterEQ, ProjectState, Track, WaveType } from './types'
+import { useDAWStore } from './store/useDAWStore'
 
-type WaveType = 'sine' | 'square' | 'sawtooth' | 'triangle'
-
-interface Clip {
-  name?: string
-  id: string
-  startBeat: number
-  lengthBeats: number
-  noteHz: number
-  wave: WaveType
-  muted?: boolean
-  gain?: number
-  transposeSemitones?: number
-  color?: string
-  fadeIn?: number
-  fadeOut?: number
-}
-
-interface Track {
-  id: string
-  name: string
-  volume: number
-  pan: number
-  muted: boolean
-  solo: boolean
-  color?: string
-  locked: boolean
-  delayEnabled?: boolean
-  delayTime?: number
-  delayFeedback?: number
-  flangerEnabled?: boolean
-  flangerSpeed?: number
-  flangerDepth?: number
-  flangerFeedback?: number
-  eqEnabled?: boolean
-  eqLow?: number
-  eqMid?: number
-  eqHigh?: number
-  distortionEnabled?: boolean
-  compressorEnabled?: boolean
-  compressorThreshold?: number
-  compressorRatio?: number
-  chorusEnabled?: boolean
-  chorusDepth?: number
-  chorusRate?: number
-  tremoloEnabled?: boolean
-  tremoloDepth?: number
-  tremoloRate?: number
-  reverbEnabled?: boolean
-  reverbMix?: number
-  reverbDecay?: number
-  transposeSemitones: number
-  filterType: 'none' | 'lowpass' | 'highpass'
-  filterCutoff: number
-  clips: Clip[]
-}
-
-interface ProjectState {
-  bpm: number
-  tracks: Track[]
-}
-
-const TRACK_COUNT = 4
 const TIMELINE_BEATS = 16
-const PROJECT_STORAGE_KEY = 'music-daw-case.project.v1'
-const MASTER_VOLUME_KEY = 'music-daw-case.masterVolume.v1'
-const MASTER_EQ_KEY = 'music-daw-case.masterEQ.v1'
 
 function semitoneToRatio(semitones: number) {
   return 2 ** (semitones / 12)
@@ -103,39 +40,6 @@ function resolveNonOverlappingStart(
   }
 
   return clamped
-}
-
-function createInitialProject(): ProjectState {
-  const defaultNotes = [261.63, 329.63, 392.0, 523.25]
-  return {
-    bpm: 120,
-    tracks: Array.from({ length: TRACK_COUNT }).map((_, i) => ({
-      id: `track-${i + 1}`,
-      name: `Track ${i + 1}`,
-      volume: 0.7,
-      pan: 0,
-      muted: false,
-      solo: false,
-            color: 'var(--color-charcoal)',
-      locked: false,
-      transposeSemitones: 0,
-      filterType: 'none',
-      filterCutoff: 20000,
-      reverbEnabled: false,
-      distortionEnabled: false,
-      reverbMix: 0.3,
-      reverbDecay: 2,
-      clips: [
-        {
-          id: `clip-${i + 1}-1`,
-          startBeat: i * 2,
-          lengthBeats: 2,
-          noteHz: defaultNotes[i],
-          wave: i % 2 === 0 ? 'sine' : 'square',
-        },
-      ],
-    })),
-  }
 }
 
 // MIDI parsing and conversion utilities
@@ -240,87 +144,6 @@ function buildMIDIFromProject(tracks: Track[], bpm: number): ArrayBuffer {
   return result.buffer
 }
 
-function isValidProjectState(value: unknown): value is ProjectState {
-  if (!value || typeof value !== 'object') return false
-  const p = value as Partial<ProjectState>
-  if (typeof p.bpm !== 'number' || !Array.isArray(p.tracks)) return false
-  return p.tracks.every((t) => {
-    if (!t || typeof t !== 'object') return false
-    if (
-      typeof t.id !== 'string' ||
-      typeof t.name !== 'string' ||
-      typeof t.volume !== 'number' ||
-      (typeof t.pan !== 'number' && typeof t.pan !== 'undefined') ||
-      typeof t.muted !== 'boolean' ||
-      typeof t.solo !== 'boolean' ||
-      (typeof t.locked !== 'boolean' && typeof t.locked !== 'undefined') ||
-      typeof t.transposeSemitones !== 'number' ||
-      (t.compressorEnabled !== undefined && typeof t.compressorEnabled !== 'boolean') ||
-      (t.compressorThreshold !== undefined && typeof t.compressorThreshold !== 'number') ||
-      (t.compressorRatio !== undefined && typeof t.compressorRatio !== 'number') ||
-      (t.chorusEnabled !== undefined && typeof t.chorusEnabled !== 'boolean') ||
-      (t.chorusDepth !== undefined && typeof t.chorusDepth !== 'number') ||
-      (t.chorusRate !== undefined && typeof t.chorusRate !== 'number') ||
-      (t.tremoloEnabled !== undefined && typeof t.tremoloEnabled !== 'boolean') ||
-      (t.tremoloDepth !== undefined && typeof t.tremoloDepth !== 'number') ||
-      (t.tremoloRate !== undefined && typeof t.tremoloRate !== 'number') ||
-      (t.reverbEnabled !== undefined && typeof t.reverbEnabled !== 'boolean') ||
-      (t.reverbMix !== undefined && typeof t.reverbMix !== 'number') ||
-      (t.reverbDecay !== undefined && typeof t.reverbDecay !== 'number') ||
-      (t.filterType && !['none', 'lowpass', 'highpass'].includes(t.filterType)) ||
-      (t.filterCutoff !== undefined && typeof t.filterCutoff !== 'number')
-    )
-      return false
-    if (!Array.isArray(t.clips)) return false
-    return t.clips.every((c) => {
-      if (!c || typeof c !== 'object') return false
-      return (
-        typeof c.id === 'string' &&
-        typeof c.startBeat === 'number' &&
-        typeof c.lengthBeats === 'number' &&
-        typeof c.noteHz === 'number' &&
-        (c.wave === 'sine' || c.wave === 'square')
-      )
-    })
-  })
-}
-
-function loadInitialProject(): ProjectState {
-  if (typeof window === 'undefined') return createInitialProject()
-  try {
-    const raw = window.localStorage.getItem(PROJECT_STORAGE_KEY)
-    if (!raw) return createInitialProject()
-    const parsed = JSON.parse(raw)
-    if (!isValidProjectState(parsed)) return createInitialProject()
-
-    return {
-      ...parsed,
-      tracks: parsed.tracks.map((track) => ({
-        ...track,
-        locked: track.locked ?? false,
-        pan: track.pan ?? 0,
-        filterType: track.filterType ?? 'none',
-        compressorEnabled: track.compressorEnabled ?? false,
-        compressorThreshold: track.compressorThreshold ?? -24,
-        compressorRatio: track.compressorRatio ?? 12,
-        chorusEnabled: track.chorusEnabled ?? false,
-        chorusDepth: track.chorusDepth ?? 0.5,
-        chorusRate: track.chorusRate ?? 1.5,
-        tremoloEnabled: track.tremoloEnabled ?? false,
-        tremoloDepth: track.tremoloDepth ?? 0.5,
-        tremoloRate: track.tremoloRate ?? 5.0,
-        reverbEnabled: track.reverbEnabled ?? false,
-        distortionEnabled: track.distortionEnabled ?? false,
-        reverbMix: track.reverbMix ?? 0.3,
-        reverbDecay: track.reverbDecay ?? 2,
-        filterCutoff: track.filterCutoff ?? 20000,
-      })),
-    }
-  } catch {
-    return createInitialProject()
-  }
-}
-
 function createReverbIR(ctx: AudioContext, durationSec: number, sampleRate?: number): AudioBuffer {
   const sr = sampleRate ?? ctx.sampleRate
   const length = Math.max(1, Math.floor(sr * durationSec))
@@ -397,35 +220,90 @@ declare global {
 }
 
 function App() {
-  const [project, setProject] = useState<ProjectState>(() => loadInitialProject())
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [metronomeEnabled, setMetronomeEnabled] = useState(false)
-  const [playheadBeat, setPlayheadBeat] = useState(0)
-  const [masterVolume, setMasterVolume] = useState(() => {
-    if (typeof window === 'undefined') return 0.8
-    try {
-      const stored = window.localStorage.getItem(MASTER_VOLUME_KEY)
-      return stored !== null ? Number(stored) : 0.8
-    } catch {
-      return 0.8
-    }
-  })
-  const [masterEQ, setMasterEQ] = useState(() => {
-    if (typeof window === 'undefined') return { low: 0, mid: 0, high: 0 }
-    try {
-      const stored = window.localStorage.getItem(MASTER_EQ_KEY)
-      if (stored) return JSON.parse(stored)
-    } catch { /* ignore */ }
-    return { low: 0, mid: 0, high: 0 }
-  })
-  const [loopEnabled, setLoopEnabled] = useState(false)
-  const [loopLengthBeats, setLoopLengthBeats] = useState(8)
+  const project = useDAWStore((state) => state.project)
+  const isPlaying = useDAWStore((state) => state.isPlaying)
+  const metronomeEnabled = useDAWStore((state) => state.metronomeEnabled)
+  const playheadBeat = useDAWStore((state) => state.playheadBeat)
+  const masterVolume = useDAWStore((state) => state.masterVolume)
+  const masterEQ = useDAWStore((state) => state.masterEQ)
+  const loopEnabled = useDAWStore((state) => state.loopEnabled)
+  const loopLengthBeats = useDAWStore((state) => state.loopLengthBeats)
+  const selectedTrackId = useDAWStore((state) => state.selectedTrackId)
+  const selectedClipRef = useDAWStore((state) => state.selectedClipRef)
+  const clipboard = useDAWStore((state) => state.clipboard)
+  const past = useDAWStore((state) => state.past)
+  const future = useDAWStore((state) => state.future)
+  const storeSetProject = useDAWStore((state) => state.setProject)
+  const updateProject = useDAWStore((state) => state.updateProject)
+  const storeSetIsPlaying = useDAWStore((state) => state.setIsPlaying)
+  const storeSetMetronomeEnabled = useDAWStore((state) => state.setMetronomeEnabled)
+  const storeSetPlayheadBeat = useDAWStore((state) => state.setPlayheadBeat)
+  const storeSetMasterVolume = useDAWStore((state) => state.setMasterVolume)
+  const storeSetMasterEQ = useDAWStore((state) => state.setMasterEQ)
+  const storeSetLoopEnabled = useDAWStore((state) => state.setLoopEnabled)
+  const storeSetLoopLengthBeats = useDAWStore((state) => state.setLoopLengthBeats)
+  const storeSetSelectedTrackId = useDAWStore((state) => state.setSelectedTrackId)
+  const storeSetSelectedClipRef = useDAWStore((state) => state.setSelectedClipRef)
+  const storeSetClipboard = useDAWStore((state) => state.setClipboard)
+  const pushHistory = useDAWStore((state) => state.pushHistory)
+  const clearHistory = useDAWStore((state) => state.clearHistory)
+  const undo = useDAWStore((state) => state.undo)
+  const redo = useDAWStore((state) => state.redo)
+  const resetProjectState = useDAWStore((state) => state.resetProject)
   const tapTempoRef = useRef<number[]>([])
-  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
-  const [selectedClipRef, setSelectedClipRef] = useState<{ trackId: string; clipId: string } | null>(null)
-  const undoStackRef = useRef<ProjectState[]>([])
-  const redoStackRef = useRef<ProjectState[]>([])
-  const [clipboard, setClipboard] = useState<{ clip: Clip; sourceTrackId: string } | null>(null)
+  const undoDepth = past.length
+  const redoDepth = future.length
+
+  const setProject = (
+    value: ProjectState | ((prev: ProjectState) => ProjectState),
+    options?: { saveHistory?: boolean },
+  ) => {
+    if (typeof value === 'function') {
+      updateProject(value, options)
+      return
+    }
+    storeSetProject(value, options)
+  }
+
+  const setIsPlaying = (value: boolean) => {
+    storeSetIsPlaying(value)
+  }
+
+  const setMetronomeEnabled = (value: boolean | ((prev: boolean) => boolean)) => {
+    storeSetMetronomeEnabled(typeof value === 'function' ? value(metronomeEnabled) : value)
+  }
+
+  const setPlayheadBeat = (value: number) => {
+    storeSetPlayheadBeat(value)
+  }
+
+  const setMasterVolume = (value: number) => {
+    storeSetMasterVolume(value)
+  }
+
+  const setMasterEQ = (value: MasterEQ | ((prev: MasterEQ) => MasterEQ)) => {
+    storeSetMasterEQ(typeof value === 'function' ? value(masterEQ) : value)
+  }
+
+  const setLoopEnabled = (value: boolean) => {
+    storeSetLoopEnabled(value)
+  }
+
+  const setLoopLengthBeats = (value: number) => {
+    storeSetLoopLengthBeats(value)
+  }
+
+  const setSelectedTrackId = (value: string | null) => {
+    storeSetSelectedTrackId(value)
+  }
+
+  const setSelectedClipRef = (value: { trackId: string; clipId: string } | null) => {
+    storeSetSelectedClipRef(value)
+  }
+
+  const setClipboard = (value: { clip: Clip; sourceTrackId: string } | null) => {
+    storeSetClipboard(value)
+  }
   const dragStateRef = useRef<{
     trackId: string
     clipId: string
@@ -515,19 +393,6 @@ function App() {
       masterGainRef.current.gain.value = masterVolume
     }
   }, [masterVolume, masterGainRef])
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(MASTER_VOLUME_KEY, String(masterVolume))
-    } catch {
-      // ignore
-    }
-  }, [masterVolume])
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(MASTER_EQ_KEY, JSON.stringify(masterEQ))
-    } catch { /* ignore */ }
-  }, [masterEQ])
 
   const ensureAudio = async () => {
     if (!audioCtxRef.current) {
@@ -1014,8 +879,8 @@ function App() {
       firstTrackFirstClipWave: project.tracks[0]?.clips[0]?.wave ?? null,
       firstTrackFirstClipGain: project.tracks[0]?.clips[0]?.gain ?? 1.0,
       playheadBeat,
-      undoDepth: undoStackRef.current.length,
-      redoDepth: redoStackRef.current.length,
+      undoDepth,
+      redoDepth,
       clipboardClipId: clipboard?.clip.id ?? null,
       clipboardSourceTrackId: clipboard?.sourceTrackId ?? null,
       masterLevel: masterLevelRef.current,
@@ -1079,6 +944,8 @@ function App() {
     isPlaying,
     playheadBeat,
     project,
+    undoDepth,
+    redoDepth,
     totalClipCount,
     beatDuration,
     totalDurationSec,
@@ -1105,31 +972,24 @@ function App() {
   ])
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project))
-    } catch {
-      // ignore persistence errors
-    }
-  }, [project])
-
-  useEffect(() => {
     if (!selectedClipRef) return
     const track = project.tracks.find((t) => t.id === selectedClipRef.trackId)
     const clipExists = !!track?.clips.some((c) => c.id === selectedClipRef.clipId)
     if (!clipExists) {
       setSelectedClipRef(null)
     }
-  }, [project.tracks, selectedClipRef])
+  }, [project.tracks, selectedClipRef, setSelectedClipRef])
+
+  useEffect(() => {
+    if (!selectedTrackId) return
+    const trackExists = project.tracks.some((track) => track.id === selectedTrackId)
+    if (!trackExists) {
+      setSelectedTrackId(null)
+    }
+  }, [project.tracks, selectedTrackId, setSelectedTrackId])
 
   const applyProjectUpdate = (updater: (prev: ProjectState) => ProjectState) => {
-    setProject((prev) => {
-      const next = updater(prev)
-      if (next === prev) return prev
-      undoStackRef.current.push(structuredClone(prev))
-      if (undoStackRef.current.length > 100) undoStackRef.current.shift()
-      redoStackRef.current = []
-      return next
-    })
+    setProject(updater, { saveHistory: true })
   }
 
   const addClip = (trackId: string) => {
@@ -1316,6 +1176,12 @@ function App() {
         ),
       }
     })
+  }
+
+  const cutClip = (trackId: string, clipId: string) => {
+    if (isPlaying) return
+    copyClip(trackId, clipId)
+    deleteClip(trackId, clipId)
   }
 
   const cycleClipWave = (trackId: string, clipId: string) => {
@@ -1587,22 +1453,17 @@ function App() {
 
   const setClipColor = (trackId: string, clipId: string, color: string) => {
     if (isPlaying) return
-    setProject((prev) => {
-      undoStackRef.current.push(structuredClone(prev))
-      if (undoStackRef.current.length > 100) undoStackRef.current.shift()
-      redoStackRef.current = []
-      return {
-        ...prev,
-        tracks: prev.tracks.map((t) =>
-          t.id === trackId
-            ? {
-                ...t,
-                clips: t.clips.map((c) => (c.id === clipId ? { ...c, color } : c)),
-              }
-            : t,
-        ),
-      }
-    })
+    setProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) =>
+        t.id === trackId
+          ? {
+              ...t,
+              clips: t.clips.map((c) => (c.id === clipId ? { ...c, color } : c)),
+            }
+          : t,
+      ),
+    }), { saveHistory: true })
   }
 
   const setClipName = (trackId: string, clipId: string, name: string) => {
@@ -1771,20 +1632,6 @@ function App() {
     }
   }
 
-  const undo = () => {
-    const prev = undoStackRef.current.pop()
-    if (!prev) return
-    redoStackRef.current.push(structuredClone(project))
-    setProject(prev)
-  }
-
-  const redo = () => {
-    const next = redoStackRef.current.pop()
-    if (!next) return
-    undoStackRef.current.push(structuredClone(project))
-    setProject(next)
-  }
-
   const startClipDrag = (
     e: ReactMouseEvent<HTMLButtonElement>,
     trackId: string,
@@ -1843,9 +1690,7 @@ function App() {
     const cleanup = () => {
       const state = dragStateRef.current
       if (state && state.hasMoved && !cancelled) {
-        undoStackRef.current.push(structuredClone(state.originProject))
-        if (undoStackRef.current.length > 100) undoStackRef.current.shift()
-        redoStackRef.current = []
+        pushHistory(state.originProject)
       }
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', cleanup)
@@ -1919,9 +1764,7 @@ function App() {
     const cleanup = () => {
       const state = resizeStateRef.current
       if (state && state.hasMoved && !cancelled) {
-        undoStackRef.current.push(structuredClone(state.originProject))
-        if (undoStackRef.current.length > 100) undoStackRef.current.shift()
-        redoStackRef.current = []
+        pushHistory(state.originProject)
       }
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', cleanup)
@@ -1996,6 +1839,14 @@ function App() {
         return
       }
 
+      if (event.key.toLowerCase() === 'x' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
+        if (selectedClipRef) {
+          event.preventDefault()
+          cutClip(selectedClipRef.trackId, selectedClipRef.clipId)
+        }
+        return
+      }
+
       if (event.key === 'Backspace' || event.key === 'Delete') {
         if (selectedClipRef) {
           const track = project.tracks.find((t) => t.id === selectedClipRef.trackId)
@@ -2010,7 +1861,7 @@ function App() {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [isPlaying, project, copyClip, deleteClip, pasteClip, pausePlayback, redo, selectedClipRef, selectedTrackId, startPlayback, stopPlayback, undo])
+  }, [cutClip, isPlaying, project, copyClip, deleteClip, pasteClip, pausePlayback, redo, selectedClipRef, selectedTrackId, startPlayback, stopPlayback, undo])
 
   return (
     <div className="app">
@@ -2062,13 +1913,11 @@ function App() {
             </label>
 
             <button data-testid="metronome-btn" onClick={() => setMetronomeEnabled(v => !v)} aria-pressed={metronomeEnabled}>{metronomeEnabled ? 'Metronome: ON' : 'Metronome: OFF'}</button>
-            <button data-testid="undo-btn" onClick={undo} disabled={undoStackRef.current.length === 0 || isPlaying}>Undo</button>
-            <button data-testid="redo-btn" onClick={redo} disabled={redoStackRef.current.length === 0 || isPlaying}>Redo</button>
+            <button data-testid="undo-btn" onClick={undo} disabled={undoDepth === 0 || isPlaying}>Undo</button>
+            <button data-testid="redo-btn" onClick={redo} disabled={redoDepth === 0 || isPlaying}>Redo</button>
             <button data-testid="reset-project-btn" onClick={() => {
-              applyProjectUpdate(() => createInitialProject())
-              undoStackRef.current = []
-              redoStackRef.current = []
-              try { window.localStorage.removeItem(PROJECT_STORAGE_KEY) } catch { /* ignore */ }
+              resetProjectState()
+              clearHistory()
             }} disabled={isPlaying}>Reset</button>
 
             <label>
