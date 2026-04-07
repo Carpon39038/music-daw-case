@@ -71,7 +71,7 @@ test.describe('clipboard copy/paste', () => {
 
     // Lock track-2
     await page.click('[data-testid="lock-track-2"]')
-    await expect(page.locator('[data-testid="lock-track-2"]')).toHaveText('L')
+    await expect(page.locator('[data-testid="lock-track-2"]')).toBeVisible()
 
     // Select track-2 and try to paste
     await page.click('[data-testid="track-header-track-2"]')

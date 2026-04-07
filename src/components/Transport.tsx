@@ -1,4 +1,4 @@
-import { Play, Square, Pause, RotateCcw, Download, Upload, Undo2, Redo2 } from 'lucide-react'
+import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2 } from 'lucide-react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { formatTime } from '../utils/formatTime'
 
@@ -27,9 +27,26 @@ export function Transport({
   stopPlayback,
 }: DAWActions) {
   return (
-    <section className="transport bg-[#0a0a0a] border-b border-gray-800 flex flex-col flex-shrink-0" data-testid="transport">
-      <div className="transport-primary flex items-center px-4 h-8 gap-4 flex-wrap">
-        <div className="flex items-center gap-1 bg-[#1a1a1a] p-0.5 rounded-md">
+    <section className="transport h-16 bg-[#111] border-b border-gray-800 flex items-center px-4 justify-between flex-shrink-0" data-testid="transport">
+      <div className="transport-primary flex items-center gap-4">
+        <div className="flex items-center gap-2 bg-[#1a1a1a] p-1 rounded-md">
+          <button
+            className="p-2 hover:bg-gray-800 rounded text-gray-400 hover:text-white"
+            onClick={() => { stopPlayback() }}
+            data-testid="stop-btn"
+            title="Reset"
+          >
+            <RotateCcw size={18} />
+          </button>
+          <button
+            className="p-2 hover:bg-gray-800 rounded text-gray-400 hover:text-white"
+            onClick={pausePlayback}
+            data-testid="pause-btn"
+            disabled={!isPlaying}
+            title="Pause"
+          >
+            <Square size={18} />
+          </button>
           <button
             className={`play-btn primary-btn p-2 rounded ${isPlaying ? 'bg-emerald-600 text-white is-playing' : 'hover:bg-gray-800 text-gray-400 hover:text-white'}`}
             onClick={() => { void startPlayback() }}
@@ -39,36 +56,14 @@ export function Transport({
           >
             <Play size={18} />
           </button>
-          <button
-            className={`pause-btn p-2 rounded ${isPlaying ? 'text-emerald-400 is-paused' : 'text-gray-400 hover:bg-gray-800'}`}
-            onClick={pausePlayback}
-            data-testid="pause-btn"
-            disabled={!isPlaying}
-            title="Pause"
-          >
-            <Pause size={18} />
-          </button>
-          <button
-            className="p-2 hover:bg-gray-800 rounded text-gray-400 hover:text-white"
-            onClick={stopPlayback}
-            data-testid="stop-btn"
-            title="Stop"
-          >
-            <Square size={18} />
-          </button>
-          <button
-            className="p-2 hover:bg-gray-800 rounded text-gray-400 hover:text-white"
-            onClick={() => { stopPlayback() }}
-            title="Reset"
-          >
-            <RotateCcw size={18} />
-          </button>
         </div>
 
         <div className="status flex items-center gap-4 bg-[#1a1a1a] px-4 py-2 rounded-md font-mono text-emerald-400 text-lg tracking-wider w-48 justify-center">
           {formatTime(playheadBeat, project.bpm)}
         </div>
+      </div>
 
+      <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500 uppercase tracking-wider">BPM</span>
           <input
@@ -126,63 +121,60 @@ export function Transport({
         </div>
       </div>
 
-      <details className="transport-advanced">
-        <summary className="text-xs text-gray-500 cursor-pointer px-4 py-1">Advanced Controls</summary>
-        <div className="transport-secondary flex items-center gap-2 px-4 py-1 flex-wrap">
-          <input
-            data-testid="midi-import-input"
-            type="file"
-            accept=".mid,.midi"
-            onChange={handleMIDIImport}
-            disabled={isPlaying}
-            className="hidden"
-          />
-          <button
-            data-testid="midi-import-btn"
-            onClick={() => document.querySelector<HTMLInputElement>('[data-testid="midi-import-input"]')?.click()}
-            disabled={isPlaying}
-            className="p-2 text-gray-500 hover:text-gray-300"
-            title="Import MIDI"
-          >
-            <Upload size={18} />
-          </button>
-          <button
-            onClick={handleMIDIExport}
-            disabled={isPlaying}
-            data-testid="midi-export-btn"
-            className="p-2 text-gray-500 hover:text-gray-300"
-            title="Export MIDI"
-          >
-            <Download size={18} />
-          </button>
-          <button
-            onClick={undo}
-            disabled={undoDepth === 0 || isPlaying}
-            data-testid="undo-btn"
-            className="p-2 text-gray-500 hover:text-gray-300 disabled:opacity-30"
-            title="Undo"
-          >
-            <Undo2 size={18} />
-          </button>
-          <button
-            onClick={redo}
-            disabled={redoDepth === 0 || isPlaying}
-            data-testid="redo-btn"
-            className="p-2 text-gray-500 hover:text-gray-300 disabled:opacity-30"
-            title="Redo"
-          >
-            <Redo2 size={18} />
-          </button>
-          <button
-            onClick={() => { resetProjectState(); clearHistory(); }}
-            disabled={isPlaying}
-            data-testid="reset-project-btn"
-            className="px-3 py-1 text-xs bg-red-900/30 text-red-400 hover:bg-red-900/50 rounded border border-red-900/50"
-          >
-            Reset
-          </button>
-        </div>
-      </details>
+      <div className="flex items-center gap-2">
+        <input
+          data-testid="midi-import-input"
+          type="file"
+          accept=".mid,.midi"
+          onChange={handleMIDIImport}
+          disabled={isPlaying}
+          className="hidden"
+        />
+        <button
+          data-testid="midi-import-btn"
+          onClick={() => document.querySelector<HTMLInputElement>('[data-testid="midi-import-input"]')?.click()}
+          disabled={isPlaying}
+          className="p-2 text-gray-500 hover:text-gray-300"
+          title="Import MIDI"
+        >
+          <Upload size={18} />
+        </button>
+        <button
+          onClick={handleMIDIExport}
+          disabled={isPlaying}
+          data-testid="midi-export-btn"
+          className="p-2 text-gray-500 hover:text-gray-300"
+          title="Export MIDI"
+        >
+          <Download size={18} />
+        </button>
+        <button
+          onClick={undo}
+          disabled={undoDepth === 0 || isPlaying}
+          data-testid="undo-btn"
+          className="p-2 text-gray-500 hover:text-gray-300 disabled:opacity-30"
+          title="Undo"
+        >
+          <Undo2 size={18} />
+        </button>
+        <button
+          onClick={redo}
+          disabled={redoDepth === 0 || isPlaying}
+          data-testid="redo-btn"
+          className="p-2 text-gray-500 hover:text-gray-300 disabled:opacity-30"
+          title="Redo"
+        >
+          <Redo2 size={18} />
+        </button>
+        <button
+          onClick={() => { resetProjectState(); clearHistory(); }}
+          disabled={isPlaying}
+          data-testid="reset-project-btn"
+          className="px-3 py-1 text-xs bg-red-900/30 text-red-400 hover:bg-red-900/50 rounded border border-red-900/50"
+        >
+          Reset
+        </button>
+      </div>
     </section>
   )
 }

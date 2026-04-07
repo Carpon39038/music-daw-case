@@ -8,10 +8,10 @@ interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'selectedCl
 
 function WaveformSVG({ wave, color }: { wave: string; color: string }) {
   let path = ''
-  if (wave === 'sine') path = 'M0,50 Q25,0 50,50 T100,50'
-  else if (wave === 'square') path = 'M0,25 L50,25 L50,75 L100,75'
-  else if (wave === 'sawtooth') path = 'M0,75 L100,25 L100,75'
-  else path = 'M0,75 L50,25 L100,75'
+  if (wave === 'sine') path = 'M0,50 Q17,15 33,50 T67,50 T100,50'
+  else if (wave === 'square') path = 'M0,25 L33,25 L33,75 L67,75 L67,25 L100,25'
+  else if (wave === 'sawtooth') path = 'M0,75 L33,25 L67,75 L100,25'
+  else path = 'M0,75 L33,25 L67,75 L100,25'
   return (
     <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="clip-waveform absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
       <path d={path} fill="none" stroke={color} strokeWidth="2" opacity="0.3" />
@@ -86,7 +86,7 @@ export function Timeline({
                 height: 'calc(100% - 8px)',
                 left: `${(clip.startBeat / TIMELINE_BEATS) * 100}%`,
                 width: `${(clip.lengthBeats / TIMELINE_BEATS) * 100}%`,
-                backgroundColor: `color-mix(in srgb, ${colorValue} 30%, transparent)`,
+                backgroundColor: clip.color || track.color || '#6366f1',
                 borderLeftColor: colorValue,
                 borderLeftWidth: 3,
                 opacity: clip.muted ? 0.5 : track.locked ? 0.6 : 1,
@@ -156,7 +156,7 @@ export function Timeline({
           className="playhead-container absolute top-0 bottom-0 z-20 pointer-events-none flex flex-col items-center"
           style={{ left: `${(Math.min(playheadBeat, effectiveTimelineBeats) / effectiveTimelineBeats) * 100}%`, transform: 'translateX(-1px)' }}
         >
-          <div className="playhead-triangle w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[8px] border-t-emerald-500 flex-shrink-0" style={{ filter: 'drop-shadow(0 0 3px #00d992)' }} />
+          <div className="playhead-triangle w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[12px] border-t-emerald-500 flex-shrink-0" style={{ filter: 'drop-shadow(0 0 3px #00d992)' }} />
           <div className="playhead-line w-0.5 flex-1 bg-emerald-500" style={{ boxShadow: '0 0 4px #00d992' }} />
         </div>
       </div>

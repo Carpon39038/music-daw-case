@@ -13,14 +13,9 @@ test.describe('UX Debloat & Information Hierarchy', () => {
     await expect(transportPrimary).toBeVisible();
     await expect(page.getByTestId('play-btn')).toBeVisible();
 
-    // Advanced transport should be closed by default
-    const transportAdvanced = page.locator('details.transport-advanced');
-    // It should be visible but not have 'open' attribute
-    await expect(transportAdvanced).toBeVisible();
-    
-    // Check if Playwright evaluates the open attribute
-    const isAdvancedOpen = await transportAdvanced.evaluate((node: HTMLDetailsElement) => node.open);
-    expect(isAdvancedOpen).toBe(false);
+    // Undo/Redo buttons are visible in the main transport bar
+    await expect(page.getByTestId('undo-btn')).toBeVisible();
+    await expect(page.getByTestId('redo-btn')).toBeVisible();
 
     // Track header key buttons
     const trackHeader = page.locator('.track-header').first();

@@ -68,7 +68,7 @@ function createInitialProject(): ProjectState {
       pan: 0,
       muted: false,
       solo: false,
-      color: 'var(--color-charcoal)',
+      color: '#6366f1',
       locked: false,
       transposeSemitones: 0,
       filterType: 'none',

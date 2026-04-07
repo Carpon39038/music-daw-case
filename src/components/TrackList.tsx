@@ -1,4 +1,4 @@
-import { Volume2, Plus, Trash2, ArrowUp, ArrowDown, Copy } from 'lucide-react'
+import { Volume2, Plus, Trash2, ArrowUp, ArrowDown, Copy, Lock, Unlock } from 'lucide-react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import type { Track } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
@@ -77,12 +77,13 @@ export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackI
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); toggleTrackLock(track.id); }}
-              className={`track-btn w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${track.locked ? 'active bg-orange-900/50 text-orange-400' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+              className={`p-1 rounded ${track.locked ? 'text-red-400' : 'text-gray-600 hover:text-gray-400'}`}
               data-testid={`lock-${track.id}`}
               disabled={isPlaying}
+              title="Lock Track"
               aria-pressed={track.locked}
             >
-              L
+              {track.locked ? <Lock size={12} /> : <Unlock size={12} />}
             </button>
             {project.tracks.length > 1 && (
               <button
