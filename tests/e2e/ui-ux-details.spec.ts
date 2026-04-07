@@ -10,6 +10,8 @@ test.describe('UI/UX Details Panel', () => {
     // Key buttons should be visible immediately
     await expect(trackHeader.locator('[data-testid^="mute-"]').first()).toBeVisible();
     await expect(trackHeader.locator('[data-testid^="solo-"]').first()).toBeVisible();
+    // open details first
+    await trackHeader.locator('summary').first().click();
     await expect(trackHeader.locator('[data-testid^="vol-"]').first()).toBeVisible();
 
     // Check selected state
