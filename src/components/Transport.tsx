@@ -27,8 +27,8 @@ export function Transport({
   stopPlayback,
 }: DAWActions) {
   return (
-    <section className="transport bg-[#111] border-b border-gray-800 flex flex-col flex-shrink-0" data-testid="transport">
-      <div className="transport-primary flex items-center px-4 py-1 gap-4 flex-wrap border-b border-gray-800/50">
+    <section className="transport bg-[#0a0a0a] border-b border-gray-800 flex flex-col flex-shrink-0" data-testid="transport">
+      <div className="transport-primary flex items-center px-4 h-8 gap-4 flex-wrap">
         <div className="flex items-center gap-1 bg-[#1a1a1a] p-0.5 rounded-md">
           <button
             className={`play-btn primary-btn p-2 rounded ${isPlaying ? 'bg-emerald-600 text-white is-playing' : 'hover:bg-gray-800 text-gray-400 hover:text-white'}`}

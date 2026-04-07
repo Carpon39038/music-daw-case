@@ -8,13 +8,13 @@ interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'selectedCl
 
 function WaveformSVG({ wave, color }: { wave: string; color: string }) {
   let path = ''
-  if (wave === 'sine') path = 'M0,20 Q10,0 20,20 Q30,40 40,20 Q50,0 60,20 Q70,40 80,20 Q90,0 100,20'
-  else if (wave === 'square') path = 'M0,5 L0,35 L25,35 L25,5 L50,5 L50,35 L75,35 L75,5 L100,5'
-  else if (wave === 'sawtooth') path = 'M0,35 L25,5 L25,35 L50,5 L50,35 L75,5 L75,35 L100,5'
-  else path = 'M0,20 L25,5 L50,35 L75,5 L100,20'
+  if (wave === 'sine') path = 'M0,50 Q25,0 50,50 T100,50'
+  else if (wave === 'square') path = 'M0,25 L50,25 L50,75 L100,75'
+  else if (wave === 'sawtooth') path = 'M0,75 L100,25 L100,75'
+  else path = 'M0,75 L50,25 L100,75'
   return (
-    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="clip-waveform absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
-      <path d={path} fill="none" stroke={color} strokeWidth="1.5" opacity="0.6" />
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="clip-waveform absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
+      <path d={path} fill="none" stroke={color} strokeWidth="2" opacity="0.3" />
     </svg>
   )
 }
@@ -48,7 +48,7 @@ export function Timeline({
 
   return (
     <div className="track-timeline-row h-24">
-      <div className="track-grid relative grid grid-cols-16 h-full gap-0 bg-[#111] overflow-hidden" ref={timelineRef}>
+      <div className="track-grid relative grid grid-cols-16 h-full gap-0 bg-[#151515] overflow-hidden" ref={timelineRef}>
         {/* Beat grid lines */}
         {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => (
           <div
@@ -195,7 +195,7 @@ type TimelineSectionProps = Pick<DAWActions, 'project' | 'selectedClipRef' | 'se
 export function TimelineSection(props: TimelineSectionProps) {
   const { project, ...rest } = props
   return (
-    <section className="timeline flex-1 flex flex-col overflow-auto min-w-0 bg-[#111]" data-testid="timeline">
+    <section className="timeline flex-1 flex flex-col overflow-auto min-w-0 bg-[#151515]" data-testid="timeline">
       <TimelineHeader startPlayheadDrag={props.startPlayheadDrag} />
       {project.tracks.map((track) => (
         <div className="track-row border-b border-gray-800/50" key={track.id} data-testid={`track-row-${track.id}`}>
