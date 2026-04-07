@@ -116,7 +116,7 @@ function createInitialProject(): ProjectState {
       pan: 0,
       muted: false,
       solo: false,
-            color: '#4a5568',
+            color: 'var(--color-charcoal)',
       locked: false,
       transposeSemitones: 0,
       filterType: 'none',
@@ -941,11 +941,11 @@ function App() {
       }
 
       ctx2d.clearRect(0, 0, canvas.width, canvas.height)
-      ctx2d.fillStyle = '#1d2a3a'
+      ctx2d.fillStyle = '#3d3a39'
       ctx2d.fillRect(0, 0, canvas.width, canvas.height)
 
       const barWidth = canvas.width * level
-      ctx2d.fillStyle = level > 0.75 ? '#ff5d5d' : '#31d187'
+      ctx2d.fillStyle = level > 0.75 ? '#2fd6a1' : '#00d992'
       ctx2d.fillRect(0, 0, barWidth, canvas.height)
 
       meterRafRef.current = requestAnimationFrame(drawMeter)
@@ -1981,12 +1981,12 @@ function App() {
     <div className="app">
       <h1>Music DAW Case (Harness MVP)</h1>
 
-      <div className="top-bar" style={{ display: "flex", gap: "24px", alignItems: "flex-start", marginBottom: "16px", padding: "12px", background: "#0f1724", borderRadius: "10px", border: "1px solid #2a3f5b" }}>
+      <div className="top-bar" style={{ display: "flex", gap: "24px", alignItems: "flex-start", marginBottom: "16px", padding: "12px", background: "var(--color-carbon)", borderRadius: "10px", border: "1px solid var(--color-charcoal)" }}>
       <section className="transport" data-testid="transport" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div className="transport-primary" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", paddingBottom: "4px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-          <button className="play-btn primary-btn" data-testid="play-btn" onClick={startPlayback} disabled={isPlaying} style={{ background: isPlaying ? "#3b82f6" : "#2563eb", color: "#fff", fontWeight: "bold", padding: "6px 16px", borderRadius: "6px" }}>▶ Play</button>
-          <button className="pause-btn" data-testid="pause-btn" onClick={pausePlayback} disabled={!isPlaying} style={{ padding: "6px 12px", borderRadius: "6px", background: !isPlaying ? "rgba(255,255,255,0.1)" : "#fbbf24", color: !isPlaying ? "#fff" : "#000" }}>⏸ Pause</button>
-          <button className="stop-btn" data-testid="stop-btn" onClick={stopPlayback} style={{ padding: "6px 12px", borderRadius: "6px", background: "rgba(255,255,255,0.1)", color: "#fff" }}>⏹ Stop</button>
+          <button className="play-btn primary-btn" data-testid="play-btn" onClick={startPlayback} disabled={isPlaying} style={{ background: isPlaying ? "rgba(0, 217, 146, 0.2)" : "var(--color-carbon)", color: "var(--color-white)", fontWeight: "bold", padding: "6px 16px", borderRadius: "6px" }}>▶ Play</button>
+          <button className="pause-btn" data-testid="pause-btn" onClick={pausePlayback} disabled={!isPlaying} style={{ padding: "6px 12px", borderRadius: "6px", background: !isPlaying ? "rgba(255,255,255,0.1)" : "#fbbf24", color: !isPlaying ? "var(--color-white)" : "var(--color-mint)" }}>⏸ Pause</button>
+          <button className="stop-btn" data-testid="stop-btn" onClick={stopPlayback} style={{ padding: "6px 12px", borderRadius: "6px", background: "rgba(255,255,255,0.1)", color: "var(--color-white)" }}>⏹ Stop</button>
           
           <label>
             BPM
@@ -2010,17 +2010,17 @@ function App() {
   <span className="master-volume-value">{(masterVolume * 100).toFixed(0)}%</span>
 </label>
 
-          <div className="status" style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: "16px", color: "#60a5fa", background: "rgba(0,0,0,0.3)", padding: "4px 8px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.1)" }}>{playheadBeat.toFixed(2)}</div>
+          <div className="status" style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: "16px", color: "var(--color-mint)", background: "rgba(0,0,0,0.3)", padding: "4px 8px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.1)" }}>{playheadBeat.toFixed(2)}</div>
         </div>
 
         <details className="transport-advanced">
-          <summary style={{ cursor: 'pointer', fontSize: '12px', color: '#9cb4d8' }}>Advanced Controls</summary>
+          <summary style={{ cursor: 'pointer', fontSize: '12px', color: 'var(--color-slate)' }}>Advanced Controls</summary>
           <div className="transport-secondary" style={{ display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
-            <label style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9cb4d8'}}>
+            <label style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-slate)'}}>
               Loop
               <input data-testid="loop-enabled" type="checkbox" checked={loopEnabled} onChange={(e) => setLoopEnabled(e.target.checked)} disabled={isPlaying} />
             </label>
-            <label style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9cb4d8'}}>
+            <label style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-slate)'}}>
               Beats
               <select data-testid="loop-length" value={loopLengthBeats} onChange={(e) => setLoopLengthBeats(Number(e.target.value))} disabled={isPlaying || !loopEnabled}>
                 {[4, 8, 12, 16].map((beats) => (<option key={beats} value={beats}>{beats}</option>))}
@@ -2053,7 +2053,7 @@ function App() {
           <canvas ref={meterCanvasRef} width={320} height={16} />
         </div>
         <details className="master-eq-collapse">
-          <summary style={{ cursor: 'pointer', fontSize: '12px', color: '#9cb4d8' }}>Master EQ</summary>
+          <summary style={{ cursor: 'pointer', fontSize: '12px', color: 'var(--color-slate)' }}>Master EQ</summary>
           <div className="master-eq-controls" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
             <label>L: <input type="range" min="-12" max="12" value={masterEQ.low} onChange={e => setMasterEQ((prev: { low: number; mid: number; high: number }) => ({...prev, low: Number(e.target.value)}))} data-testid="master-eq-low" /></label>
             <label>M: <input type="range" min="-12" max="12" value={masterEQ.mid} onChange={e => setMasterEQ((prev: { low: number; mid: number; high: number }) => ({...prev, mid: Number(e.target.value)}))} data-testid="master-eq-mid" /></label>
@@ -2102,7 +2102,7 @@ function App() {
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
                     
-                <details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "#9cb4d8", fontSize: "11px" }}>Basic FX</summary><div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap", padding: "8px 0" }}>
+                <details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "var(--color-slate)", fontSize: "11px" }}>Basic FX</summary><div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap", padding: "8px 0" }}>
                   <label>
                 Pan
                 <input
@@ -2133,9 +2133,9 @@ function App() {
               </label>
                 </div>
               </details>
-<details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "#9cb4d8", fontSize: "11px" }}>Modulation & Time</summary><div style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "8px 0" }}>
+<details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "var(--color-slate)", fontSize: "11px" }}>Modulation & Time</summary><div style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "8px 0" }}>
                 <div className="track-chorus-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)' }}>
                     <input
                       type="checkbox"
                       data-testid={`chorus-enabled-${selectedTrack.id}`}
@@ -2154,7 +2154,7 @@ function App() {
                   
                   {selectedTrack.chorusEnabled && (
                     <>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af', marginLeft: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)', marginLeft: '8px' }}>
                         Rate
                         <input
                           type="range"
@@ -2175,7 +2175,7 @@ function App() {
                           }}
                         />
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)' }}>
                         Depth
                         <input
                           type="range"
@@ -2201,7 +2201,7 @@ function App() {
                 </div>
 
                 <div className="track-tremolo-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)' }}>
                     <input
                       type="checkbox"
                       data-testid={`tremolo-enabled-${selectedTrack.id}`}
@@ -2220,7 +2220,7 @@ function App() {
                   
                   {selectedTrack.tremoloEnabled && (
                     <>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af', marginLeft: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)', marginLeft: '8px' }}>
                         Rate
                         <input
                           type="range"
@@ -2241,7 +2241,7 @@ function App() {
                           }}
                         />
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af', marginLeft: '4px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)', marginLeft: '4px' }}>
                         Depth
                         <input
                           type="range"
@@ -2267,7 +2267,7 @@ function App() {
                 </div>
 
                 </div></details>
-<details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "#9cb4d8", fontSize: "11px" }}>Dynamics & EQ</summary>
+<details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "var(--color-slate)", fontSize: "11px" }}>Dynamics & EQ</summary>
 <div className="track-effects-details" style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "8px 0" }}>
                 <div className="track-compressor-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
                   <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
@@ -2522,7 +2522,7 @@ function App() {
                 </div>
                 
                 <div className="track-tremolo-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)' }}>
                     <input
                       type="checkbox"
                       data-testid={`tremolo-enabled-${selectedTrack.id}`}
@@ -2542,7 +2542,7 @@ function App() {
                   
                   {selectedTrack.tremoloEnabled && (
                     <>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af', marginLeft: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)', marginLeft: '8px' }}>
                         Rate
                         <input
                           type="range"
@@ -2564,7 +2564,7 @@ function App() {
                           }}
                         />
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9ca3af', marginLeft: '4px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)', marginLeft: '4px' }}>
                         Depth
                         <input
                           type="range"
@@ -2784,7 +2784,7 @@ function App() {
             </div>
 
             <details className="inspector-subgroup" style={{ marginBottom: '8px' }}>
-              <summary style={{ cursor: 'pointer', color: '#9cb4d8', fontSize: '11px' }}>Tuning & Gain</summary>
+              <summary style={{ cursor: 'pointer', color: 'var(--color-slate)', fontSize: '11px' }}>Tuning & Gain</summary>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
                 <div className="inspector-row">
                   <label htmlFor="selected-clip-gain">Gain</label>
@@ -2841,7 +2841,7 @@ function App() {
             </details>
 
             <details className="inspector-subgroup" style={{ marginBottom: '8px' }}>
-              <summary style={{ cursor: 'pointer', color: '#9cb4d8', fontSize: '11px' }}>Timing & Fades</summary>
+              <summary style={{ cursor: 'pointer', color: 'var(--color-slate)', fontSize: '11px' }}>Timing & Fades</summary>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
                 <div className="inspector-row">
                   <label htmlFor="selected-clip-length">Length (beats)</label>
@@ -2891,7 +2891,7 @@ function App() {
               </div>
             </details>
 
-            <div className="clip-actions-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px', borderTop: '1px solid #2d3748', paddingTop: '12px' }}>
+            <div className="clip-actions-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px', borderTop: '1px solid var(--color-charcoal)', paddingTop: '12px' }}>
               <button
                 data-testid="selected-clip-mute-btn"
                 onClick={() => toggleClipMute(selectedClipData.track.id, selectedClipData.clip.id)}
@@ -2967,19 +2967,19 @@ function App() {
               <div className="track-header-main" style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
               <div className="track-header-row1" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
     
-                <div className="track-name" style={{ color: track.color || "#e2e8f0", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px', fontWeight: 'bold' }}>{track.name}</div>
+                <div className="track-name" style={{ color: track.color || "var(--color-snow)", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px', fontWeight: 'bold' }}>{track.name}</div>
               
     <div className="track-header-buttons" style={{ display: 'flex', gap: '4px', flex: 1, minWidth: '100px' }}>
       
-                <button data-testid={`mute-${track.id}`} onClick={() => toggleTrackMute(track.id)} disabled={isPlaying} aria-pressed={track.muted} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.muted ? '#ff5d5d' : undefined, color: track.muted ? '#fff' : undefined }}>{track.muted ? 'M' : 'M'}</button>
-                <button data-testid={`solo-${track.id}`} onClick={() => toggleTrackSolo(track.id)} disabled={isPlaying} aria-pressed={track.solo} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.solo ? '#eab308' : undefined, color: track.solo ? '#fff' : undefined }}>{track.solo ? 'S' : 'S'}</button>
-                <button data-testid={`lock-${track.id}`} onClick={() => toggleTrackLock(track.id)} disabled={isPlaying} aria-pressed={track.locked} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.locked ? '#ef4444' : undefined, color: track.locked ? '#fff' : undefined }}>{track.locked ? 'L' : 'L'}</button>
+                <button data-testid={`mute-${track.id}`} onClick={() => toggleTrackMute(track.id)} disabled={isPlaying} aria-pressed={track.muted} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.muted ? '#3d3a39' : undefined, color: track.muted ? '#f2f2f2' : undefined }}>{track.muted ? 'M' : 'M'}</button>
+                <button data-testid={`solo-${track.id}`} onClick={() => toggleTrackSolo(track.id)} disabled={isPlaying} aria-pressed={track.solo} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.solo ? '#00d992' : undefined, color: track.solo ? '#101010' : undefined }}>{track.solo ? 'S' : 'S'}</button>
+                <button data-testid={`lock-${track.id}`} onClick={() => toggleTrackLock(track.id)} disabled={isPlaying} aria-pressed={track.locked} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.locked ? '#3d3a39' : undefined, color: track.locked ? '#f2f2f2' : undefined }}>{track.locked ? 'L' : 'L'}</button>
                 <button data-testid={`add-clip-${track.id}`} onClick={() => addClip(track.id)} disabled={isPlaying || track.locked} style={{ padding: '4px 6px', fontSize: '11px', flex: 1 }}>+</button>
               
     </div>
   </div>
               <details className="track-header-params">
-                <summary style={{ fontSize: '10px', color: '#9cb4d8', cursor: 'pointer', marginTop: '4px' }}>More Params</summary>
+                <summary style={{ fontSize: '10px', color: 'var(--color-slate)', cursor: 'pointer', marginTop: '4px' }}>More Params</summary>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', marginTop: '4px' }}>
                   Vol
                   <input data-testid={`vol-${track.id}`} type="range" min={0} max={1} step={0.01} value={track.volume} onChange={(e) => setTrackVolume(track.id, Number(e.target.value))} disabled={isPlaying} style={{ width: '100%' }} />
