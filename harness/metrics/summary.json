@@ -1,21 +1,21 @@
 {
-  "generatedAt": "2026-04-06T19:14:35.587Z",
-  "total": 114,
-  "pass": 98,
-  "fail": 16,
+  "generatedAt": "2026-04-07T00:08:54.929Z",
+  "total": 121,
+  "pass": 101,
+  "fail": 20,
   "failedSteps": {
-    "lint": 5,
+    "lint": 6,
     "unit": 1,
-    "e2e": 10,
+    "e2e": 14,
     "build": 1
   },
   "failureTaxonomy": {
-    "R3_rules_missing": 5,
+    "R3_rules_missing": 6,
     "R4_toolchain_or_build": 1,
-    "R6_validation_gap": 11
+    "R6_validation_gap": 15
   },
   "scoreSummary": {
-    "count": 98,
+    "count": 101,
     "avgTotal": 24.88,
     "maxTotal": 25,
     "latestTotal": 25
@@ -868,6 +868,69 @@
       "totalScore": 25
     },
     {
+      "taskId": "daily-dev-2026-04-07-0416",
+      "verdict": "FAIL",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": true,
+      "buildFail": false,
+      "totalScore": null
+    },
+    {
+      "taskId": "daily-dev-2026-04-07-0508",
+      "verdict": "FAIL",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": true,
+      "buildFail": false,
+      "totalScore": null
+    },
+    {
+      "taskId": "daily-dev-2026-04-07-0615",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-07-0712",
+      "verdict": "FAIL",
+      "lintFail": true,
+      "unitFail": false,
+      "e2eFail": true,
+      "buildFail": false,
+      "totalScore": null
+    },
+    {
+      "taskId": "daily-dev-2026-04-07-0714-2",
+      "verdict": "FAIL",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": true,
+      "buildFail": false,
+      "totalScore": null
+    },
+    {
+      "taskId": "daily-dev-2026-04-07-0716-3",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-07-0808",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
       "taskId": "daily-dev-distort",
       "verdict": "PASS",
       "lintFail": false,
@@ -1048,5 +1111,5 @@
       "totalScore": 25
     }
   ],
-  "passRate": 0.8596
+  "passRate": 0.8347
 }

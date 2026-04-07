@@ -1,0 +1,167 @@
+
+> music-daw-case@0.0.0 pretest:e2e /Users/cc/.openclaw/workspace/music-daw-case
+> pnpm run build
+
+
+> music-daw-case@0.0.0 build /Users/cc/.openclaw/workspace/music-daw-case
+> tsc -b && vite build
+
+vite v8.0.3 building client environment for production...
+[2Ktransforming...✓ 17 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.46 kB │ gzip:  0.30 kB
+dist/assets/index-I7MYm2Pk.css    5.86 kB │ gzip:  1.93 kB
+dist/assets/index-DgcSC-ND.js   245.69 kB │ gzip: 72.37 kB
+
+✓ built in 51ms
+
+> music-daw-case@0.0.0 test:e2e /Users/cc/.openclaw/workspace/music-daw-case
+> playwright test
+
+
+Running 68 tests using 5 workers
+
+  ✓   5 tests/e2e/clip-inspector.spec.ts:4:3 › Clip Inspector › can edit clip waveform and length from inspector (214ms)
+  ✓   1 tests/e2e/clip-gain.spec.ts:4:3 › Clip Gain › should allow setting and persisting clip gain via inspector (253ms)
+  ✓   4 tests/e2e/clip-delete.spec.ts:12:3 › Clip Delete › can delete a clip via button (278ms)
+  ✓   2 tests/e2e/clip-mute.spec.ts:13:3 › Clip Mute › can mute and unmute a clip from the inspector (285ms)
+  ✓   6 tests/e2e/clip-name.spec.ts:4:3 › Clip Name Feature › should allow setting and displaying a custom clip name (195ms)
+  ✓   7 tests/e2e/clip-transpose.spec.ts:4:3 › Clip Transpose › should allow setting and persisting clip transpose via inspector (222ms)
+  ✓   8 tests/e2e/clip-delete.spec.ts:28:3 › Clip Delete › cannot delete a clip on a locked track (204ms)
+  ✓   9 tests/e2e/clipboard.spec.ts:12:3 › clipboard copy/paste › copy and paste clip to same track (244ms)
+  ✓  11 tests/e2e/duplicate-track.spec.ts:4:3 › Duplicate Track › should duplicate track with its clips (169ms)
+  ✓  12 tests/e2e/eq3.spec.ts:3:1 › track eq3 effect can be enabled and configured (210ms)
+  ✓  10 tests/e2e/daw.spec.ts:4:3 › DAW MVP e2e › transport + clip add/remove + playback debug state (290ms)
+  ✓  13 tests/e2e/clipboard.spec.ts:29:3 › clipboard copy/paste › paste to different track (236ms)
+  ✓  15 tests/e2e/layout.spec.ts:4:3 › Layout & UI Organization › should render inspector and timeline side-by-side in workspace (108ms)
+  ✓  16 tests/e2e/daw.spec.ts:40:3 › DAW MVP e2e › bpm and volume controls are editable when stopped (103ms)
+  ✓  14 tests/e2e/inspector-collapse.spec.ts:4:3 › Inspector Panel Collapsibility › should use native details element for track and clip settings (230ms)
+  ✓  18 tests/e2e/layout.spec.ts:27:3 › Layout & UI Organization › should render top-bar with transport and meter (105ms)
+  ✓   3 tests/e2e/clip-fades.spec.ts:4:3 › Clip Fades › should allow setting and persisting clip fadeIn and fadeOut via inspector (994ms)
+  ✓  19 tests/e2e/daw.spec.ts:53:3 › DAW MVP e2e › editing guards should apply during playback and restore after stop (163ms)
+  ✓  20 tests/e2e/master-eq.spec.ts:4:3 › Master EQ features › should adjust master EQ Low, Mid, High and persist state (162ms)
+  ✓  17 tests/e2e/clipboard.spec.ts:42:3 › clipboard copy/paste › paste is disabled during playback (370ms)
+  ✓  24 tests/e2e/midi-import-export.spec.ts:8:3 › MIDI Import/Export Functionality › should render MIDI import and export buttons in transport (101ms)
+  ✓  23 tests/e2e/daw.spec.ts:76:3 › DAW MVP e2e › transport rapid toggles should end in a stable stopped state (210ms)
+  ✓  21 tests/e2e/master-volume-tap-tempo.spec.ts:9:3 › Master Volume & Tap Tempo › master volume slider should render and control gain node (342ms)
+  ✓  27 tests/e2e/daw.spec.ts:96:3 › DAW MVP e2e › bpm invalid input should fallback to default guard value (99ms)
+  ✓  26 tests/e2e/midi-import-export.spec.ts:14:3 › MIDI Import/Export Functionality › should export project as MIDI file (126ms)
+  ✓  25 tests/e2e/clipboard.spec.ts:59:3 › clipboard copy/paste › paste button disabled without track selection is irrelevant - copy requires clip selection (176ms)
+  ✓  29 tests/e2e/daw.spec.ts:108:3 › DAW MVP e2e › clip drag should snap to beat and clamp within both timeline bounds (209ms)
+  ✓  30 tests/e2e/midi-import-export.spec.ts:23:3 › MIDI Import/Export Functionality › should disable MIDI controls during playback (228ms)
+  ✓  31 tests/e2e/clipboard.spec.ts:67:3 › clipboard copy/paste › paste to locked track is no-op (258ms)
+  ✓  33 tests/e2e/midi-import-export.spec.ts:35:3 › MIDI Import/Export Functionality › should import MIDI file (94ms)
+  ✓  22 tests/e2e/metronome.spec.ts:3:1 › metronome toggle works (692ms)
+  ✓  32 tests/e2e/daw.spec.ts:151:3 › DAW MVP e2e › clip drag position should be reflected in playback schedule state (200ms)
+  ✓  34 tests/e2e/negative.spec.ts:3:1 › play button is disabled while playing (157ms)
+  ✓  35 tests/e2e/midi-import-export.spec.ts:61:3 › MIDI Import/Export Functionality › should maintain track structure after MIDI import (117ms)
+  ✓  37 tests/e2e/daw.spec.ts:175:3 › DAW MVP e2e › clip drag should revert on Escape (cancel consistency) (160ms)
+  ✓  36 tests/e2e/track-chorus.spec.ts:4:3 › Track Chorus Effect › should toggle track chorus effect (202ms)
+  ✓  38 tests/e2e/negative.spec.ts:20:1 › cannot undo or redo while playing (163ms)
+  ✓  39 tests/e2e/track-color.spec.ts:4:3 › Track Color › should allow changing track color and apply to track header (167ms)
+  ✓  28 tests/e2e/master-volume-tap-tempo.spec.ts:28:3 › Master Volume & Tap Tempo › master volume should affect audio output level during playback (773ms)
+  ✓  40 tests/e2e/daw.spec.ts:196:3 › DAW MVP e2e › undo/redo should restore clip add operation state (195ms)
+  ✓  41 tests/e2e/track-compressor.spec.ts:4:3 › Track Compressor › should allow enabling and configuring track compressor via inspector (198ms)
+  ✓  42 tests/e2e/negative.spec.ts:41:3 › negative: should reject invalid master volume input by fallback (209ms)
+  ✓  43 tests/e2e/track-delay.spec.ts:4:3 › Track Delay e2e › should toggle delay and adjust parameters (213ms)
+  ✓  45 tests/e2e/daw.spec.ts:214:3 › DAW MVP e2e › project should persist clip edits across reload (166ms)
+  ✓  46 tests/e2e/track-distortion.spec.ts:4:3 › Track Distortion e2e › should toggle distortion and expose via debug state (179ms)
+  ✓  47 tests/e2e/negative.spec.ts:62:3 › negative: should ignore duplicate clip action when track is locked (148ms)
+  ✓  48 tests/e2e/track-filter.spec.ts:4:3 › Track Filter e2e › should display filter select and change filter type (142ms)
+  ✓  51 tests/e2e/track-management.spec.ts:15:3 › Track Management › can add a new track (129ms)
+  ✓  49 tests/e2e/daw.spec.ts:230:3 › DAW MVP e2e › clip drag should avoid overlap by auto-resolving to nearest free slot (189ms)
+  ✓  50 tests/e2e/track-flanger.spec.ts:10:3 › Track Flanger › should allow enabling flanger and setting parameters (166ms)
+  ✓  55 tests/e2e/track-name.spec.ts:4:3 › Track Name › should verify new track has default name (103ms)
+  ✓  53 tests/e2e/track-management.spec.ts:32:3 › Track Management › can delete a track (157ms)
+  ✓  54 tests/e2e/daw.spec.ts:262:3 › DAW MVP e2e › audio runtime should clear scheduled nodes on pause and stop (170ms)
+  ✓  44 tests/e2e/master-volume-tap-tempo.spec.ts:41:3 › Master Volume & Tap Tempo › master volume should persist across page reload (658ms)
+  ✓  56 tests/e2e/track-reorder.spec.ts:4:3 › Track Reordering › should move track up and down (226ms)
+  ✓  58 tests/e2e/track-reverb.spec.ts:4:3 › Track Reverb e2e › should toggle reverb and adjust mix and decay parameters (191ms)
+  ✓  57 tests/e2e/track-management.spec.ts:59:3 › Track Management › cannot delete the last track (241ms)
+  ✓  59 tests/e2e/master-volume-tap-tempo.spec.ts:54:3 › Master Volume & Tap Tempo › tap tempo button should render and be disabled during playback (155ms)
+  ✓  60 tests/e2e/track-solo.spec.ts:4:3 › Track Solo Feature › should solo a track (161ms)
+  ✓  62 tests/e2e/track-tremolo.spec.ts:4:3 › Track Tremolo e2e › should toggle tremolo and expose via debug state (173ms)
+  ✓  64 tests/e2e/ui-ux-details.spec.ts:4:3 › UI/UX Details Panel › should display key buttons on track header and advanced effects in inspector (117ms)
+  ✓  65 tests/e2e/track-tremolo.spec.ts:29:3 › Track Tremolo e2e › should adjust tremolo rate and depth (117ms)
+  ✓  66 tests/e2e/ui-ux.spec.ts:3:1 › UI/UX interaction improvements (138ms)
+  ✓  63 tests/e2e/master-volume-tap-tempo.spec.ts:67:3 › Master Volume & Tap Tempo › tap tempo should estimate BPM from taps (2.7s)
+  ✓  67 tests/e2e/master-volume-tap-tempo.spec.ts:86:3 › Master Volume & Tap Tempo › tap tempo should not change BPM when only one tap (105ms)
+  ✓  68 tests/e2e/master-volume-tap-tempo.spec.ts:96:3 › Master Volume & Tap Tempo › master volume at zero should silence output (859ms)
+  ✘  52 tests/e2e/track-filter.spec.ts:32:3 › Track Filter e2e › audio runtime should register filter in debug state (30.0s)
+  ✘  61 tests/e2e/track-reverb.spec.ts:48:3 › Track Reverb e2e › should expose reverb state via debug interface (30.0s)
+
+
+  1) tests/e2e/track-filter.spec.ts:32:3 › Track Filter e2e › audio runtime should register filter in debug state 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.selectOption: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[data-testid="filter-type-track-1"]')[22m
+    [2m    - locator resolved to <select data-testid="filter-type-track-1">…</select>[22m
+    [2m  - attempting select option action[22m
+    [2m    2 × waiting for element to be visible and enabled[22m
+    [2m      - element is not visible[22m
+    [2m    - retrying select option action[22m
+    [2m    - waiting 20ms[22m
+    [2m    2 × waiting for element to be visible and enabled[22m
+    [2m      - element is not visible[22m
+    [2m    - retrying select option action[22m
+    [2m      - waiting 100ms[22m
+    [2m    59 × waiting for element to be visible and enabled[22m
+    [2m       - element is not visible[22m
+    [2m     - retrying select option action[22m
+    [2m       - waiting 500ms[22m
+
+
+      35 | // Change track 1 to lowpass
+      36 |     const filterSelect = page.locator('[data-testid="filter-type-track-1"]')
+    > 37 |     await filterSelect.selectOption('lowpass')
+         |                        ^
+      38 |     
+      39 |     // Start playback
+      40 |     await page.click('[data-testid="play-btn"]')
+        at /Users/cc/.openclaw/workspace/music-daw-case/tests/e2e/track-filter.spec.ts:37:24
+
+    Error Context: test-results/track-filter-Track-Filter--4f50b-ister-filter-in-debug-state/error-context.md
+
+  2) tests/e2e/track-reverb.spec.ts:48:3 › Track Reverb e2e › should expose reverb state via debug interface 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.check: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[data-testid^="reverb-enable-"]').first()[22m
+    [2m    - locator resolved to <input type="checkbox" data-testid="reverb-enable-track-1"/>[22m
+    [2m  - attempting click action[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is not visible[22m
+    [2m    - retrying click action[22m
+    [2m    - waiting 20ms[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is not visible[22m
+    [2m    - retrying click action[22m
+    [2m      - waiting 100ms[22m
+    [2m    57 × waiting for element to be visible, enabled and stable[22m
+    [2m       - element is not visible[22m
+    [2m     - retrying click action[22m
+    [2m       - waiting 500ms[22m
+
+
+      58 |     // Enable reverb on first track
+      59 |     const reverbToggle = page.locator('[data-testid^="reverb-enable-"]').first()
+    > 60 |     await reverbToggle.check()
+         |                        ^
+      61 |
+      62 |     const afterCount = await page.evaluate(() => window.__DAW_DEBUG__?.reverbEnabledTrackCount)
+      63 |     expect(afterCount).toBe(1)
+        at /Users/cc/.openclaw/workspace/music-daw-case/tests/e2e/track-reverb.spec.ts:60:24
+
+    Error Context: test-results/track-reverb-Track-Reverb--d0e70-b-state-via-debug-interface/error-context.md
+
+  2 failed
+    tests/e2e/track-filter.spec.ts:32:3 › Track Filter e2e › audio runtime should register filter in debug state 
+    tests/e2e/track-reverb.spec.ts:48:3 › Track Reverb e2e › should expose reverb state via debug interface 
+  66 passed (33.8s)
+ ELIFECYCLE  Command failed with exit code 1.

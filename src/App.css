@@ -431,3 +431,34 @@ details.inspector-group[open] summary::before {
 .danger-btn:hover {
   background: #991b1b !important;
 }
+
+/* Key buttons highlighted */
+.play-btn {
+  background: #38a169 !important;
+  color: #fff !important;
+  border-color: #2f855a !important;
+  font-weight: bold;
+}
+.play-btn:hover:not(:disabled) {
+  background: #2f855a !important;
+}
+
+.pause-btn {
+  background: #d69e2e !important;
+  color: #fff !important;
+  border-color: #b7791f !important;
+  font-weight: bold;
+}
+.pause-btn:hover:not(:disabled) {
+  background: #b7791f !important;
+}
+
+.stop-btn {
+  background: #e53e3e !important;
+  color: #fff !important;
+  border-color: #c53030 !important;
+  font-weight: bold;
+}
+.stop-btn:hover:not(:disabled) {
+  background: #c53030 !important;
+}

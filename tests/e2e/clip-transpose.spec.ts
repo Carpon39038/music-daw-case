@@ -8,6 +8,7 @@ test.describe('Clip Transpose', () => {
     const clip1 = page.locator('[data-testid^="clip-track-1-"]').first()
     await expect(clip1).toBeVisible()
     await clip1.click()
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
 
     const transposeInput = page.locator('[data-testid="selected-clip-transpose-input"]')
     await expect(transposeInput).toBeVisible()
@@ -20,6 +21,7 @@ test.describe('Clip Transpose', () => {
     // Select another clip
     const clip2 = page.locator('[data-testid^="clip-track-2-"]').first()
     await clip2.click()
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
     
     // Transpose for clip 2 should be 0
     await expect(transposeInput).toHaveValue('0')

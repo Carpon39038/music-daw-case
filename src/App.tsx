@@ -1984,9 +1984,9 @@ function App() {
       <div className="top-bar" style={{ display: "flex", gap: "24px", alignItems: "flex-start", marginBottom: "16px", padding: "12px", background: "#0f1724", borderRadius: "10px", border: "1px solid #2a3f5b" }}>
       <section className="transport" data-testid="transport" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div className="transport-primary" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button data-testid="play-btn" onClick={startPlayback} disabled={isPlaying}>Play</button>
-          <button data-testid="pause-btn" onClick={pausePlayback} disabled={!isPlaying}>Pause</button>
-          <button data-testid="stop-btn" onClick={stopPlayback}>Stop</button>
+          <button className="play-btn" data-testid="play-btn" onClick={startPlayback} disabled={isPlaying}>Play</button>
+          <button className="pause-btn" data-testid="pause-btn" onClick={pausePlayback} disabled={!isPlaying}>Pause</button>
+          <button className="stop-btn" data-testid="stop-btn" onClick={stopPlayback}>Stop</button>
           
           <label>
             BPM
@@ -2106,7 +2106,7 @@ function App() {
             </div>
 
             
-            <details open className="inspector-group" data-testid="inspector-track-effects">
+            <details className="inspector-group" data-testid="inspector-track-effects">
               <summary className="inspector-subtitle" style={{cursor: "pointer"}}>Track Effects & Params</summary>
               {(() => {
                 const selectedTrack = project.tracks.find(t => t.id === selectedTrackId);
@@ -2114,7 +2114,7 @@ function App() {
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
                     
-                <details open className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "#9cb4d8", fontSize: "11px" }}>Basic FX</summary><div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap", padding: "8px 0" }}>
+                <details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "#9cb4d8", fontSize: "11px" }}>Basic FX</summary><div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap", padding: "8px 0" }}>
                   <label>
                 Pan
                 <input
@@ -2795,7 +2795,7 @@ function App() {
               </div>
             </div>
 
-            <details open className="inspector-subgroup" style={{ marginBottom: '8px' }}>
+            <details className="inspector-subgroup" style={{ marginBottom: '8px' }}>
               <summary style={{ cursor: 'pointer', color: '#9cb4d8', fontSize: '11px' }}>Tuning & Gain</summary>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
                 <div className="inspector-row">
