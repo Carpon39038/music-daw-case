@@ -1983,10 +1983,10 @@ function App() {
 
       <div className="top-bar" style={{ display: "flex", gap: "24px", alignItems: "flex-start", marginBottom: "16px", padding: "12px", background: "#0f1724", borderRadius: "10px", border: "1px solid #2a3f5b" }}>
       <section className="transport" data-testid="transport" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div className="transport-primary" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button className="play-btn" data-testid="play-btn" onClick={startPlayback} disabled={isPlaying}>Play</button>
-          <button className="pause-btn" data-testid="pause-btn" onClick={pausePlayback} disabled={!isPlaying}>Pause</button>
-          <button className="stop-btn" data-testid="stop-btn" onClick={stopPlayback}>Stop</button>
+        <div className="transport-primary" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", paddingBottom: "4px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <button className="play-btn primary-btn" data-testid="play-btn" onClick={startPlayback} disabled={isPlaying} style={{ background: isPlaying ? "#3b82f6" : "#2563eb", color: "#fff", fontWeight: "bold", padding: "6px 16px", borderRadius: "6px" }}>▶ Play</button>
+          <button className="pause-btn" data-testid="pause-btn" onClick={pausePlayback} disabled={!isPlaying} style={{ padding: "6px 12px", borderRadius: "6px", background: !isPlaying ? "rgba(255,255,255,0.1)" : "#fbbf24", color: !isPlaying ? "#fff" : "#000" }}>⏸ Pause</button>
+          <button className="stop-btn" data-testid="stop-btn" onClick={stopPlayback} style={{ padding: "6px 12px", borderRadius: "6px", background: "rgba(255,255,255,0.1)", color: "#fff" }}>⏹ Stop</button>
           
           <label>
             BPM
@@ -2002,30 +2002,7 @@ function App() {
             />
           </label>
 
-          <label>
-            Loop
-            <input
-              data-testid="loop-enabled"
-              type="checkbox"
-              checked={loopEnabled}
-              onChange={(e) => setLoopEnabled(e.target.checked)}
-              disabled={isPlaying}
-            />
-          </label>
-
-          <label>
-            Beats
-            <select
-              data-testid="loop-length"
-              value={loopLengthBeats}
-              onChange={(e) => setLoopLengthBeats(Number(e.target.value))}
-              disabled={isPlaying || !loopEnabled}
-            >
-              {[4, 8, 12, 16].map((beats) => (
-                <option key={beats} value={beats}>{beats}</option>
-              ))}
-            </select>
-          </label>
+          
 
           <label>
   Vol
@@ -2033,12 +2010,23 @@ function App() {
   <span className="master-volume-value">{(masterVolume * 100).toFixed(0)}%</span>
 </label>
 
-          <div className="status" style={{ marginLeft: 'auto' }}>Playhead: {playheadBeat.toFixed(2)}</div>
+          <div className="status" style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: "16px", color: "#60a5fa", background: "rgba(0,0,0,0.3)", padding: "4px 8px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.1)" }}>{playheadBeat.toFixed(2)}</div>
         </div>
 
         <details className="transport-advanced">
           <summary style={{ cursor: 'pointer', fontSize: '12px', color: '#9cb4d8' }}>Advanced Controls</summary>
           <div className="transport-secondary" style={{ display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
+            <label style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9cb4d8'}}>
+              Loop
+              <input data-testid="loop-enabled" type="checkbox" checked={loopEnabled} onChange={(e) => setLoopEnabled(e.target.checked)} disabled={isPlaying} />
+            </label>
+            <label style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9cb4d8'}}>
+              Beats
+              <select data-testid="loop-length" value={loopLengthBeats} onChange={(e) => setLoopLengthBeats(Number(e.target.value))} disabled={isPlaying || !loopEnabled}>
+                {[4, 8, 12, 16].map((beats) => (<option key={beats} value={beats}>{beats}</option>))}
+              </select>
+            </label>
+
             <button data-testid="metronome-btn" onClick={() => setMetronomeEnabled(v => !v)} aria-pressed={metronomeEnabled}>{metronomeEnabled ? 'Metronome: ON' : 'Metronome: OFF'}</button>
             <button data-testid="undo-btn" onClick={undo} disabled={undoStackRef.current.length === 0 || isPlaying}>Undo</button>
             <button data-testid="redo-btn" onClick={redo} disabled={redoStackRef.current.length === 0 || isPlaying}>Redo</button>
