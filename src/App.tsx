@@ -1981,12 +1981,12 @@ function App() {
     <div className="app">
       <h1>Music DAW Case (Harness MVP)</h1>
 
-      <div className="top-bar" style={{ display: "flex", gap: "24px", alignItems: "flex-start", marginBottom: "16px", padding: "12px", background: "var(--color-carbon)", borderRadius: "10px", border: "1px solid var(--color-charcoal)" }}>
-      <section className="transport" data-testid="transport" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div className="transport-primary" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", paddingBottom: "4px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-          <button className="play-btn primary-btn" data-testid="play-btn" onClick={startPlayback} disabled={isPlaying} style={{ background: isPlaying ? "rgba(0, 217, 146, 0.2)" : "var(--color-carbon)", color: "var(--color-white)", fontWeight: "bold", padding: "6px 16px", borderRadius: "6px" }}>▶ Play</button>
-          <button className="pause-btn" data-testid="pause-btn" onClick={pausePlayback} disabled={!isPlaying} style={{ padding: "6px 12px", borderRadius: "6px", background: !isPlaying ? "rgba(255,255,255,0.1)" : "#fbbf24", color: !isPlaying ? "var(--color-white)" : "var(--color-mint)" }}>⏸ Pause</button>
-          <button className="stop-btn" data-testid="stop-btn" onClick={stopPlayback} style={{ padding: "6px 12px", borderRadius: "6px", background: "rgba(255,255,255,0.1)", color: "var(--color-white)" }}>⏹ Stop</button>
+      <div className="top-bar">
+      <section className="transport" data-testid="transport">
+        <div className="transport-primary">
+          <button className={`play-btn primary-btn ${isPlaying ? "is-playing" : ""}`} data-testid="play-btn" onClick={startPlayback} disabled={isPlaying} >▶ Play</button>
+          <button className={`pause-btn ${!isPlaying ? "" : "is-paused"}`} data-testid="pause-btn" onClick={pausePlayback} disabled={!isPlaying} >⏸ Pause</button>
+          <button className="stop-btn" data-testid="stop-btn" onClick={stopPlayback} >⏹ Stop</button>
           
           <label>
             BPM
@@ -1998,7 +1998,6 @@ function App() {
               value={project.bpm}
               onChange={(e) => setProject({ ...project, bpm: Number(e.target.value) || 120 })}
               disabled={isPlaying}
-              style={{ width: '60px' }}
             />
           </label>
 
@@ -2006,21 +2005,21 @@ function App() {
 
           <label>
   Vol
-  <input data-testid="master-volume" type="range" min={0} max={1} step={0.01} value={masterVolume} onChange={(e) => setMasterVolume(Number(e.target.value))} style={{ width: '80px' }} />
+  <input data-testid="master-volume" type="range" min={0} max={1} step={0.01} value={masterVolume} onChange={(e) => setMasterVolume(Number(e.target.value))} />
   <span className="master-volume-value">{(masterVolume * 100).toFixed(0)}%</span>
 </label>
 
-          <div className="status" style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: "16px", color: "var(--color-mint)", background: "rgba(0,0,0,0.3)", padding: "4px 8px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.1)" }}>{Math.floor((playheadBeat * 60 / project.bpm) / 60).toString().padStart(2, '0')}:{((playheadBeat * 60 / project.bpm) % 60).toFixed(2).padStart(5, '0')} | {playheadBeat.toFixed(2)}</div>
+          <div className="status">{Math.floor((playheadBeat * 60 / project.bpm) / 60).toString().padStart(2, '0')}:{((playheadBeat * 60 / project.bpm) % 60).toFixed(2).padStart(5, '0')} | {playheadBeat.toFixed(2)}</div>
         </div>
 
         <details className="transport-advanced">
-          <summary style={{ cursor: 'pointer', fontSize: '12px', color: 'var(--color-slate)' }}>Advanced Controls</summary>
-          <div className="transport-secondary" style={{ display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
-            <label style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-slate)'}}>
+          <summary>Advanced Controls</summary>
+          <div className="transport-secondary">
+            <label>
               Loop
               <input data-testid="loop-enabled" type="checkbox" checked={loopEnabled} onChange={(e) => setLoopEnabled(e.target.checked)} disabled={isPlaying} />
             </label>
-            <label style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-slate)'}}>
+            <label>
               Beats
               <select data-testid="loop-length" value={loopLengthBeats} onChange={(e) => setLoopLengthBeats(Number(e.target.value))} disabled={isPlaying || !loopEnabled}>
                 {[4, 8, 12, 16].map((beats) => (<option key={beats} value={beats}>{beats}</option>))}
@@ -2038,7 +2037,7 @@ function App() {
             }} disabled={isPlaying}>Reset</button>
 
             <label>
-              <input data-testid="midi-import-input" type="file" accept=".mid,.midi" onChange={handleMIDIImport} disabled={isPlaying} style={{ display: 'none' }} />
+              <input data-testid="midi-import-input" type="file" accept=".mid,.midi" onChange={handleMIDIImport} disabled={isPlaying} />
               <button data-testid="midi-import-btn" onClick={() => document.querySelector<HTMLInputElement>('[data-testid="midi-import-input"]')?.click()} disabled={isPlaying}>Import MIDI</button>
             </label>
             <button data-testid="midi-export-btn" onClick={handleMIDIExport} disabled={isPlaying}>Export MIDI</button>
@@ -2047,14 +2046,14 @@ function App() {
         </details>
       </section>
 
-      <section className="meter" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
-        <div className="meter-main" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <section className="meter">
+        <div className="meter-main">
           <div className="meter-label">Master Output Meter</div>
           <canvas ref={meterCanvasRef} width={320} height={16} />
         </div>
         <details className="master-eq-collapse">
-          <summary style={{ cursor: 'pointer', fontSize: '12px', color: 'var(--color-slate)' }}>Master EQ</summary>
-          <div className="master-eq-controls" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
+          <summary>Master EQ</summary>
+          <div className="master-eq-controls">
             <label>L: <input type="range" min="-12" max="12" value={masterEQ.low} onChange={e => setMasterEQ((prev: { low: number; mid: number; high: number }) => ({...prev, low: Number(e.target.value)}))} data-testid="master-eq-low" /></label>
             <label>M: <input type="range" min="-12" max="12" value={masterEQ.mid} onChange={e => setMasterEQ((prev: { low: number; mid: number; high: number }) => ({...prev, mid: Number(e.target.value)}))} data-testid="master-eq-mid" /></label>
             <label>H: <input type="range" min="-12" max="12" value={masterEQ.high} onChange={e => setMasterEQ((prev: { low: number; mid: number; high: number }) => ({...prev, high: Number(e.target.value)}))} data-testid="master-eq-high" /></label>
@@ -2063,12 +2062,12 @@ function App() {
       </section>
       </div>
 
-      <div className="workspace" style={{ display: "flex", gap: "16px", alignItems: "flex-start", marginTop: "16px", width: "100%" }}>
+      <div className="workspace">
       <section className="inspector" data-testid="inspector-panel">
         <div className="inspector-title">Inspector</div>
         {selectedTrackId ? (
-          <details className="inspector-group" data-testid="inspector-track" open>
-            <summary className="inspector-subtitle" style={{cursor: "pointer"}}>Track Settings</summary>
+          <details className="inspector-group sm" data-testid="inspector-track" open>
+            <summary className="inspector-subtitle">Track Settings</summary>
             <div className="inspector-row">
               <label htmlFor="selected-track-name-input">Name</label>
               <input
@@ -2094,15 +2093,15 @@ function App() {
             </div>
 
             
-            <details className="inspector-group" data-testid="inspector-track-effects">
-              <summary className="inspector-subtitle" style={{cursor: "pointer"}}>Track Effects & Params</summary>
+            <details className="inspector-group sm" data-testid="inspector-track-effects">
+              <summary className="inspector-subtitle">Track Effects & Params</summary>
               {(() => {
                 const selectedTrack = project.tracks.find(t => t.id === selectedTrackId);
                 if (!selectedTrack) return null;
                 return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                  <div>
                     
-                <details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "var(--color-slate)", fontSize: "11px" }}>Basic FX</summary><div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap", padding: "8px 0" }}>
+                <details className="inspector-subgroup sm"><summary>Basic FX</summary><div>
                   <label>
                 Pan
                 <input
@@ -2133,9 +2132,9 @@ function App() {
               </label>
                 </div>
               </details>
-<details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "var(--color-slate)", fontSize: "11px" }}>Modulation & Time</summary><div style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "8px 0" }}>
-                <div className="track-chorus-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)' }}>
+<details className="inspector-subgroup sm"><summary>Modulation & Time</summary><div>
+                <div className="track-chorus-controls">
+                  <label className="fx-label">
                     <input
                       type="checkbox"
                       data-testid={`chorus-enabled-${selectedTrack.id}`}
@@ -2154,7 +2153,7 @@ function App() {
                   
                   {selectedTrack.chorusEnabled && (
                     <>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)', marginLeft: '8px' }}>
+                      <label className="fx-label-indented">
                         Rate
                         <input
                           type="range"
@@ -2163,7 +2162,7 @@ function App() {
                           max="10"
                           step="0.1"
                           value={selectedTrack.chorusRate ?? 1.5}
-                          style={{ width: '40px' }}
+                         
                           onChange={(e) => {
                             const val = parseFloat(e.target.value)
                             setProject((prev) => ({
@@ -2175,7 +2174,7 @@ function App() {
                           }}
                         />
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)' }}>
+                      <label className="fx-label">
                         Depth
                         <input
                           type="range"
@@ -2184,7 +2183,7 @@ function App() {
                           max="5"
                           step="0.1"
                           value={selectedTrack.chorusDepth ?? 0.5}
-                          style={{ width: '40px' }}
+                         
                           onChange={(e) => {
                             const val = parseFloat(e.target.value)
                             setProject((prev) => ({
@@ -2200,8 +2199,8 @@ function App() {
                   )}
                 </div>
 
-                <div className="track-tremolo-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)' }}>
+                <div className="track-tremolo-controls">
+                  <label className="fx-label">
                     <input
                       type="checkbox"
                       data-testid={`tremolo-enabled-${selectedTrack.id}`}
@@ -2220,7 +2219,7 @@ function App() {
                   
                   {selectedTrack.tremoloEnabled && (
                     <>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)', marginLeft: '8px' }}>
+                      <label className="fx-label-indented">
                         Rate
                         <input
                           type="range"
@@ -2229,7 +2228,7 @@ function App() {
                           max="20"
                           step="0.1"
                           value={selectedTrack.tremoloRate ?? 5.0}
-                          style={{ width: '40px' }}
+                         
                           onChange={(e) => {
                             const val = parseFloat(e.target.value)
                             setProject((prev) => ({
@@ -2241,7 +2240,7 @@ function App() {
                           }}
                         />
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)', marginLeft: '4px' }}>
+                      <label className="fx-label-sub">
                         Depth
                         <input
                           type="range"
@@ -2250,7 +2249,7 @@ function App() {
                           max="1"
                           step="0.05"
                           value={selectedTrack.tremoloDepth ?? 0.5}
-                          style={{ width: '40px' }}
+                         
                           onChange={(e) => {
                             const val = parseFloat(e.target.value)
                             setProject((prev) => ({
@@ -2267,10 +2266,10 @@ function App() {
                 </div>
 
                 </div></details>
-<details className="inspector-subgroup" style={{ marginBottom: "8px" }}><summary style={{ cursor: "pointer", color: "var(--color-slate)", fontSize: "11px" }}>Dynamics & EQ</summary>
-<div className="track-effects-details" style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "8px 0" }}>
-                <div className="track-compressor-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
-                  <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
+<details className="inspector-subgroup sm"><summary>Dynamics & EQ</summary>
+<div className="track-effects-details">
+                <div className="track-compressor-controls">
+                  <label className="fx-label">
                     <input
                       type="checkbox"
                       data-testid={`compressor-enabled-${selectedTrack.id}`}
@@ -2284,7 +2283,7 @@ function App() {
                           ),
                         }))
                       }}
-                      style={{ margin: 0, marginRight: '4px' }}
+                     
                     />
                     Comp
                   </label>
@@ -2307,7 +2306,7 @@ function App() {
                             ),
                           }))
                         }}
-                        style={{ width: '40px' }}
+                       
                       />
                       <input
                         type="range"
@@ -2326,15 +2325,15 @@ function App() {
                             ),
                           }))
                         }}
-                        style={{ width: '40px' }}
+                       
                       />
                     </>
                   )}
                 </div>
                 
                 
-                <div className="track-eq-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '4px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div className="track-eq-controls">
+                  <label className="fx-label">
                     <input
                       type="checkbox"
                       data-testid={`eq-enable-${selectedTrack.id}`}
@@ -2350,7 +2349,7 @@ function App() {
                   </label>
                   {selectedTrack.eqEnabled && (
                     <>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <label className="fx-label">
                         Low:
                         <input
                           type="range"
@@ -2363,10 +2362,10 @@ function App() {
                                 t.id === selectedTrack.id ? { ...t, eqLow: parseFloat(e.target.value) } : t
                             )
                           }))}
-                          style={{ width: '40px' }}
+                         
                         />
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <label className="fx-label">
                         Mid:
                         <input
                           type="range"
@@ -2379,10 +2378,10 @@ function App() {
                                 t.id === selectedTrack.id ? { ...t, eqMid: parseFloat(e.target.value) } : t
                             )
                           }))}
-                          style={{ width: '40px' }}
+                         
                         />
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <label className="fx-label">
                         High:
                         <input
                           type="range"
@@ -2395,14 +2394,14 @@ function App() {
                                 t.id === selectedTrack.id ? { ...t, eqHigh: parseFloat(e.target.value) } : t
                             )
                           }))}
-                          style={{ width: '40px' }}
+                         
                         />
                       </label>
                     </>
                   )}
                 </div>
-                <div className="track-flanger-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div className="track-flanger-controls">
+                  <label className="fx-label">
                     <input
                       type="checkbox"
                       data-testid={`flanger-enable-${selectedTrack.id}`}
@@ -2418,7 +2417,7 @@ function App() {
                   </label>
                   {selectedTrack.flangerEnabled && (
                     <>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <label className="fx-label">
                         Spd:
                         <input
                           type="range"
@@ -2436,7 +2435,7 @@ function App() {
                           }}
                         />
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <label className="fx-label">
                         Dep:
                         <input
                           type="range"
@@ -2458,8 +2457,8 @@ function App() {
                   )}
                 </div>
 
-                <div className="track-delay-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
+                <div className="track-delay-controls">
+                  <label className="fx-label">
                     <input
                       type="checkbox"
                       data-testid={`delay-enable-${selectedTrack.id}`}
@@ -2473,7 +2472,7 @@ function App() {
                           ),
                         }))
                       }}
-                      style={{ margin: 0, marginRight: '4px' }}
+                     
                     />
                     Delay
                   </label>
@@ -2496,7 +2495,7 @@ function App() {
                             ),
                           }))
                         }}
-                        style={{ width: '40px' }}
+                       
                       />
                       <input
                         type="range"
@@ -2515,14 +2514,14 @@ function App() {
                             ),
                           }))
                         }}
-                        style={{ width: '40px' }}
+                       
                       />
                     </>
                   )}
                 </div>
                 
-                <div className="track-tremolo-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)' }}>
+                <div className="track-tremolo-controls">
+                  <label className="fx-label">
                     <input
                       type="checkbox"
                       data-testid={`tremolo-enabled-${selectedTrack.id}`}
@@ -2542,7 +2541,7 @@ function App() {
                   
                   {selectedTrack.tremoloEnabled && (
                     <>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)', marginLeft: '8px' }}>
+                      <label className="fx-label-indented">
                         Rate
                         <input
                           type="range"
@@ -2552,7 +2551,7 @@ function App() {
                           step="0.1"
                           value={selectedTrack.tremoloRate ?? 5.0}
                           disabled={isPlaying}
-                          style={{ width: '40px' }}
+                         
                           onChange={(e) => {
                             const val = parseFloat(e.target.value)
                             setProject((prev) => ({
@@ -2564,7 +2563,7 @@ function App() {
                           }}
                         />
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-parchment)', marginLeft: '4px' }}>
+                      <label className="fx-label-sub">
                         Depth
                         <input
                           type="range"
@@ -2574,7 +2573,7 @@ function App() {
                           step="0.05"
                           value={selectedTrack.tremoloDepth ?? 0.5}
                           disabled={isPlaying}
-                          style={{ width: '40px' }}
+                         
                           onChange={(e) => {
                             const val = parseFloat(e.target.value)
                             setProject((prev) => ({
@@ -2590,8 +2589,8 @@ function App() {
                   )}
                 </div>
 
-<div className="track-reverb-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
+<div className="track-reverb-controls">
+                  <label className="fx-label">
                     <input
                       type="checkbox"
                       data-testid={`reverb-enable-${selectedTrack.id}`}
@@ -2605,7 +2604,7 @@ function App() {
                           ),
                         }))
                       }}
-                      style={{ margin: 0, marginRight: '4px' }}
+                     
                     />
                     Reverb
                   </label>
@@ -2628,7 +2627,7 @@ function App() {
                             ),
                           }))
                         }}
-                        style={{ width: '40px' }}
+                       
                       />
                       <input
                         type="range"
@@ -2647,13 +2646,13 @@ function App() {
                             ),
                           }))
                         }}
-                        style={{ width: '40px' }}
+                       
                       />
                     </>
                   )}
                 </div>
-                <div className="track-distortion-controls" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <label style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center' }}>
+                <div className="track-distortion-controls">
+                  <label className="fx-label">
                     <input
                       type="checkbox"
                       data-testid={`track-distortion-toggle-${selectedTrack.id}`}
@@ -2667,7 +2666,7 @@ function App() {
                           ),
                         }))
                       }}
-                      style={{ margin: 0, marginRight: '4px' }}
+                     
                     />
                     Distortion
                   </label>
@@ -2702,7 +2701,7 @@ function App() {
                 );
               })()}
             </details>
-            <div className="inspector-row" style={{ marginTop: '12px', gap: '8px', display: 'flex' }}>
+            <div className="inspector-row">
               <button
                 data-testid="duplicate-track-btn"
                 onClick={() => duplicateTrack(selectedTrackId)}
@@ -2739,11 +2738,11 @@ function App() {
         )}
 
         {selectedClipData ? (
-          <details className="inspector-group" data-testid="inspector-clip" open>
-            <summary className="inspector-subtitle" style={{cursor: "pointer"}}>Clip Settings</summary>
+          <details className="inspector-group sm" data-testid="inspector-clip" open>
+            <summary className="inspector-subtitle">Clip Settings</summary>
             
             {/* Top Level: Name, Color, Wave */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
+            <div>
               <div className="inspector-row">
                 <label htmlFor="selected-clip-name">Name</label>
                 <input
@@ -2783,9 +2782,8 @@ function App() {
               </div>
             </div>
 
-            <details className="inspector-subgroup" style={{ marginBottom: '8px' }}>
-              <summary style={{ cursor: 'pointer', color: 'var(--color-slate)', fontSize: '11px' }}>Tuning & Gain</summary>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
+            <details className="inspector-subgroup sm"><summary>Tuning & Gain</summary>
+              <div>
                 <div className="inspector-row">
                   <label htmlFor="selected-clip-gain">Gain</label>
                   <input
@@ -2840,9 +2838,8 @@ function App() {
               </div>
             </details>
 
-            <details className="inspector-subgroup" style={{ marginBottom: '8px' }}>
-              <summary style={{ cursor: 'pointer', color: 'var(--color-slate)', fontSize: '11px' }}>Timing & Fades</summary>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
+            <details className="inspector-subgroup sm"><summary>Timing & Fades</summary>
+              <div>
                 <div className="inspector-row">
                   <label htmlFor="selected-clip-length">Length (beats)</label>
                   <input
@@ -2891,7 +2888,7 @@ function App() {
               </div>
             </details>
 
-            <div className="clip-actions-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px', borderTop: '1px solid var(--color-charcoal)', paddingTop: '12px' }}>
+            <div className="clip-actions-group">
               <button
                 data-testid="selected-clip-mute-btn"
                 onClick={() => toggleClipMute(selectedClipData.track.id, selectedClipData.clip.id)}
@@ -2947,7 +2944,7 @@ function App() {
         )}
       </section>
 
-      <section className="timeline" style={{ flex: 1, minWidth: 0, overflowX: "auto" }}>
+      <section className="timeline">
         {project.tracks.map((track) => (
           <div className="track-row" key={track.id}>
             <div
@@ -2964,25 +2961,25 @@ function App() {
               }}
               aria-label={`Select ${track.name} track`}
             >
-              <div className="track-header-main" style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-              <div className="track-header-row1" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+              <div className="track-header-main">
+              <div className="track-header-row1">
     
-                <div className="track-name" style={{ color: track.color || "var(--color-snow)", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px', fontWeight: 'bold' }}>{track.name}</div>
+                <div className="track-name" style={{ color: track.color || "var(--color-snow)" }}>{track.name}</div>
               
-    <div className="track-header-buttons" style={{ display: 'flex', gap: '4px', flex: 1, minWidth: '100px' }}>
+    <div className="track-header-buttons">
       
-                <button data-testid={`mute-${track.id}`} onClick={() => toggleTrackMute(track.id)} disabled={isPlaying} aria-pressed={track.muted} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.muted ? '#3d3a39' : undefined, color: track.muted ? '#f2f2f2' : undefined }}>{track.muted ? 'M' : 'M'}</button>
-                <button data-testid={`solo-${track.id}`} onClick={() => toggleTrackSolo(track.id)} disabled={isPlaying} aria-pressed={track.solo} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.solo ? '#00d992' : undefined, color: track.solo ? '#101010' : undefined }}>{track.solo ? 'S' : 'S'}</button>
-                <button data-testid={`lock-${track.id}`} onClick={() => toggleTrackLock(track.id)} disabled={isPlaying} aria-pressed={track.locked} style={{ padding: '4px 6px', fontSize: '11px', flex: 1, backgroundColor: track.locked ? '#3d3a39' : undefined, color: track.locked ? '#f2f2f2' : undefined }}>{track.locked ? 'L' : 'L'}</button>
-                <button data-testid={`add-clip-${track.id}`} onClick={() => addClip(track.id)} disabled={isPlaying || track.locked} style={{ padding: '4px 6px', fontSize: '11px', flex: 1 }}>+</button>
+                <button className={`track-btn ${track.muted ? "active" : ""}`} data-testid={`mute-${track.id}`} onClick={() => toggleTrackMute(track.id)} disabled={isPlaying} aria-pressed={track.muted}>{track.muted ? 'M' : 'M'}</button>
+                <button className={`track-btn ${track.solo ? "active-emerald" : ""}`} data-testid={`solo-${track.id}`} onClick={() => toggleTrackSolo(track.id)} disabled={isPlaying} aria-pressed={track.solo}>{track.solo ? 'S' : 'S'}</button>
+                <button className={`track-btn ${track.locked ? "active" : ""}`} data-testid={`lock-${track.id}`} onClick={() => toggleTrackLock(track.id)} disabled={isPlaying} aria-pressed={track.locked}>{track.locked ? 'L' : 'L'}</button>
+                <button className="track-btn" data-testid={`add-clip-${track.id}`} onClick={() => addClip(track.id)} disabled={isPlaying || track.locked}>+</button>
               
     </div>
   </div>
               <details className="track-header-params">
-                <summary style={{ fontSize: '10px', color: 'var(--color-slate)', cursor: 'pointer', marginTop: '4px' }}>More Params</summary>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', marginTop: '4px' }}>
+                <summary>More Params</summary>
+                <label>
                   Vol
-                  <input data-testid={`vol-${track.id}`} type="range" min={0} max={1} step={0.01} value={track.volume} onChange={(e) => setTrackVolume(track.id, Number(e.target.value))} disabled={isPlaying} style={{ width: '100%' }} />
+                  <input data-testid={`vol-${track.id}`} type="range" min={0} max={1} step={0.01} value={track.volume} onChange={(e) => setTrackVolume(track.id, Number(e.target.value))} disabled={isPlaying} />
                 </label>
               </details>
             </div>

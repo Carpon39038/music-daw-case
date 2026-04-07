@@ -1,5 +1,10 @@
+/* ═══════════════════════════════════════════════
+   VoltAgent Design System — Music DAW Case
+   Abyss Black + Emerald Signal Green monochrome
+   ═══════════════════════════════════════════════ */
+
 :root {
-  /* VoltAgent Palette */
+  /* Core palette */
   --color-abyss: #050507;
   --color-carbon: #101010;
   --color-charcoal: #3d3a39;
@@ -9,13 +14,29 @@
   --color-parchment: #b8b3b0;
   --color-slate: #8b949e;
   --color-white: #ffffff;
-  
+  --color-danger: #fb565b;
+
+  /* Semantic */
+  --color-danger-bg: rgba(251, 86, 91, 0.1);
+  --color-emerald-bg: rgba(0, 217, 146, 0.03);
+  --color-emerald-bg-strong: rgba(0, 217, 146, 0.2);
+  --color-emerald-border: rgba(33, 196, 93, 0.5);
+  --color-divider: rgba(255, 255, 255, 0.05);
+  --color-hover-bg: rgba(0, 0, 0, 0.2);
+
+  /* Shadows */
+  --shadow-warm: rgba(92, 88, 85, 0.2) 0px 0px 15px;
+  --shadow-dramatic: rgba(0, 0, 0, 0.7) 0px 20px 60px;
+  --shadow-emerald: drop-shadow(0 0 2px var(--color-emerald));
+  --shadow-emerald-strong: drop-shadow(0 0 8px var(--color-emerald));
+
+  /* Fonts */
   --font-heading: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, sans-serif;
   --font-body: Inter, system-ui, -apple-system, sans-serif;
   --font-mono: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
@@ -25,7 +46,10 @@ body {
   color: var(--color-snow);
   font-family: var(--font-body);
   font-feature-settings: "calt", "rlig";
+  -webkit-font-smoothing: antialiased;
 }
+
+/* ── Layout ── */
 
 .app {
   max-width: 1100px;
@@ -34,7 +58,7 @@ body {
   background: var(--color-carbon);
   border: 1px solid var(--color-charcoal);
   border-radius: 8px;
-  box-shadow: rgba(92, 88, 85, 0.2) 0px 0px 15px;
+  box-shadow: var(--shadow-warm);
 }
 
 h1, h2, h3, .inspector-title {
@@ -44,88 +68,168 @@ h1, h2, h3, .inspector-title {
 }
 
 h1 {
-  font-size: 2.25rem;
-  line-height: 1.11;
-  letter-spacing: -0.9px;
-  margin: 0 0 24px;
+  font-size: 1.5rem;
+  line-height: 1.33;
+  letter-spacing: -0.6px;
+  margin: 0 0 20px;
 }
+
+/* ── Top Bar ── */
+
+.top-bar {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--color-carbon);
+  border: 1px solid var(--color-charcoal);
+  border-radius: 8px;
+}
+
+/* ── Transport ── */
 
 .transport {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
 }
 
-/* Button default: Ghost */
-.transport button,
-.track-header button,
-.add-track-btn {
+.transport-primary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.transport-secondary {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+
+/* ── Buttons (Ghost system) ── */
+
+button {
   background: transparent;
   color: var(--color-white);
   border: 1px solid var(--color-charcoal);
   border-radius: 6px;
-  padding: 8px 12px;
+  padding: 6px 12px;
   cursor: pointer;
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
 }
 
-.transport button:hover:not(:disabled),
-.track-header button:hover:not(:disabled),
-.add-track-btn:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.2);
-  border-color: rgba(33, 196, 93, 0.5);
-  opacity: 0.8;
+button:hover:not(:disabled) {
+  background: var(--color-hover-bg);
+  border-color: var(--color-emerald-border);
 }
 
-.transport button:disabled,
-.track-header button:disabled,
-.add-track-btn:disabled {
+button:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
 
-/* Primary buttons */
+/* Primary: Play — emerald glow */
 .play-btn {
-  background: var(--color-carbon) !important;
-  color: var(--color-mint) !important;
-  border-color: var(--color-emerald) !important;
-  box-shadow: 0 0 2px var(--color-emerald);
+  background: var(--color-carbon);
+  color: var(--color-mint);
+  border-color: var(--color-emerald);
+  box-shadow: var(--shadow-emerald);
+  font-weight: 700;
+  padding: 6px 16px;
 }
 
 .play-btn:hover:not(:disabled) {
-  box-shadow: 0 0 8px var(--color-emerald);
+  box-shadow: var(--shadow-emerald-strong);
 }
 
-.stop-btn, .pause-btn {
-  /* Still keeping a subtle mono look but highlighting the intent */
-  border-color: var(--color-charcoal) !important;
+.play-btn.is-playing {
+  background: var(--color-emerald-bg-strong);
 }
 
+/* Stop */
+.stop-btn {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Pause */
+.pause-btn {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pause-btn.is-paused {
+  background: var(--color-emerald-bg-strong);
+  border-color: var(--color-emerald);
+  color: var(--color-mint);
+}
+
+/* Danger */
 .danger-btn {
-  border-color: #fb565b !important;
-  color: #fb565b !important;
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 .danger-btn:hover:not(:disabled) {
-  background: rgba(251, 86, 91, 0.1) !important;
+  background: var(--color-danger-bg);
 }
 
-.transport label {
+/* Track header mini buttons */
+.track-btn {
+  padding: 4px 6px;
+  font-size: 11px;
+  flex: 1;
+  min-width: 0;
+}
+
+.track-btn.active {
+  background: var(--color-charcoal);
+  color: var(--color-snow);
+}
+
+.track-btn.active-emerald {
+  background: var(--color-emerald);
+  color: var(--color-abyss);
+  border-color: var(--color-emerald);
+}
+
+/* Add track */
+.add-track-btn {
+  border-style: dashed;
+  width: auto;
+}
+
+.add-track-btn:hover:not(:disabled) {
+  border-style: solid;
+}
+
+/* ── Transport labels & inputs ── */
+
+.transport label,
+.transport-secondary label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: var(--color-parchment);
-  font-size: 14px;
+  gap: 4px;
+  color: var(--color-slate);
+  font-size: 11px;
 }
 
-.transport input[type='number'],
-.inspector-row input {
-  width: 80px;
+.transport-primary label {
+  font-size: 14px;
+  color: var(--color-parchment);
+  gap: 8px;
+}
+
+.transport input[type='number'] {
+  width: 60px;
   background: var(--color-abyss);
   color: var(--color-snow);
   border: 1px solid var(--color-charcoal);
@@ -136,18 +240,42 @@ h1 {
   transition: border-color 0.2s;
 }
 
-.transport input[type='number']:focus,
-.inspector-row input:focus {
+.transport input[type='number']:focus {
   outline: none;
   border-color: var(--color-emerald);
   box-shadow: 0 0 0 1px var(--color-emerald);
 }
 
-.status {
-  color: var(--color-slate);
-  font-family: var(--font-mono);
-  font-size: 13px;
+.transport input[type='range'],
+.inspector input[type='range'] {
+  accent-color: var(--color-emerald);
 }
+
+.transport select {
+  background: var(--color-abyss);
+  color: var(--color-snow);
+  border: 1px solid var(--color-charcoal);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* ── Status display ── */
+
+.status {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--color-mint);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-charcoal);
+  white-space: nowrap;
+}
+
+/* ── Meter ── */
 
 .meter {
   display: flex;
@@ -162,6 +290,8 @@ h1 {
   background: var(--color-abyss);
 }
 
+/* ── Workspace ── */
+
 .workspace {
   display: flex;
   gap: 24px;
@@ -173,9 +303,12 @@ h1 {
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   flex: 1;
+  min-width: 0;
 }
+
+/* ── Track Row ── */
 
 .track-row {
   border: 1px solid var(--color-charcoal);
@@ -187,47 +320,76 @@ h1 {
 .track-header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 10px;
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 8px;
-  transition: all 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
 .track-header.selected {
-  border: 1px solid var(--color-emerald) !important;
-  box-shadow: drop-shadow(0 0 2px var(--color-emerald)) !important;
-  background: rgba(0, 217, 146, 0.03) !important;
+  border-color: var(--color-emerald);
+  box-shadow: var(--shadow-emerald);
+  background: var(--color-emerald-bg);
 }
 
 .track-header-main {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 6px;
   width: 100%;
 }
 
+.track-header-row1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.track-header-buttons {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-width: 100px;
+}
+
 .track-name {
-  width: 80px;
-  font-weight: 600;
   color: var(--color-snow);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100px;
+  font-weight: 700;
+  font-size: 13px;
 }
 
-.track-header input[type='range'] {
-  width: 120px;
-  accent-color: var(--color-emerald);
-}
-
-.pan-value,
-.transpose-value {
-  min-width: 48px;
-  display: inline-block;
-  text-align: right;
+/* Track header collapsed params */
+.track-header-params summary {
+  font-size: 10px;
   color: var(--color-slate);
-  font-family: var(--font-mono);
-  font-size: 12px;
+  cursor: pointer;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
 }
+
+.track-header-params label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  margin-top: 4px;
+  color: var(--color-slate);
+}
+
+.track-header-params input[type='range'] {
+  width: 100%;
+}
+
+/* ── Track Grid (Timeline) ── */
 
 .track-grid {
   position: relative;
@@ -258,6 +420,8 @@ h1 {
   z-index: 100;
 }
 
+/* ── Clips ── */
+
 .clip {
   position: absolute;
   top: 7px;
@@ -276,7 +440,7 @@ h1 {
   white-space: nowrap;
   padding-left: 8px;
   background: rgba(61, 58, 57, 0.4);
-  transition: border-color 0.2s, filter 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
 .clip-label {
@@ -299,13 +463,32 @@ h1 {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Monochromatic style for clips, use borders to distinguish instead of vivid colors */
+/* Clip wave types — monochrome left border distinction */
 .clip.sine {
-  border-left: 3px solid #818cf8;
+  border-left: 3px solid var(--color-emerald);
 }
 
 .clip.square {
-  border-left: 3px solid #b8b3b0;
+  border-left: 3px solid var(--color-parchment);
+}
+
+.clip.sawtooth {
+  border-left: 3px solid var(--color-slate);
+}
+
+.clip.triangle {
+  border-left: 3px solid var(--color-charcoal);
+}
+
+.clip.muted {
+  opacity: 0.5;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 255, 255, 0.03) 4px,
+    rgba(255, 255, 255, 0.03) 8px
+  );
 }
 
 .clip.locked {
@@ -314,19 +497,19 @@ h1 {
 }
 
 .clip.selected {
-  border: 1px solid var(--color-emerald) !important;
-  box-shadow: 0 0 4px var(--color-emerald), inset 0 0 2px var(--color-emerald) !important;
-  z-index: 20 !important;
+  border-color: var(--color-emerald) !important;
+  box-shadow: 0 0 4px var(--color-emerald), inset 0 0 2px var(--color-emerald);
+  z-index: 20;
   background: rgba(0, 217, 146, 0.1);
 }
 
-/* Inspector */
+/* ── Inspector ── */
+
 .inspector {
   border: 1px solid var(--color-charcoal);
   border-radius: 8px;
   background: var(--color-carbon);
   padding: 16px;
-  margin-bottom: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -335,13 +518,15 @@ h1 {
   top: 24px;
   max-height: calc(100vh - 48px);
   overflow-y: auto;
-  box-shadow: rgba(92, 88, 85, 0.2) 0px 0px 15px;
+  box-shadow: var(--shadow-warm);
 }
 
 .inspector-title {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   letter-spacing: -0.6px;
 }
+
+/* ── Details / Accordion ── */
 
 details {
   border: 1px solid var(--color-charcoal);
@@ -378,7 +563,7 @@ details summary::before {
   content: '▶';
   display: inline-block;
   margin-right: 8px;
-  font-size: 0.8em;
+  font-size: 0.7em;
   color: var(--color-slate);
   transition: transform 0.2s;
 }
@@ -387,18 +572,53 @@ details[open] summary::before {
   transform: rotate(90deg);
 }
 
-.inspector-group, .track-effects-details, .inspector-subgroup {
+/* Small summary variant (inspector subgroups) */
+details.sm summary {
+  font-size: 11px;
+  color: var(--color-slate);
+  padding: 8px 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+}
+
+/* Transport advanced summary */
+.transport-advanced summary {
+  font-size: 12px;
+  color: var(--color-slate);
+}
+
+/* Inspector group content */
+.inspector-group,
+.track-effects-details,
+.inspector-subgroup {
   display: flex;
   flex-direction: column;
   gap: 0;
 }
 
-.inspector-group > div, .track-effects-details > div, .inspector-subgroup > div {
+.inspector-group > div,
+.track-effects-details > div,
+.inspector-subgroup > div {
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
+
+/* Inspector subgroups */
+.inspector-subgroup {
+  margin-bottom: 8px;
+}
+
+.inspector-subgroup > div {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+
+/* ── Inspector rows & labels ── */
 
 .inspector-subtitle {
   color: var(--color-slate);
@@ -420,9 +640,34 @@ details[open] summary::before {
   font-size: 14px;
 }
 
-.inspector-row input {
+.inspector-row input[type='number'],
+.inspector-row input[type='text'] {
   flex: 1;
   min-width: 120px;
+  background: var(--color-abyss);
+  color: var(--color-snow);
+  border: 1px solid var(--color-charcoal);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+
+.inspector-row input:focus {
+  outline: none;
+  border-color: var(--color-emerald);
+  box-shadow: 0 0 0 1px var(--color-emerald);
+}
+
+.inspector-row input[type='color'] {
+  width: 36px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid var(--color-charcoal);
+  border-radius: 4px;
+  background: var(--color-abyss);
+  cursor: pointer;
 }
 
 .inspector-meta,
@@ -431,6 +676,45 @@ details[open] summary::before {
   font-size: 13px;
   font-family: var(--font-mono);
 }
+
+/* Compact label (for effect params) */
+.fx-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-parchment);
+}
+
+.fx-label-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-parchment);
+  margin-left: 8px;
+}
+
+.fx-label-indented {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-parchment);
+  margin-left: 4px;
+}
+
+/* Clip actions grid */
+.clip-actions-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-charcoal);
+}
+
+/* ── Add Track ── */
 
 .add-track-row {
   padding: 12px;
@@ -443,14 +727,7 @@ details[open] summary::before {
   margin-top: 8px;
 }
 
-.add-track-btn {
-  width: auto;
-  border-style: dashed;
-}
-
-.add-track-btn:hover:not(:disabled) {
-  border-style: solid;
-}
+/* ── Hint ── */
 
 .hint {
   margin-top: 16px;
@@ -459,18 +736,30 @@ details[open] summary::before {
   font-family: var(--font-mono);
 }
 
-/* Scrollbars */
+/* ── Scrollbars ── */
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: var(--color-abyss);
 }
 ::-webkit-scrollbar-thumb {
   background: var(--color-charcoal);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-slate);
+}
+
+/* ── Select styling ── */
+select {
+  background: var(--color-abyss);
+  color: var(--color-snow);
+  border: 1px solid var(--color-charcoal);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
