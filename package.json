@@ -27,6 +27,7 @@
     "test:e2e:flaky": "playwright test --repeat-each=3 --retries=0"
   },
   "dependencies": {
+    "lucide-react": "^1.7.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "zundo": "^2.3.0",

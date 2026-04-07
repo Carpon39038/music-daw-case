@@ -368,6 +368,19 @@ export class AudioEngine {
     osc.stop(ctx.currentTime + Math.min(clip.lengthBeats * beatDuration, 1.0))
   }
 
+  getRMS(): number {
+    if (!this.analyser) return 0
+    const bufferLength = this.analyser.frequencyBinCount
+    const dataArray = new Uint8Array(bufferLength)
+    this.analyser.getByteTimeDomainData(dataArray)
+    let sum = 0
+    for (let i = 0; i < bufferLength; i++) {
+      const v = (dataArray[i] - 128) / 128
+      sum += v * v
+    }
+    return Math.sqrt(sum / bufferLength)
+  }
+
   getElapsed() {
     if (!this.ctx) return 0
     return Math.max(0, this.ctx.currentTime - this.startTime)
