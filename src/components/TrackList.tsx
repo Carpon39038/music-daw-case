@@ -29,7 +29,7 @@ export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackI
       <div className="track-header-main flex flex-col gap-1 w-full">
         <div className="track-header-row1 flex justify-between items-center gap-1">
           <div className="track-name-container flex items-center gap-2">
-            <div className="track-color-dot w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: track.color || '#6366f1' }} />
+            <input type="color" className="track-color-picker w-4 h-4 p-0 border-0 rounded cursor-pointer flex-shrink-0 bg-transparent" value={track.color || '#6366f1'} onChange={(e) => updateProject(prev => ({ ...prev, tracks: prev.tracks.map(t => t.id === track.id ? { ...t, color: e.target.value } : t) }))} />
             <div
               className="track-name track-name-input"
               contentEditable
