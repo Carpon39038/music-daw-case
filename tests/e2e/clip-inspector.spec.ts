@@ -16,8 +16,8 @@ test.describe('Clip Inspector', () => {
     await expect(inspectorClip).toBeVisible()
 
     // Change waveform to sawtooth
-    const waveSelect = page.locator('[data-testid="selected-clip-wave-select"]')
-    await waveSelect.selectOption('sawtooth')
+    const waveBtn = page.locator('[data-testid="wave-btn-sawtooth"]')
+    await waveBtn.click()
 
     // Verify clip has 'sawtooth' class
     await expect(firstClip).toHaveClass(/sawtooth/)
