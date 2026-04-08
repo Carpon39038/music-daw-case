@@ -14,11 +14,11 @@ test.describe('Clip Gain', () => {
     const gainInput = page.getByTestId('selected-clip-gain-input')
     await expect(gainInput).toBeVisible()
     
-    // Default gain should be 1
-    await expect(gainInput).toHaveValue('1')
+    // Default gain should be 100
+    await expect(gainInput).toHaveValue('100')
 
-    // Change gain to 0.5
-    await gainInput.fill('0.5')
+    // Change gain to 50
+    await gainInput.fill('50')
     await gainInput.press('Enter')
 
     // Read internal debug state to verify
@@ -29,6 +29,6 @@ test.describe('Clip Gain', () => {
     await page.reload()
     await page.locator('.clip').first().click(); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true))
     const gainInputReloaded = page.getByTestId('selected-clip-gain-input')
-    await expect(gainInputReloaded).toHaveValue('0.5')
+    await expect(gainInputReloaded).toHaveValue('50')
   })
 })

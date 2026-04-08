@@ -351,7 +351,8 @@ export class AudioEngine {
     osc.frequency.value = clip.noteHz
 
     gain.gain.setValueAtTime(0, ctx.currentTime)
-    const finalGain = Math.pow(10, (clip.gain ?? 0) / 20) * track.volume
+    const clipGain = clip.gain ?? 1.0
+    const finalGain = clipGain * track.volume
     if (track.muted || finalGain <= 0.001) return
 
     const beatDuration = 60 / bpm
