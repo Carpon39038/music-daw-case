@@ -5,6 +5,8 @@ import { Mixer } from './components/Mixer'
 import { Inspector } from './components/Inspector'
 import { TimelineSection } from './components/Timeline'
 import { TrackListPanel } from './components/TrackList'
+import { Onboarding } from './components/Onboarding'
+
 
 function App() {
   const daw = useDAWActions()
@@ -15,6 +17,8 @@ function App() {
       data-testid="daw-root"
     >
       <h1 className="daw-title sr-only">Music DAW Case</h1>
+      <Onboarding />
+
       {/* Top: Transport */}
       <Transport {...daw} />
 
