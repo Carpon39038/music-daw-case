@@ -1,6 +1,7 @@
 import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2 } from 'lucide-react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { formatTime } from '../utils/formatTime'
+import { DEMOS } from '../utils/demos'
 
 export function Transport({
   isPlaying,
@@ -172,6 +173,25 @@ export function Transport({
         >
           <Redo2 size={18} />
         </button>
+        
+        <select
+          disabled={isPlaying}
+          onChange={(e) => {
+            const idx = parseInt(e.target.value);
+            if (!isNaN(idx) && DEMOS[idx]) {
+              setProject(DEMOS[idx].project, { saveHistory: true });
+              e.target.value = '';
+            }
+          }}
+          className="px-2 py-1 text-xs bg-[#1a1a1a] text-gray-300 border border-gray-800 rounded focus:outline-none"
+          defaultValue=""
+          data-testid="demo-select"
+        >
+          <option value="" disabled>Load Demo...</option>
+          {DEMOS.map((demo, idx) => (
+            <option key={idx} value={idx}>{demo.name}</option>
+          ))}
+        </select>
         <button
           onClick={() => { resetProjectState(); clearHistory(); }}
           disabled={isPlaying}
