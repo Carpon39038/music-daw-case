@@ -50,19 +50,22 @@ export function Timeline({
     <div className="track-timeline-row h-24">
       <div className="track-grid relative grid grid-cols-16 h-full gap-0 bg-[#151515] overflow-hidden" ref={timelineRef}>
         {/* Beat grid lines */}
-        {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => (
-          <div
-            key={beat}
-            className={`beat-cell border-r ${beat % 4 === 0 ? 'beat-cell-bar border-gray-700 bg-white/[0.01]' : 'border-gray-800/50'}`}
-            onDoubleClick={() => {
-              if (isPlaying || track.locked) return
-              const clip = track.clips.find(c => beat >= c.startBeat && beat < c.startBeat + c.lengthBeats)
-              if (!clip) {
-                addClipAtBeat(track.id, beat)
-              }
-            }}
-          />
-        ))}
+        {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => {
+          const isPlayingBeat = isPlaying && playheadBeat >= beat && playheadBeat < beat + 1;
+          return (
+            <div
+              key={beat}
+              className={`beat-cell border-r ${beat % 4 === 0 ? 'beat-cell-bar border-gray-700 bg-white/[0.01]' : 'border-gray-800/50'} ${isPlayingBeat ? 'bg-white/[0.05]' : ''}`}
+              onDoubleClick={() => {
+                if (isPlaying || track.locked) return
+                const clip = track.clips.find(c => beat >= c.startBeat && beat < c.startBeat + c.lengthBeats)
+                if (!clip) {
+                  addClipAtBeat(track.id, beat)
+                }
+              }}
+            />
+          )
+        })}
 
         {/* Loop region overlay */}
         {loopEnabled && (
@@ -76,11 +79,12 @@ export function Timeline({
         {/* Clips */}
         {track.clips.map((clip) => {
           const colorValue = clip.color || track.color || '#6366f1'
+          const isPlayingClip = isPlaying && playheadBeat >= clip.startBeat && playheadBeat < clip.startBeat + clip.lengthBeats;
           return (
             <button
               key={clip.id}
               data-testid={`clip-${track.id}-${clip.id}`}
-              className={`clip ${clip.wave} ${track.locked ? 'locked' : ''} ${clip.muted ? 'muted' : ''} ${isSelected(clip.id) ? 'selected' : ''} absolute rounded border overflow-hidden ${isSelected(clip.id) ? 'border-white ring-1 ring-white/50 z-10' : 'border-black/50'}`}
+              className={`clip ${clip.wave} ${track.locked ? 'locked' : ''} ${clip.muted ? 'muted' : ''} ${isSelected(clip.id) ? 'selected' : ''} ${isPlayingClip ? 'playing brightness-125' : ''} absolute rounded border overflow-hidden ${isSelected(clip.id) ? 'border-white ring-1 ring-white/50 z-10' : 'border-black/50'} ${isPlayingClip && !isSelected(clip.id) ? 'ring-1 ring-white/30' : ''}`}
               style={{
                 top: 4,
                 height: 'calc(100% - 8px)',
@@ -167,9 +171,11 @@ export function Timeline({
 
 interface TimelineHeaderProps {
   startPlayheadDrag: (e: React.MouseEvent) => void
+  isPlaying: boolean
+  playheadBeat: number
 }
 
-export function TimelineHeader({ startPlayheadDrag }: TimelineHeaderProps) {
+export function TimelineHeader({ startPlayheadDrag, isPlaying, playheadBeat }: TimelineHeaderProps) {
   return (
     <div
       className="timeline-header h-8 bg-[#0a0a0a] border-b border-gray-800 sticky top-0 z-10 cursor-pointer flex"
@@ -178,14 +184,17 @@ export function TimelineHeader({ startPlayheadDrag }: TimelineHeaderProps) {
         if (e.button === 0) startPlayheadDrag(e)
       }}
     >
-      {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => (
-        <div
-          key={beat}
-          className={`timeline-header-beat flex-1 flex items-center justify-center text-[10px] font-mono border-r ${beat % 4 === 0 ? 'timeline-header-bar border-gray-700 text-gray-500 font-semibold' : 'border-gray-800/50 text-gray-700'}`}
-        >
-          {beat % 4 === 0 ? `${beat / 4 + 1}` : ''}
-        </div>
-      ))}
+      {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => {
+        const isPlayingBeat = isPlaying && playheadBeat >= beat && playheadBeat < beat + 1;
+        return (
+          <div
+            key={beat}
+            className={`timeline-header-beat flex-1 flex items-center justify-center text-[10px] font-mono border-r ${beat % 4 === 0 ? 'timeline-header-bar border-gray-700 text-gray-500 font-semibold' : 'border-gray-800/50 text-gray-700'} ${isPlayingBeat ? 'bg-white/10 text-white' : ''}`}
+          >
+            {beat % 4 === 0 ? `${beat / 4 + 1}` : ''}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -196,7 +205,7 @@ export function TimelineSection(props: TimelineSectionProps) {
   const { project, ...rest } = props
   return (
     <section className="timeline flex-1 flex flex-col overflow-auto min-w-0 bg-[#151515]" data-testid="timeline">
-      <TimelineHeader startPlayheadDrag={props.startPlayheadDrag} />
+      <TimelineHeader startPlayheadDrag={props.startPlayheadDrag} isPlaying={props.isPlaying} playheadBeat={props.playheadBeat} />
       {project.tracks.map((track) => (
         <div className="track-row border-b border-gray-800/50" key={track.id} data-testid={`track-row-${track.id}`}>
           <Timeline track={track} {...rest} />
