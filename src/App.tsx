@@ -7,6 +7,7 @@ import { TimelineSection } from './components/Timeline'
 import { TrackListPanel } from './components/TrackList'
 import { Onboarding } from './components/Onboarding'
 import { ShortcutPanel } from './components/ShortcutPanel'
+import { IdleHint } from './components/IdleHint'
 import { useEffect } from 'react'
 import { useDAWStore } from './store/useDAWStore'
 import { decodeSharePayload } from './utils/shareLink'
@@ -43,6 +44,7 @@ function App() {
       <h1 className="daw-title sr-only">Music DAW Case</h1>
       <Onboarding />
       <ShortcutPanel />
+      <IdleHint />
 
       {/* Top: Transport */}
       <Transport {...daw} />
