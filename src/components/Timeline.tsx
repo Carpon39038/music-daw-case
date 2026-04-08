@@ -14,7 +14,7 @@ function WaveformSVG({ wave, color }: { wave: string; color: string }) {
   else path = 'M0,75 L33,25 L67,75 L100,25'
   return (
     <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="clip-waveform absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
-      <path d={path} fill="none" stroke={color} strokeWidth="2" opacity="0.3" />
+      <path d={path} fill="none" stroke={color} strokeWidth="1.5" opacity="0.7" />
     </svg>
   )
 }
@@ -86,7 +86,7 @@ export function Timeline({
                 height: 'calc(100% - 8px)',
                 left: `${(clip.startBeat / TIMELINE_BEATS) * 100}%`,
                 width: `${(clip.lengthBeats / TIMELINE_BEATS) * 100}%`,
-                backgroundColor: clip.color || track.color || '#6366f1',
+                backgroundColor: `${clip.color || track.color || '#6366f1'}30`,
                 borderLeftColor: colorValue,
                 borderLeftWidth: 3,
                 opacity: clip.muted ? 0.5 : track.locked ? 0.6 : 1,
