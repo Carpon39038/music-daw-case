@@ -1001,9 +1001,11 @@ export function useDAWActions(): DAWActions {
           ...t,
           clips: t.clips.map((c) => {
             if (c.id !== clipId) return c
+            const waves: WaveType[] = ['sine', 'square', 'sawtooth', 'triangle', 'organ', 'brass'];
+            const nextIdx = (waves.indexOf(c.wave) + 1) % waves.length;
             return {
               ...c,
-              wave: c.wave === 'sine' ? 'square' : 'sine',
+              wave: waves[nextIdx],
             }
           }),
         }

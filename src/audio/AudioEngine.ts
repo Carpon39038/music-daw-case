@@ -1,5 +1,23 @@
 import type { Clip, Track } from '../types'
 
+function applyWaveType(ctx: BaseAudioContext, osc: OscillatorNode, waveType: string) {
+  if (["sine", "square", "sawtooth", "triangle"].includes(waveType)) {
+    osc.type = waveType as OscillatorType;
+  } else if (waveType === "organ") {
+    const real = new Float32Array([0, 0.8, 0.6, 0.6, 0.5, 0.4, 0.3, 0.2]);
+    const imag = new Float32Array(real.length);
+    const wave = ctx.createPeriodicWave(real, imag);
+    osc.setPeriodicWave(wave);
+  } else if (waveType === "brass") {
+    const real = new Float32Array([0, 1, 0.2, 0.8, 0.1, 0.4, 0.05, 0.2]);
+    const imag = new Float32Array(real.length);
+    const wave = ctx.createPeriodicWave(real, imag);
+    osc.setPeriodicWave(wave);
+  } else {
+    osc.type = "sine";
+  }
+}
+
 function semitoneToRatio(semitones: number) {
   return 2 ** (semitones / 12)
 }
@@ -199,7 +217,7 @@ export class AudioEngine {
         const clipStart = startAt + clipOffsetSec
         const clipEnd = clipStart + clipDurationSec
 
-        osc.type = clip.wave
+        applyWaveType(ctx, osc, clip.wave)
         const scheduledFrequencyHz = clip.noteHz * semitoneToRatio(track.transposeSemitones + (clip.transposeSemitones || 0))
         osc.frequency.value = scheduledFrequencyHz
 
@@ -416,7 +434,7 @@ export class AudioEngine {
     const gain = ctx.createGain()
     const panner = ctx.createStereoPanner()
 
-    osc.type = clip.wave
+    applyWaveType(ctx, osc, clip.wave)
     osc.frequency.value = clip.noteHz
 
     gain.gain.setValueAtTime(0, ctx.currentTime)

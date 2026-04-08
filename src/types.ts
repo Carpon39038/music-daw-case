@@ -1,4 +1,4 @@
-export type WaveType = 'sine' | 'square' | 'sawtooth' | 'triangle'
+export type WaveType = 'sine' | 'square' | 'sawtooth' | 'triangle' | 'organ' | 'brass'
 
 export interface Clip {
   name?: string
