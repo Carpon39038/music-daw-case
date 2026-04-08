@@ -52,12 +52,26 @@ export class AudioEngine {
   masterGain: GainNode | null = null
   analyser: AnalyserNode | null = null
 
-  scheduledNodes: Array<{ osc: OscillatorNode; gain: GainNode }> = []
+  scheduledNodes: Array<{ osc: AudioScheduledSourceNode; gain: GainNode }> = []
   scheduledFrequencyPreview: number[] = []
   startTime = 0
 
   mediaRecorder: MediaRecorder | null = null
   recordedChunks: BlobPart[] = []
+  audioBufferCache: Map<string, AudioBuffer> = new Map()
+
+  async loadClipAudio(clipId: string, audioData: string) {
+    if (!this.ctx) return
+    if (this.audioBufferCache.has(clipId)) return
+    try {
+      const res = await fetch(audioData)
+      const ab = await res.arrayBuffer()
+      const buffer = await this.ctx.decodeAudioData(ab)
+      this.audioBufferCache.set(clipId, buffer)
+    } catch (err) {
+      console.error('Failed to load clip audio', err)
+    }
+  }
 
   async ensureAudio(masterVolume: number) {
     if (!this.ctx) {
@@ -241,17 +255,27 @@ export class AudioEngine {
         const clipDurationSec = Math.min(loopDurationSec - clipOffsetSec, clip.lengthBeats * beatDuration)
         if (clipDurationSec <= 0) return
 
-        const osc = ctx.createOscillator()
+        let osc: AudioScheduledSourceNode
         const gain = ctx.createGain()
         const panner = ctx.createStereoPanner()
         const filter = ctx.createBiquadFilter()
 
         const clipStart = startAt + clipOffsetSec
         const clipEnd = clipStart + clipDurationSec
-
-        applyWaveType(ctx, osc, clip.wave)
+        
         const scheduledFrequencyHz = clip.noteHz * semitoneToRatio(track.transposeSemitones + (clip.transposeSemitones || 0))
-        osc.frequency.value = scheduledFrequencyHz
+
+        if (clip.audioData && this.audioBufferCache.has(clip.id)) {
+          const bufferSource = ctx.createBufferSource()
+          bufferSource.buffer = this.audioBufferCache.get(clip.id)!
+          bufferSource.playbackRate.value = semitoneToRatio(track.transposeSemitones + (clip.transposeSemitones || 0))
+          osc = bufferSource
+        } else {
+          const synthOsc = ctx.createOscillator()
+          applyWaveType(ctx, synthOsc, clip.wave)
+          synthOsc.frequency.value = scheduledFrequencyHz
+          osc = synthOsc
+        }
 
         gain.gain.setValueAtTime(0.0001, clipStart)
         const isTrackAudible = !track.muted && (!soloActive || track.solo)
@@ -462,12 +486,21 @@ export class AudioEngine {
     const ctx = this.ctx
     const master = this.masterGain
 
-    const osc = ctx.createOscillator()
+    let osc: AudioScheduledSourceNode
     const gain = ctx.createGain()
     const panner = ctx.createStereoPanner()
 
-    applyWaveType(ctx, osc, clip.wave)
-    osc.frequency.value = clip.noteHz
+    if (clip.audioData && this.audioBufferCache.has(clip.id)) {
+      const bufferSource = ctx.createBufferSource()
+      bufferSource.buffer = this.audioBufferCache.get(clip.id)!
+      bufferSource.playbackRate.value = semitoneToRatio(track.transposeSemitones + (clip.transposeSemitones || 0))
+      osc = bufferSource
+    } else {
+      const synthOsc = ctx.createOscillator()
+      applyWaveType(ctx, synthOsc, clip.wave)
+      synthOsc.frequency.value = clip.noteHz * semitoneToRatio(track.transposeSemitones + (clip.transposeSemitones || 0))
+      osc = synthOsc
+    }
 
     gain.gain.setValueAtTime(0, ctx.currentTime)
     const clipGain = clip.gain ?? 1.0

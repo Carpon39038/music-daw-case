@@ -357,6 +357,16 @@ export function useDAWActions(): DAWActions {
   const [isRecording, setIsRecording] = React.useState(false)
   const resetProjectState = useDAWStore((state) => state.resetProject)
   const tapTempoRef = useRef<number[]>([])
+  useEffect(() => {
+    project.tracks.forEach((track) => {
+      track.clips.forEach((clip) => {
+        if (clip.audioData) {
+          audioEngine.loadClipAudio(clip.id, clip.audioData)
+        }
+      })
+    })
+  }, [project])
+
   const undoDepth = past.length
   const redoDepth = future.length
 
@@ -564,7 +574,49 @@ export function useDAWActions(): DAWActions {
     if (isRecording) {
       const blob = await audioEngine.stopRecordingMic()
       setIsRecording(false)
-      console.log('Recorded blob:', blob)
+      if (blob && selectedTrackId) {
+        const reader = new FileReader()
+        reader.onloadend = async () => {
+          const base64data = reader.result as string
+          const clipId = `rec-${Date.now()}`
+          
+          await audioEngine.loadClipAudio(clipId, base64data)
+          
+          updateProject((prev) => {
+            const track = prev.tracks.find(t => t.id === selectedTrackId)
+            if (!track) return prev
+            const startBeat = Math.round(playheadBeat * 2) / 2
+            
+            // Calculate duration in beats if possible, fallback to 4
+            let lengthBeats = 4
+            if (audioEngine.audioBufferCache.has(clipId)) {
+              const buf = audioEngine.audioBufferCache.get(clipId)!
+              const durationSec = buf.duration
+              const beatDurationSec = 60 / prev.bpm
+              lengthBeats = Math.ceil((durationSec / beatDurationSec) * 2) / 2 || 4
+            }
+            
+            const newClip: Clip = {
+              id: clipId,
+              name: `Recording ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`,
+              startBeat,
+              lengthBeats,
+              noteHz: 440,
+              wave: 'sine',
+              audioData: base64data,
+            }
+            return {
+              ...prev,
+              tracks: prev.tracks.map(t => 
+                t.id === selectedTrackId 
+                  ? { ...t, clips: [...t.clips, newClip] }
+                  : t
+              )
+            }
+          }, { saveHistory: true })
+        }
+        reader.readAsDataURL(blob)
+      }
     } else {
       await audioEngine.startRecordingMic()
       setIsRecording(true)

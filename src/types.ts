@@ -13,6 +13,7 @@ export interface Clip {
   color?: string
   fadeIn?: number
   fadeOut?: number
+  audioData?: string
 }
 
 export interface Track {
