@@ -1,0 +1,90 @@
+--- src/utils/demos.ts
++++ src/utils/demos.ts
+@@ -193,10 +193,76 @@
+   ]
+ }
+ 
++export const DEMO_HIPHOP: ProjectState = {
++  bpm: 90,
++  tracks: [
++    {
++      id: 'hiphop-drums',
++      name: '808 & Drums',
++      volume: 85,
++      pan: 0,
++      muted: false,
++      solo: false,
++      locked: false,
++      transposeSemitones: 0,
++      filterType: 'none',
++      filterCutoff: 20000,
++      clips: [
++        { id: 'hd1', startBeat: 0, lengthBeats: 0.5, noteHz: 45, wave: 'sine' }, // 808
++        { id: 'hd2', startBeat: 1, lengthBeats: 0.5, noteHz: 200, wave: 'square' }, // Snare
++        { id: 'hd3', startBeat: 2.5, lengthBeats: 0.5, noteHz: 45, wave: 'sine' },
++        { id: 'hd4', startBeat: 3, lengthBeats: 0.5, noteHz: 200, wave: 'square' },
++        { id: 'hd5', startBeat: 4, lengthBeats: 0.5, noteHz: 45, wave: 'sine' },
++        { id: 'hd6', startBeat: 5, lengthBeats: 0.5, noteHz: 200, wave: 'square' },
++        { id: 'hd7', startBeat: 6.5, lengthBeats: 0.5, noteHz: 45, wave: 'sine' },
++        { id: 'hd8', startBeat: 7, lengthBeats: 0.5, noteHz: 200, wave: 'square' }
++      ]
++    },
++    {
++      id: 'hiphop-keys',
++      name: 'Dark Keys',
++      volume: 70,
++      pan: 0,
++      muted: false,
++      solo: false,
++      locked: false,
++      transposeSemitones: 0,
++      filterType: 'lowpass',
++      filterCutoff: 1500,
++      clips: [
++        { id: 'hk1', startBeat: 0, lengthBeats: 2, noteHz: 196.00, wave: 'triangle' }, // G3
++        { id: 'hk2', startBeat: 2, lengthBeats: 2, noteHz: 164.81, wave: 'triangle' }, // E3
++        { id: 'hk3', startBeat: 4, lengthBeats: 2, noteHz: 196.00, wave: 'triangle' },
++        { id: 'hk4', startBeat: 6, lengthBeats: 2, noteHz: 146.83, wave: 'triangle' }  // D3
++      ]
++    }
++  ]
++}
++
++export const DEMO_CLASSICAL: ProjectState = {
++  bpm: 75,
++  tracks: [
++    {
++      id: 'classical-strings',
++      name: 'Strings',
++      volume: 80,
++      pan: 0,
++      muted: false,
++      solo: false,
++      locked: false,
++      transposeSemitones: 0,
++      filterType: 'lowpass',
++      filterCutoff: 3000,
++      reverbEnabled: true,
++      reverbMix: 0.5,
++      reverbDecay: 4,
++      clips: [
++        { id: 'cs1', startBeat: 0, lengthBeats: 4, noteHz: 261.63, wave: 'sawtooth' }, // C4
++        { id: 'cs2', startBeat: 0, lengthBeats: 4, noteHz: 329.63, wave: 'sawtooth' }, // E4
++        { id: 'cs3', startBeat: 0, lengthBeats: 4, noteHz: 392.00, wave: 'sawtooth' }, // G4
++        { id: 'cs4', startBeat: 4, lengthBeats: 4, noteHz: 349.23, wave: 'sawtooth' }, // F4
++        { id: 'cs5', startBeat: 4, lengthBeats: 4, noteHz: 440.00, wave: 'sawtooth' }, // A4
++        { id: 'cs6', startBeat: 4, lengthBeats: 4, noteHz: 523.25, wave: 'sawtooth' }  // C5
++      ]
++    }
++  ]
++}
++
+ export const DEMOS = [
+   { name: '基础：鼓点节奏', project: DEMO_DRUM_BEAT },
+   { name: '基础：简单旋律', project: DEMO_MELODY },
+   { name: '风格：Lo-Fi 氛围', project: DEMO_LOFI },
+-  { name: '风格：Synthwave', project: DEMO_SYNTHWAVE }
++  { name: '风格：Synthwave', project: DEMO_SYNTHWAVE },
++  { name: '风格：Trap/Hip-Hop', project: DEMO_HIPHOP },
++  { name: '风格：古典弦乐', project: DEMO_CLASSICAL }
+ ]
