@@ -289,6 +289,7 @@ export interface DAWActions {
   updateClipLengthBeats: (trackId: string, clipId: string, lengthBeats: number) => void
   handleMIDIImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMIDIExport: () => void
+  handleAudioExport: () => Promise<void>
   handleTapTempo: () => void
   startPlayback: () => void
   pausePlayback: () => void
@@ -497,6 +498,24 @@ export function useDAWActions(): DAWActions {
   useEffect(() => {
     audioEngine.setMasterVolume(masterVolume)
   }, [masterVolume])
+
+  const handleAudioExport = async () => {
+    try {
+      const wavData = await audioEngine.exportWav(project.tracks, project.bpm, TIMELINE_BEATS)
+      const blob = new Blob([wavData], { type: 'audio/wav' })
+      const url = URL.createObjectURL(blob)
+      
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `project-${Date.now()}.wav`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Failed to export audio:', error)
+    }
+  }
 
   const handleTapTempo = () => {
     const now = performance.now()
@@ -1819,6 +1838,7 @@ export function useDAWActions(): DAWActions {
     updateClipLengthBeats,
     handleMIDIImport,
     handleMIDIExport,
+    handleAudioExport,
     handleTapTempo,
     startPlayback,
     pausePlayback,

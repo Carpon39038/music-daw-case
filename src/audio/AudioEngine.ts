@@ -4,7 +4,7 @@ function semitoneToRatio(semitones: number) {
   return 2 ** (semitones / 12)
 }
 
-function createReverbIR(ctx: AudioContext, durationSec: number, sampleRate?: number): AudioBuffer {
+function createReverbIR(ctx: BaseAudioContext, durationSec: number, sampleRate?: number): AudioBuffer {
   const sr = sampleRate ?? ctx.sampleRate
   const length = Math.max(1, Math.floor(sr * durationSec))
   const buffer = ctx.createBuffer(2, length, sr)
@@ -73,6 +73,71 @@ export class AudioEngine {
     this.scheduledNodes = []
   }
 
+  async exportWav(
+    tracks: Track[],
+    bpm: number,
+    timelineBeats: number,
+  ): Promise<ArrayBuffer> {
+    const beatDuration = 60 / bpm;
+    const durationSec = timelineBeats * beatDuration;
+    const sampleRate = 44100;
+    const offlineCtx = new OfflineAudioContext(2, Math.ceil(sampleRate * durationSec), sampleRate);
+    
+    const masterGain = offlineCtx.createGain();
+    masterGain.gain.value = 1.0;
+    masterGain.connect(offlineCtx.destination);
+    
+    this.scheduleProject(tracks, bpm, false, timelineBeats, false, timelineBeats, offlineCtx, masterGain);
+    
+    const renderedBuffer = await offlineCtx.startRendering();
+    
+    const numChannels = renderedBuffer.numberOfChannels;
+    const format = 1;
+    const bitDepth = 16;
+    
+    const result = new Float32Array(renderedBuffer.length * numChannels);
+    for (let channel = 0; channel < numChannels; channel++) {
+      const channelData = renderedBuffer.getChannelData(channel);
+      for (let i = 0; i < renderedBuffer.length; i++) {
+        result[i * numChannels + channel] = channelData[i];
+      }
+    }
+
+    const dataLength = result.length * (bitDepth / 8);
+    const bufferArray = new ArrayBuffer(44 + dataLength);
+    const view = new DataView(bufferArray);
+
+    const writeString = (v: DataView, off: number, str: string) => {
+      for (let i = 0; i < str.length; i++) {
+        v.setUint8(off + i, str.charCodeAt(i));
+      }
+    };
+
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataLength, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
+    view.setUint16(32, numChannels * (bitDepth / 8), true);
+    view.setUint16(34, bitDepth, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataLength, true);
+
+    let offset = 44;
+    for (let i = 0; i < result.length; i++) {
+      let s = Math.max(-1, Math.min(1, result[i]));
+      s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      view.setInt16(offset, s, true);
+      offset += 2;
+    }
+
+    return bufferArray;
+  }
+
   scheduleProject(
     tracks: Track[],
     bpm: number,
@@ -80,17 +145,19 @@ export class AudioEngine {
     loopLengthBeats: number,
     metronomeEnabled: boolean,
     timelineBeats: number,
+    customCtx?: BaseAudioContext,
+    customMaster?: GainNode,
   ) {
-    const ctx = this.ctx
-    const master = this.masterGain
+    const ctx = customCtx || this.ctx
+    const master = customMaster || this.masterGain
     if (!ctx || !master) return
 
     const soloActive = tracks.some((t) => t.solo)
     const beatDuration = 60 / bpm
     const loopBeats = loopEnabled ? loopLengthBeats : timelineBeats
     const loopDurationSec = loopBeats * beatDuration
-    const startAt = ctx.currentTime + 0.05
-    this.startTime = startAt
+    const startAt = ctx.currentTime + (customCtx ? 0 : 0.05)
+    if (!customCtx) this.startTime = startAt
 
     // Metronome
     if (metronomeEnabled) {
@@ -112,7 +179,7 @@ export class AudioEngine {
         clickOsc.start(beatTime)
         clickOsc.stop(beatTime + 0.05)
 
-        this.scheduledNodes.push({ osc: clickOsc, gain: clickGain })
+        if (!customCtx) { this.scheduledNodes.push({ osc: clickOsc, gain: clickGain }) }
       }
     }
 
@@ -331,8 +398,10 @@ export class AudioEngine {
         osc.start(clipStart)
         osc.stop(clipEnd)
 
-        this.scheduledFrequencyPreview.push(scheduledFrequencyHz)
-        this.scheduledNodes.push({ osc, gain })
+        if (!customCtx) {
+          this.scheduledFrequencyPreview.push(scheduledFrequencyHz)
+          this.scheduledNodes.push({ osc, gain })
+        }
       })
     })
   }

@@ -1,4 +1,4 @@
-import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2 } from 'lucide-react'
+import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2, FileAudio } from 'lucide-react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { formatTime } from '../utils/formatTime'
 import { DEMOS } from '../utils/demos'
@@ -22,6 +22,7 @@ export function Transport({
   clearHistory,
   handleMIDIImport,
   handleMIDIExport,
+  handleAudioExport,
   handleTapTempo,
   startPlayback,
   pausePlayback,
@@ -153,6 +154,15 @@ export function Transport({
           title="Export MIDI"
         >
           <Download size={18} />
+        </button>
+        <button
+          onClick={() => { void handleAudioExport() }}
+          disabled={isPlaying}
+          data-testid="audio-export-btn"
+          className="p-2 text-gray-500 hover:text-gray-300"
+          title="Export WAV"
+        >
+          <FileAudio size={18} />
         </button>
         <button
           onClick={undo}
