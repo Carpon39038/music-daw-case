@@ -52,14 +52,19 @@ export function Transport({
             onClick={() => { void startPlayback() }}
             data-testid="play-btn"
             disabled={isPlaying}
-            title="Play"
+            title="Play (Space)"
           >
             <Play size={18} />
           </button>
         </div>
 
-        <div className="status flex items-center gap-4 bg-[#1a1a1a] px-4 py-2 rounded-md font-mono text-emerald-400 text-lg tracking-wider w-48 justify-center">
-          {formatTime(playheadBeat, project.bpm)}
+        <div className="status flex flex-col items-center justify-center bg-[#1a1a1a] px-4 py-1 rounded-md w-48">
+          <div className="font-mono text-emerald-400 text-lg tracking-wider">
+            {formatTime(playheadBeat, project.bpm)}
+          </div>
+          <div className="text-[10px] text-gray-500 font-sans tracking-wide">
+            SPACE TO {isPlaying ? 'PAUSE' : 'PLAY'}
+          </div>
         </div>
       </div>
 
@@ -152,17 +157,18 @@ export function Transport({
           onClick={undo}
           disabled={undoDepth === 0 || isPlaying}
           data-testid="undo-btn"
-          className="p-2 text-gray-500 hover:text-gray-300 disabled:opacity-30"
-          title="Undo"
+          className="p-2 text-gray-500 hover:text-gray-300 disabled:opacity-30 flex items-center gap-1"
+          title="Undo (Ctrl/Cmd+Z)"
         >
           <Undo2 size={18} />
+          <span className="text-[10px]">Ctrl+Z</span>
         </button>
         <button
           onClick={redo}
           disabled={redoDepth === 0 || isPlaying}
           data-testid="redo-btn"
-          className="p-2 text-gray-500 hover:text-gray-300 disabled:opacity-30"
-          title="Redo"
+          className="p-2 text-gray-500 hover:text-gray-300 disabled:opacity-30 flex items-center gap-1"
+          title="Redo (Ctrl/Cmd+Shift+Z)"
         >
           <Redo2 size={18} />
         </button>
