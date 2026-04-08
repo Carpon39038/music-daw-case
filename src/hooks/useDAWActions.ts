@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent }
 import type { Clip, MasterEQ, ProjectState, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
+import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
 
 export const TIMELINE_BEATS = 16
 
@@ -290,6 +291,7 @@ export interface DAWActions {
   handleMIDIImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
+  handleMp3Export: () => Promise<void>
   handleTapTempo: () => void
   isRecording: boolean
   toggleRecording: () => Promise<void>
@@ -517,6 +519,25 @@ export function useDAWActions(): DAWActions {
       URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Failed to export audio:', error)
+    }
+  }
+
+  const handleMp3Export = async () => {
+    try {
+      const audioBuffer = await audioEngine.renderBuffer(project.tracks, project.bpm, TIMELINE_BEATS)
+      const mp3Data = audioBufferToMp3(audioBuffer)
+      const blob = new Blob([mp3Data], { type: 'audio/mp3' })
+      const url = URL.createObjectURL(blob)
+      
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `project-${Date.now()}.mp3`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Failed to export MP3:', error)
     }
   }
 
@@ -1855,6 +1876,7 @@ export function useDAWActions(): DAWActions {
     handleMIDIImport,
     handleMIDIExport,
     handleAudioExport,
+    handleMp3Export,
     handleTapTempo,
     isRecording,
     toggleRecording,

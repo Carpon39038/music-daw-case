@@ -114,11 +114,11 @@ export class AudioEngine {
     this.scheduledNodes = []
   }
 
-  async exportWav(
+  async renderBuffer(
     tracks: Track[],
     bpm: number,
     timelineBeats: number,
-  ): Promise<ArrayBuffer> {
+  ): Promise<AudioBuffer> {
     const beatDuration = 60 / bpm;
     const durationSec = timelineBeats * beatDuration;
     const sampleRate = 44100;
@@ -130,11 +130,20 @@ export class AudioEngine {
     
     this.scheduleProject(tracks, bpm, false, timelineBeats, false, timelineBeats, offlineCtx, masterGain);
     
-    const renderedBuffer = await offlineCtx.startRendering();
+    return await offlineCtx.startRendering();
+  }
+
+  async exportWav(
+    tracks: Track[],
+    bpm: number,
+    timelineBeats: number,
+  ): Promise<ArrayBuffer> {
+    const renderedBuffer = await this.renderBuffer(tracks, bpm, timelineBeats);
     
     const numChannels = renderedBuffer.numberOfChannels;
     const format = 1;
     const bitDepth = 16;
+    const sampleRate = renderedBuffer.sampleRate;
     
     const result = new Float32Array(renderedBuffer.length * numChannels);
     for (let channel = 0; channel < numChannels; channel++) {

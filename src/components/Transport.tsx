@@ -25,6 +25,7 @@ export function Transport({
   handleMIDIImport,
   handleMIDIExport,
   handleAudioExport,
+  handleMp3Export,
   handleTapTempo,
   startPlayback,
   pausePlayback,
@@ -179,6 +180,15 @@ export function Transport({
           title="Export WAV"
         >
           <FileAudio size={18} />
+        </button>
+        <button
+          onClick={() => { void handleMp3Export() }}
+          disabled={isPlaying}
+          data-testid="mp3-export-btn"
+          className="p-2 text-gray-500 hover:text-gray-300"
+          title="Export MP3"
+        >
+          <span className="text-xs font-bold">MP3</span>
         </button>
         <button
           onClick={undo}
