@@ -1,6 +1,8 @@
-# 🎯 产品目标
+# 🎯 music-daw-case 产品文档
 
-**music-daw-case** 是一个面向新手的浏览器端 DAW（数字音频工作站），帮助零基础用户入门音乐制作，做出自己的小 demo。
+> **定位**：面向零基础用户的浏览器端 DAW，帮助新手 5 分钟内做出自己的小 demo。
+
+---
 
 ## 核心原则
 
@@ -11,88 +13,91 @@
 
 ---
 
-## 功能总览（截至 2026-04-08）
+## ✅ 已完成功能（P0-P2 全部完成）
 
-### 基础功能 ✅
-| 功能 | 状态 | 说明 |
-|------|------|------|
-| 多轨时间轴 | ✅ 已实现 | 可添加/删除轨道，16 beats |
-| Clip 创建/删除/复制/拆分 | ✅ 已实现 | — |
-| 播放/暂停/停止 | ✅ 已实现 | — |
-| BPM 设置 + Tap Tempo | ✅ 已实现 | — |
-| 波形类型选择 | ✅ 已实现 | sine/square/sawtooth/triangle |
-| Clip 音高设置 + 移调 | ✅ 已实现 | — |
-| Clip 音量（gain）+ 淡入淡出 | ✅ 已实现 | — |
-| 轨道音量/静音/Solo/锁定 | ✅ 已实现 | — |
-| 循环播放 | ✅ 已实现 | — |
-| 节拍器 | ✅ 已实现 | — |
-| 主控音量 + 3 段 EQ | ✅ 已实现 | — |
-| 电平表 | ✅ 已实现 | — |
-| 播放头拖拽 | ✅ 已实现 | — |
-| Clip 拖拽移动 + Beat 吸附 | ✅ 已实现 | — |
-| Undo/Redo | ✅ 已实现 | — |
-| 复制/粘贴 Clip | ✅ 已实现 | — |
-| MIDI 导入/导出 | ✅ 已实现 | — |
-| 项目重置 | ✅ 已实现 | — |
-| VoltAgent 视觉设计 | ✅ 已实现 | 深色主题 |
+### 基础 DAW 能力
+| 功能 | 实现位置 |
+|------|---------|
+| 多轨时间轴（16 beats） | `Timeline.tsx` |
+| Clip 创建/删除/复制/拆分 | `useDAWActions.ts` |
+| 播放/暂停/停止 | `Transport.tsx` |
+| BPM 设置 + Tap Tempo | `Transport.tsx` |
+| 播放头拖拽 + Beat 吸附 | `Timeline.tsx` |
+| Undo/Redo、复制/粘贴 | `useDAWActions.ts` |
+| 循环播放 + 节拍器 | `AudioEngine.ts` |
+| 主控音量 + 电平表 | `Mixer.tsx` |
+| 轨道音量/静音/Solo/锁定 | `TrackList.tsx` |
+| 项目重置 | `useDAWStore.ts` |
 
-### 新手优化 ✅
-| 功能 | 状态 | 实现方式 |
-|------|------|---------|
-| 音符选择器替代频率输入 | ✅ 已实现 | Inspector 下拉选 C3/Bb4 等（`hZToClosestNoteLabel`） |
-| 音色名称替代波形名 | ✅ 已实现 | cycleClipWave 循环切换 |
-| 音量百分比滑块 | ✅ 已实现 | Inspector 滑块（0-100%） |
-| 3 段 EQ 隐藏 | ✅ 已实现 | 不暴露给新手 |
-| MIDI 导入/导出隐藏 | ✅ 已实现 | 不暴露给新手 |
-| 淡入淡出折叠 | ✅ 已实现 | 默认不展示 |
+### 音频合成 & 效果器
+| 功能 | 实现位置 |
+|------|---------|
+| 9 种波形/音色（sine/square/saw/triangle/organ/brass + Pad/Lead） | `AudioEngine.ts` |
+| Clip 音高 + 移调 | `Inspector.tsx` |
+| Clip 音量 + 淡入淡出 | `Inspector.tsx` |
+| 7 种效果器（Reverb/Delay/Distortion/Compressor/Filter/Chorus/Flanger） | `Inspector.tsx` |
+| 3 段主控 EQ | `Mixer.tsx` |
+| WAV 音频导出 | `audioBufferToWav.ts` |
+| 麦克风录音 | `AudioEngine.ts` |
+| MIDI 导入/导出 | `useDAWActions.ts` |
 
-### 效果器 ✅
-| 效果器 | 状态 | 控制方式 |
-|--------|------|---------|
-| 混响（Reverb） | ✅ 已实现 | 一键开关 + Mix/Decay 参数 |
-| 延迟（Delay） | ✅ 已实现 | 一键开关 + Time/Feedback 参数 |
-| 失真（Distortion） | ✅ 已实现 | checkbox 开关 |
-| 压缩（Compressor） | ✅ 已实现 | checkbox 开关 + Threshold/Ratio |
-| 滤波器（Filter） | ✅ 已实现 | highpass/lowpass + Cutoff |
-| 合唱（Chorus） | ✅ 已实现 | — |
-| 镶边（Flanger） | ✅ 已实现 | — |
+### 新手体验
+| 功能 | 实现位置 |
+|------|---------|
+| 预设 demo 模板（鼓点/旋律） | `demos.ts` + `Transport.tsx` |
+| 新手引导（交互式） | `Onboarding.tsx` |
+| 键盘快捷键（Space/Ctrl+Z 等） | `useDAWActions.ts` |
+| 点击 clip 即刻预览 | `useDAWActions.ts` |
+| 音符选择器（C3/D4 等） | `Inspector.tsx` + `notes.ts` |
+| 音色名称替代波形名 | `cycleClipWave` |
+| 音量百分比滑块 | `Inspector.tsx` |
+| 播放时高亮当前 beat/clip | `Timeline.tsx` |
+| 高级功能默认折叠 | `Inspector.tsx` |
+| 深色主题（VoltAgent 设计） | 全局 |
 
 ---
 
-## 新增功能进度
+## 🔲 下一阶段：产品打磨（P3）
 
-### P0 — 上手第一印象
-- [x] **预设 demo 模板** — `src/utils/demos.ts` + Transport 下拉选择加载
-- [x] **新手引导** — `src/components/Onboarding.tsx` 交互式引导
-- [x] **键盘快捷键** — `src/hooks/useDAWActions.ts`（Space/Ctrl+Z 等）
-- [x] **点击 clip 即刻预览** — `previewClip` 功能
+> P0-P2 功能已全部就绪，代码约 4400 行、78 个 e2e 测试。接下来围绕**"新手能真正做出完整 demo 并分享"**这个终极目标打磨体验。
 
-### P1 — 核心体验
-- [x] **音符选择器替代频率输入** — Inspector Note 下拉
-- [x] **音色名称替代波形名** — cycleClipWave
-- [x] **音量百分比滑块** — Inspector 滑块
-- [x] **导出音频** — WAV 导出（`audioEngine.exportWav`）
-- [x] **播放高亮** — `playheadBeat` 驱动的 beat/clip 高亮
+### P3-A — 分享 & 完整性（达成"做出 demo 并分享"闭环）
+- [ ] **项目保存/加载** — localStorage 持久化，关闭浏览器不丢进度
+- [ ] **分享链接** — 将项目编码到 URL hash 或生成短链接，发给朋友能直接打开听到
+- [ ] **MP3 导出** — 除 WAV 外支持 MP3 格式，方便社交分享
 
-### P2 — 进阶
-- [x] **简单效果器预设** — 混响/延迟等已实现一键开关（Inspector checkbox），详见上方效果器表
-- [x] **录音功能** — 用麦克风录制
-- [x] **更多预设音色** — 扩充内置合成器音色
+### P3-B — 新手引导深化
+- [ ] **引导完成后的"下一步提示"** — 新手完成引导后，引导他加载第一个 demo 模板试试
+- [ ] **空白项目时的引导气泡** — 新建项目后如果 10 秒没操作，弹出轻量提示
+- [ ] **快捷键面板** — 界面上有 `?` 按钮，点击显示所有快捷键一览
+
+### P3-C — 音频体验提升
+- [ ] **更丰富的 demo 模板** — 至少 4-5 个不同风格的预设（电子/嘻哈/氛围/古典/Lo-Fi）
+- [ ] **音色预览** — 在音色选择器悬停时播放该音色的示范音
+- [ ] **录音后自动创建 Clip** — 录音结束后自动将录音片段放到当前轨道的时间轴上（目前录音功能缺少与时间轴的整合）
+
+### P3-D — 视觉 & 交互优化
+- [ ] **SVG 波形显示** — Clip 内显示波形图形而非纯色块
+- [ ] **轨道颜色系统** — 每条轨道可设置颜色，Clip 背景用 track.color 30% 半透明
+- [ ] **拖拽反馈优化** — 拖拽 clip 时显示吸附位置预览
+- [ ] **响应式布局** — 支持常见笔记本屏幕尺寸（1366px+）
 
 ---
 
-## 不做
+## 不做（明确排除）
 
 - ❌ 专业级功能（自动化曲线、高级 MIDI 编辑、多声道输出）
 - ❌ 插件系统（VST/AU）
 - ❌ 移动端适配（专注桌面浏览器）
 - ❌ 协作/云存储
+- ❌ 采样器/音频文件导入（当前仅合成器 + 录音）
 
 ---
 
 ## Harness 质量指标（2026-04-08）
 
-- 总评测次数：145
-- 通过率：85.52%
+- 总评测次数：147
+- 通过率：85.71%
 - 最新评分：124/150
-- 失败分布：e2e 为主（间歇性）
+- 代码行数：~4400 行
+- e2e 测试：78 个
