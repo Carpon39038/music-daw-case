@@ -6,6 +6,7 @@ import { Inspector } from './components/Inspector'
 import { TimelineSection } from './components/Timeline'
 import { TrackListPanel } from './components/TrackList'
 import { Onboarding } from './components/Onboarding'
+import { ShortcutPanel } from './components/ShortcutPanel'
 
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
     >
       <h1 className="daw-title sr-only">Music DAW Case</h1>
       <Onboarding />
+      <ShortcutPanel />
 
       {/* Top: Transport */}
       <Transport {...daw} />
