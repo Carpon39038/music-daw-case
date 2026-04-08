@@ -7,10 +7,33 @@ import { TimelineSection } from './components/Timeline'
 import { TrackListPanel } from './components/TrackList'
 import { Onboarding } from './components/Onboarding'
 import { ShortcutPanel } from './components/ShortcutPanel'
+import { useEffect } from 'react'
+import { useDAWStore } from './store/useDAWStore'
+import { decodeSharePayload } from './utils/shareLink'
 
 
 function App() {
   const daw = useDAWActions()
+
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash.startsWith('#share=')) {
+      const base64Str = hash.slice(7)
+      const payload = decodeSharePayload(base64Str)
+      if (payload) {
+        useDAWStore.setState({
+          project: payload.project,
+          masterVolume: payload.masterVolume,
+          masterEQ: payload.masterEQ,
+          loopEnabled: payload.loopEnabled,
+          loopLengthBeats: payload.loopLengthBeats
+        })
+      }
+      // Remove hash to keep URL clean and allow refreshing
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
+
 
   return (
     <div

@@ -2,6 +2,8 @@ import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2, FileAudio, Mic
 import type { DAWActions } from '../hooks/useDAWActions'
 import { formatTime } from '../utils/formatTime'
 import { DEMOS } from '../utils/demos'
+import { ShareButton } from './ShareButton'
+
 
 export function Transport({
   isPlaying,
@@ -124,6 +126,8 @@ export function Transport({
             >
               LOOP
             </button>
+        <ShareButton />
+
             <select
               value={loopLengthBeats}
               onChange={(e) => setLoopLengthBeats(Number(e.target.value))}
@@ -196,6 +200,8 @@ export function Transport({
           <Redo2 size={18} />
         </button>
         
+        <ShareButton />
+
         <select
           disabled={isPlaying}
           onChange={(e) => {
