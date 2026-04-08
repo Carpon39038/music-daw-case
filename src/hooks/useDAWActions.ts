@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
+import React, { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import type { Clip, MasterEQ, ProjectState, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
@@ -291,6 +291,8 @@ export interface DAWActions {
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
   handleTapTempo: () => void
+  isRecording: boolean
+  toggleRecording: () => Promise<void>
   startPlayback: () => void
   pausePlayback: () => void
   stopPlayback: () => void
@@ -350,6 +352,7 @@ export function useDAWActions(): DAWActions {
   const clearHistory = useDAWStore((state) => state.clearHistory)
   const undo = useDAWStore((state) => state.undo)
   const redo = useDAWStore((state) => state.redo)
+  const [isRecording, setIsRecording] = React.useState(false)
   const resetProjectState = useDAWStore((state) => state.resetProject)
   const tapTempoRef = useRef<number[]>([])
   const undoDepth = past.length
@@ -533,6 +536,17 @@ export function useDAWActions(): DAWActions {
       if (bpm >= 60 && bpm <= 200) {
         setProject((prev) => ({ ...prev, bpm }))
       }
+    }
+  }
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      const blob = await audioEngine.stopRecordingMic()
+      setIsRecording(false)
+      console.log('Recorded blob:', blob)
+    } else {
+      await audioEngine.startRecordingMic()
+      setIsRecording(true)
     }
   }
 
@@ -1842,6 +1856,8 @@ export function useDAWActions(): DAWActions {
     handleMIDIExport,
     handleAudioExport,
     handleTapTempo,
+    isRecording,
+    toggleRecording,
     startPlayback,
     pausePlayback,
     stopPlayback,

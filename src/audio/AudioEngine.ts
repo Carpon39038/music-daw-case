@@ -56,6 +56,9 @@ export class AudioEngine {
   scheduledFrequencyPreview: number[] = []
   startTime = 0
 
+  mediaRecorder: MediaRecorder | null = null
+  recordedChunks: BlobPart[] = []
+
   async ensureAudio(masterVolume: number) {
     if (!this.ctx) {
       const ctx = new AudioContext()
@@ -74,6 +77,26 @@ export class AudioEngine {
     if (this.ctx?.state === 'suspended') {
       await this.ctx.resume()
     }
+  }
+
+  async startRecordingMic() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    this.mediaRecorder = new MediaRecorder(stream)
+    this.recordedChunks = []
+    this.mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) this.recordedChunks.push(e.data)
+    }
+    this.mediaRecorder.start()
+  }
+
+  async stopRecordingMic(): Promise<Blob | null> {
+    return new Promise((resolve) => {
+      if (!this.mediaRecorder) return resolve(null)
+      this.mediaRecorder.onstop = () => {
+        resolve(new Blob(this.recordedChunks, { type: 'audio/webm' }))
+      }
+      this.mediaRecorder.stop()
+    })
   }
 
   setMasterVolume(volume: number) {

@@ -1,4 +1,4 @@
-import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2, FileAudio } from 'lucide-react'
+import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2, FileAudio, Mic } from 'lucide-react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { formatTime } from '../utils/formatTime'
 import { DEMOS } from '../utils/demos'
@@ -27,6 +27,8 @@ export function Transport({
   startPlayback,
   pausePlayback,
   stopPlayback,
+  isRecording,
+  toggleRecording
 }: DAWActions) {
   return (
     <section className="transport h-16 bg-[#111] border-b border-gray-800 flex items-center px-4 justify-between flex-shrink-0" data-testid="transport">
@@ -57,6 +59,16 @@ export function Transport({
             title="Play (Space)"
           >
             <Play size={18} />
+          </button>
+          
+          <button
+            className={`p-2 rounded ${isRecording ? 'bg-red-600 text-white' : 'hover:bg-gray-800 text-gray-400 hover:text-white'}`}
+            onClick={() => void toggleRecording()}
+            data-testid="record-btn"
+            disabled={isPlaying && !isRecording}
+            title="Record (Mic)"
+          >
+            <Mic size={18} />
           </button>
         </div>
 
