@@ -3,7 +3,7 @@ import { TIMELINE_BEATS } from '../hooks/useDAWActions'
 import { useDAWStore } from '../store/useDAWStore'
 import type { Track } from '../types'
 
-interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'selectedClipRefs' | 'isPlaying' | 'playheadBeat' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'addClipAtBeat' | 'addAudioFileClip'> {
+interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'selectedClipRefs' | 'isPlaying' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'addClipAtBeat' | 'addAudioFileClip'> {
   track: Track
 }
 
@@ -38,8 +38,6 @@ export function Timeline({
   selectedClipRef,
   selectedClipRefs,
   isPlaying,
-  playheadBeat,
-  effectiveTimelineBeats,
   timelineRef,
   setSelectedTrackId,
   setSelectedClipRef,
@@ -89,11 +87,10 @@ export function Timeline({
       >
         {/* Beat grid lines */}
         {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => {
-          const isPlayingBeat = isPlaying && playheadBeat >= beat && playheadBeat < beat + 1;
           return (
             <div
               key={beat}
-              className={`beat-cell border-r ${beat % 4 === 0 ? 'beat-cell-bar border-gray-700 bg-white/[0.01]' : 'border-gray-800/50'} ${isPlayingBeat ? 'bg-white/[0.05]' : ''}`}
+              className={`beat-cell border-r ${beat % 4 === 0 ? 'beat-cell-bar border-gray-700 bg-white/[0.01]' : 'border-gray-800/50'}`}
               onDoubleClick={() => {
                 if (isPlaying || track.locked) return
                 const clip = track.clips.find(c => beat >= c.startBeat && beat < c.startBeat + c.lengthBeats)
@@ -135,12 +132,11 @@ export function Timeline({
           const isDraggingThisClip = clipDrag?.isDragging && clipDrag.trackId === track.id && clipDrag.clipId === clip.id;
 
           const colorValue = clip.color || track.color || '#6366f1'
-          const isPlayingClip = isPlaying && playheadBeat >= clip.startBeat && playheadBeat < clip.startBeat + clip.lengthBeats;
           return (
             <button
               key={clip.id}
               data-testid={`clip-${track.id}-${clip.id}`}
-              className={`clip ${clip.wave} ${track.locked ? 'locked' : ''} ${clip.muted ? 'muted' : ''} ${isSelected(clip.id) ? 'selected' : ''} ${isPlayingClip ? 'playing brightness-125' : ''} absolute rounded border overflow-hidden ${isSelected(clip.id) ? 'border-white ring-1 ring-white/50 z-10' : 'border-black/50'} ${isPlayingClip && !isSelected(clip.id) ? 'ring-1 ring-white/30' : ''} ${isDraggingThisClip ? 'opacity-30 pointer-events-none' : ''}`}
+              className={`clip ${clip.wave} ${track.locked ? 'locked' : ''} ${clip.muted ? 'muted' : ''} ${isSelected(clip.id) ? 'selected' : ''} absolute rounded border overflow-hidden ${isSelected(clip.id) ? 'border-white ring-1 ring-white/50 z-10' : 'border-black/50'} ${isDraggingThisClip ? 'opacity-30 pointer-events-none' : ''}`}
               style={{
                 top: 4,
                 height: 'calc(100% - 8px)',
@@ -213,15 +209,6 @@ export function Timeline({
             </button>
           )
         })}
-
-        {/* Playhead */}
-        <div
-          className="playhead-container absolute top-0 bottom-0 z-20 pointer-events-none flex flex-col items-center"
-          style={{ left: `${(Math.min(playheadBeat, effectiveTimelineBeats) / effectiveTimelineBeats) * 100}%`, transform: 'translateX(-1px)' }}
-        >
-          <div className="playhead-triangle w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[12px] border-t-emerald-500 flex-shrink-0" style={{ filter: 'drop-shadow(0 0 3px #00d992)' }} />
-          <div className="playhead-line w-0.5 flex-1 bg-emerald-500" style={{ boxShadow: '0 0 4px #00d992' }} />
-        </div>
       </div>
     </div>
   )
@@ -230,25 +217,22 @@ export function Timeline({
 
 interface TimelineHeaderProps {
   startPlayheadDrag: (e: React.MouseEvent) => void
-  isPlaying: boolean
-  playheadBeat: number
 }
 
-export function TimelineHeader({ startPlayheadDrag, isPlaying, playheadBeat }: TimelineHeaderProps) {
+export function TimelineHeader({ startPlayheadDrag }: TimelineHeaderProps) {
   return (
     <div
       className="timeline-header h-8 bg-[#0a0a0a] border-b border-gray-800 sticky top-0 z-10 cursor-pointer flex"
       data-testid="timeline-header"
       onMouseDown={(e) => {
-        if (e.button === 0) startPlayheadDrag(e)
+        startPlayheadDrag(e)
       }}
     >
       {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => {
-        const isPlayingBeat = isPlaying && playheadBeat >= beat && playheadBeat < beat + 1;
         return (
           <div
             key={beat}
-            className={`timeline-header-beat flex-1 flex items-center justify-center text-[10px] font-mono border-r ${beat % 4 === 0 ? 'timeline-header-bar border-gray-700 text-gray-500 font-semibold' : 'border-gray-800/50 text-gray-700'} ${isPlayingBeat ? 'bg-white/10 text-white' : ''}`}
+            className={`timeline-header-beat flex-1 flex items-center justify-center text-[10px] font-mono border-r ${beat % 4 === 0 ? 'timeline-header-bar border-gray-700 text-gray-500 font-semibold' : 'border-gray-800/50 text-gray-700'}`}
           >
             {beat % 4 === 0 ? `${beat / 4 + 1}` : ''}
           </div>
@@ -258,18 +242,34 @@ export function TimelineHeader({ startPlayheadDrag, isPlaying, playheadBeat }: T
   )
 }
 
-type TimelineSectionProps = Pick<DAWActions, 'project' | 'selectedClipRef' | 'selectedClipRefs' | 'selectedTrackId' | 'isPlaying' | 'playheadBeat' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'setPlayheadBeat' | 'startPlayheadDrag' | 'addClipAtBeat' | 'addAudioFileClip'>
+function GlobalPlayheadLine({ effectiveTimelineBeats }: { effectiveTimelineBeats: number }) {
+  const playheadBeat = useDAWStore(s => s.playheadBeat)
+  return (
+    <div
+      className="playhead-container absolute top-0 bottom-0 z-20 pointer-events-none flex flex-col items-center"
+      style={{ left: `${(Math.min(playheadBeat, effectiveTimelineBeats) / effectiveTimelineBeats) * 100}%`, transform: 'translateX(-1px)' }}
+    >
+      <div className="playhead-triangle w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[12px] border-t-emerald-500 flex-shrink-0" style={{ filter: 'drop-shadow(0 0 3px #00d992)' }} />
+      <div className="playhead-line w-0.5 flex-1 bg-emerald-500" style={{ boxShadow: '0 0 4px #00d992' }} />
+    </div>
+  )
+}
+
+type TimelineSectionProps = Pick<DAWActions, 'project' | 'selectedClipRef' | 'selectedClipRefs' | 'selectedTrackId' | 'isPlaying' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'setPlayheadBeat' | 'startPlayheadDrag' | 'addClipAtBeat' | 'addAudioFileClip'>
 
 export function TimelineSection(props: TimelineSectionProps) {
-  const { project, ...rest } = props
+  const { project, effectiveTimelineBeats, ...rest } = props
   return (
     <section className="timeline flex-1 flex flex-col overflow-auto min-w-0 bg-[#151515]" data-testid="timeline">
-      <TimelineHeader startPlayheadDrag={props.startPlayheadDrag} isPlaying={props.isPlaying} playheadBeat={props.playheadBeat} />
-      {project.tracks.map((track) => (
-        <div className="track-row border-b border-gray-800/50" key={track.id} data-testid={`track-row-${track.id}`}>
-          <Timeline track={track} {...rest} />
-        </div>
-      ))}
+      <TimelineHeader startPlayheadDrag={props.startPlayheadDrag} />
+      <div className="relative flex-1">
+        {project.tracks.map((track) => (
+          <div className="track-row border-b border-gray-800/50" key={track.id} data-testid={`track-row-${track.id}`}>
+            <Timeline track={track} {...rest} />
+          </div>
+        ))}
+        <GlobalPlayheadLine effectiveTimelineBeats={effectiveTimelineBeats} />
+      </div>
     </section>
   )
 }

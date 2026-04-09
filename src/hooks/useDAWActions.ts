@@ -200,7 +200,6 @@ export interface DAWActions {
   project: ProjectState
   isPlaying: boolean
   metronomeEnabled: boolean
-  playheadBeat: number
   masterVolume: number
   masterEQ: MasterEQ
   loopEnabled: boolean
@@ -325,7 +324,6 @@ export function useDAWActions(): DAWActions {
   const project = useDAWStore((state) => state.project)
   const isPlaying = useDAWStore((state) => state.isPlaying)
   const metronomeEnabled = useDAWStore((state) => state.metronomeEnabled)
-  const playheadBeat = useDAWStore((state) => state.playheadBeat)
   const masterVolume = useDAWStore((state) => state.masterVolume)
   const masterEQ = useDAWStore((state) => state.masterEQ)
   const loopEnabled = useDAWStore((state) => state.loopEnabled)
@@ -586,7 +584,7 @@ export function useDAWActions(): DAWActions {
           updateProject((prev) => {
             const track = prev.tracks.find(t => t.id === selectedTrackId)
             if (!track) return prev
-            const startBeat = Math.round(playheadBeat * 2) / 2
+            const startBeat = Math.round(useDAWStore.getState().playheadBeat * 2) / 2
             
             // Calculate duration in beats if possible, fallback to 4
             let lengthBeats = 4
@@ -775,7 +773,7 @@ export function useDAWActions(): DAWActions {
       firstTrackFirstClipLengthBeats: project.tracks[0]?.clips[0]?.lengthBeats ?? null,
       firstTrackFirstClipWave: project.tracks[0]?.clips[0]?.wave ?? null,
       firstTrackFirstClipGain: project.tracks[0]?.clips[0]?.gain ?? 1.0,
-      playheadBeat,
+      get playheadBeat() { return useDAWStore.getState().playheadBeat },
       undoDepth,
       redoDepth,
       clipboardClipId: clipboard?.clip.id ?? null,
@@ -839,7 +837,6 @@ export function useDAWActions(): DAWActions {
     }
   }, [
     isPlaying,
-    playheadBeat,
     project,
     undoDepth,
     redoDepth,
@@ -1930,7 +1927,6 @@ export function useDAWActions(): DAWActions {
     project,
     isPlaying,
     metronomeEnabled,
-    playheadBeat,
     masterVolume,
     masterEQ,
     loopEnabled,

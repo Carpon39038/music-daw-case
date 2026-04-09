@@ -3,12 +3,12 @@ import type { DAWActions } from '../hooks/useDAWActions'
 import { formatTime } from '../utils/formatTime'
 import { DEMOS } from '../utils/demos'
 import { ShareButton } from './ShareButton'
-
+import { useDAWStore } from '../store/useDAWStore'
 
 export function Transport({
   isPlaying,
   project,
-  playheadBeat,
+  
   loopEnabled,
   loopLengthBeats,
   metronomeEnabled,
@@ -33,6 +33,7 @@ export function Transport({
   isRecording,
   toggleRecording
 }: DAWActions) {
+  const playheadBeat = useDAWStore(s => s.playheadBeat)
   return (
     <section className="transport h-16 bg-[#111] border-b border-gray-800 flex items-center px-4 justify-between flex-shrink-0" data-testid="transport">
       <div className="transport-primary flex items-center gap-4">
