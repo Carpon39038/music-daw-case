@@ -9,6 +9,17 @@ export interface PlayheadDragState {
   beatWidthPx: number
 }
 
+export interface ClipDragState {
+  isDragging: boolean
+  trackId: string
+  clipId: string
+  originStartBeat: number
+  lengthBeats: number
+  targetTrackId: string
+  targetStartBeat: number
+  targetConflicts: boolean
+}
+
 const TRACK_COUNT = 4
 const STORE_STORAGE_KEY = 'music-daw-case.store.v1'
 const LEGACY_PROJECT_STORAGE_KEY = 'music-daw-case.project.v1'
@@ -34,6 +45,8 @@ interface DAWState extends PersistedDAWState {
   past: ProjectState[]
   future: ProjectState[]
   playheadDrag: PlayheadDragState | null
+  clipDrag: ClipDragState | null
+  setClipDrag: (value: ClipDragState | null) => void
   setProject: (project: ProjectState, options?: { saveHistory?: boolean }) => void
   updateProject: (updater: (prev: ProjectState) => ProjectState, options?: { saveHistory?: boolean }) => void
   setIsPlaying: (value: boolean) => void
@@ -248,6 +261,7 @@ export const useDAWStore = create<DAWState>()(
       past: [],
       future: [],
       playheadDrag: null,
+      clipDrag: null,
       setProject: (project, options) =>
         set((state) => {
           const nextProject = normalizeProject(project)
@@ -290,6 +304,7 @@ export const useDAWStore = create<DAWState>()(
       })),
       setClipboard: (value) => set({ clipboard: value }),
       setPlayheadDrag: (value) => set({ playheadDrag: value }),
+      setClipDrag: (value) => set({ clipDrag: value }),
       pushHistory: (snapshot) =>
         set((state) => ({
           past: [...state.past, cloneProject(snapshot ?? state.project)].slice(-100),

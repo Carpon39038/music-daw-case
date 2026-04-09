@@ -1595,6 +1595,17 @@ export function useDAWActions(): DAWActions {
       originProject: structuredClone(project),
       hasMoved: false,
     }
+    
+    useDAWStore.getState().setClipDrag({
+      isDragging: true,
+      trackId,
+      clipId,
+      originStartBeat,
+      lengthBeats,
+      targetTrackId: trackId,
+      targetStartBeat: originStartBeat,
+      targetConflicts: false
+    })
 
     let cancelled = false
 
@@ -1613,9 +1624,9 @@ export function useDAWActions(): DAWActions {
 
       // Cross-track drag: check if mouse moved to a different track
       const timelineEl = document.querySelector('[data-testid="timeline"]')
+      let targetTrackId = state.trackId
       if (timelineEl) {
         const rows = timelineEl.querySelectorAll('[data-testid^="track-row-"]')
-        let targetTrackId = state.trackId
         for (const row of rows) {
           const rect = (row as HTMLElement).getBoundingClientRect()
           if (moveEvent.clientY >= rect.top && moveEvent.clientY <= rect.bottom) {
@@ -1623,55 +1634,88 @@ export function useDAWActions(): DAWActions {
             break
           }
         }
+      }
 
-        if (targetTrackId !== state.trackId) {
-          const targetTrack = project.tracks.find(t => t.id === targetTrackId)
-          if (targetTrack && !targetTrack.locked) {
-            // Find the clip data from origin project
-            const srcTrack = state.originProject.tracks.find(t => t.id === state.trackId)
-            const srcClip = srcTrack?.clips.find(c => c.id === state.clipId)
-            if (srcClip) {
-              const resolvedStart = resolveNonOverlappingStart(targetTrack.clips, srcClip.lengthBeats, nextStart)
-              const conflicts = targetTrack.clips.some(c => rangesOverlap(resolvedStart, srcClip.lengthBeats, c.startBeat, c.lengthBeats))
-              if (!conflicts) {
-                setProject(prev => ({
-                  ...prev,
-                  tracks: prev.tracks.map(t => {
-                    if (t.id === state.trackId) {
-                      return { ...t, clips: t.clips.filter(c => c.id !== state.clipId) }
-                    }
-                    if (t.id === targetTrackId) {
-                      return { ...t, clips: [...t.clips, { ...srcClip, startBeat: resolvedStart }] }
-                    }
-                    return t
-                  })
-                }))
-                state.trackId = targetTrackId
-                state.hasMoved = true
-                return
-              }
-            }
-          }
+      const targetTrack = project.tracks.find(t => t.id === targetTrackId)
+      let conflicts = false
+      let resolvedStart = nextStart
+      
+      if (targetTrack && !targetTrack.locked) {
+        const srcTrack = state.originProject.tracks.find(t => t.id === state.trackId)
+        const srcClip = srcTrack?.clips.find(c => c.id === state.clipId)
+        if (srcClip) {
+          // If moving across tracks, try resolving non-overlapping. But we only visually show it.
+          // Wait, if it's the same track, we should exclude itself from conflict check.
+          const otherClips = targetTrack.clips.filter(c => !(targetTrackId === state.trackId && c.id === state.clipId))
+          resolvedStart = resolveNonOverlappingStart(otherClips, srcClip.lengthBeats, nextStart)
+          conflicts = otherClips.some(c => rangesOverlap(resolvedStart, srcClip.lengthBeats, c.startBeat, c.lengthBeats))
         }
       }
 
-      updateClipStartBeat(state.trackId, state.clipId, nextStart)
+      useDAWStore.getState().setClipDrag({
+        isDragging: true,
+        trackId: state.trackId,
+        clipId: state.clipId,
+        originStartBeat: state.originStartBeat,
+        lengthBeats: state.lengthBeats,
+        targetTrackId,
+        targetStartBeat: resolvedStart,
+        targetConflicts: conflicts
+      })
     }
 
     const onKeyDown = (keyEvent: KeyboardEvent) => {
       const state = dragStateRef.current
       if (!state) return
-      if (keyEvent.key !== 'Escape') return
-      cancelled = true
-      setProject(state.originProject)
-      cleanup()
+      if (keyEvent.key === 'Escape') {
+        cancelled = true
+        cleanup()
+      }
     }
 
     const cleanup = () => {
       const state = dragStateRef.current
-      if (state && state.hasMoved && !cancelled) {
-        pushHistory(state.originProject)
+      
+      const currentDrag = useDAWStore.getState().clipDrag
+      
+      if (state && currentDrag && state.hasMoved && !cancelled) {
+        if (!currentDrag.targetConflicts) {
+          // Apply changes to project
+          const srcTrackId = currentDrag.trackId
+          const tgtTrackId = currentDrag.targetTrackId
+          const clipId = currentDrag.clipId
+          const nextStart = currentDrag.targetStartBeat
+          
+          if (srcTrackId === tgtTrackId) {
+             updateClipStartBeat(srcTrackId, clipId, nextStart)
+             pushHistory(state.originProject)
+          } else {
+             const targetTrack = project.tracks.find(t => t.id === tgtTrackId)
+             if (targetTrack && !targetTrack.locked) {
+                 const srcTrack = state.originProject.tracks.find(t => t.id === srcTrackId)
+                 const srcClip = srcTrack?.clips.find(c => c.id === clipId)
+                 if (srcClip) {
+                     setProject(prev => ({
+                      ...prev,
+                      tracks: prev.tracks.map(t => {
+                        if (t.id === srcTrackId) {
+                          return { ...t, clips: t.clips.filter(c => c.id !== clipId) }
+                        }
+                        if (t.id === tgtTrackId) {
+                          return { ...t, clips: [...t.clips, { ...srcClip, startBeat: nextStart }] }
+                        }
+                        return t
+                      })
+                     }))
+                     pushHistory(state.originProject)
+                 }
+             }
+          }
+        }
       }
+      
+      useDAWStore.getState().setClipDrag(null)
+
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', cleanup)
       window.removeEventListener('keydown', onKeyDown)

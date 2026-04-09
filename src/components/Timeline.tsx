@@ -1,5 +1,6 @@
 import type { DAWActions } from '../hooks/useDAWActions'
 import { TIMELINE_BEATS } from '../hooks/useDAWActions'
+import { useDAWStore } from '../store/useDAWStore'
 import type { Track } from '../types'
 
 interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'selectedClipRefs' | 'isPlaying' | 'playheadBeat' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'addClipAtBeat'> {
@@ -55,6 +56,8 @@ export function Timeline({
   loopLengthBeats,
   addClipAtBeat,
 }: TimelineProps) {
+  const clipDrag = useDAWStore((s) => s.clipDrag)
+
   const isSelected = (clipId: string) =>
     (selectedClipRef?.clipId === clipId && selectedClipRef?.trackId === track.id) ||
     selectedClipRefs.some(r => r.clipId === clipId && r.trackId === track.id)
@@ -91,13 +94,15 @@ export function Timeline({
 
         {/* Clips */}
         {track.clips.map((clip) => {
+          const isDraggingThisClip = clipDrag?.isDragging && clipDrag.trackId === track.id && clipDrag.clipId === clip.id;
+
           const colorValue = clip.color || track.color || '#6366f1'
           const isPlayingClip = isPlaying && playheadBeat >= clip.startBeat && playheadBeat < clip.startBeat + clip.lengthBeats;
           return (
             <button
               key={clip.id}
               data-testid={`clip-${track.id}-${clip.id}`}
-              className={`clip ${clip.wave} ${track.locked ? 'locked' : ''} ${clip.muted ? 'muted' : ''} ${isSelected(clip.id) ? 'selected' : ''} ${isPlayingClip ? 'playing brightness-125' : ''} absolute rounded border overflow-hidden ${isSelected(clip.id) ? 'border-white ring-1 ring-white/50 z-10' : 'border-black/50'} ${isPlayingClip && !isSelected(clip.id) ? 'ring-1 ring-white/30' : ''}`}
+              className={`clip ${clip.wave} ${track.locked ? 'locked' : ''} ${clip.muted ? 'muted' : ''} ${isSelected(clip.id) ? 'selected' : ''} ${isPlayingClip ? 'playing brightness-125' : ''} absolute rounded border overflow-hidden ${isSelected(clip.id) ? 'border-white ring-1 ring-white/50 z-10' : 'border-black/50'} ${isPlayingClip && !isSelected(clip.id) ? 'ring-1 ring-white/30' : ''} ${isDraggingThisClip ? 'opacity-30 pointer-events-none' : ''}`}
               style={{
                 top: 4,
                 height: 'calc(100% - 8px)',
