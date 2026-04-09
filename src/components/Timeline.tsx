@@ -5,6 +5,7 @@ import type { Track } from '../types'
 
 interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'toggleDrumStep' | 'selectedClipRefs' | 'isPlaying' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'addClipAtBeat' | 'addAudioFileClip'> {
   track: Track
+  isPerformanceModeActive: boolean
 }
 
 function WaveformSVG({ wave, color }: { wave: string; color: string }) {
@@ -55,6 +56,7 @@ export function Timeline({
   addClipAtBeat,
   addAudioFileClip,
   toggleDrumStep,
+  isPerformanceModeActive,
 }: TimelineProps) {
   const clipDrag = useDAWStore((s) => s.clipDrag)
 
@@ -174,9 +176,9 @@ export function Timeline({
                 left: `${(clip.startBeat / TIMELINE_BEATS) * 100}%`,
                 width: `${(clip.lengthBeats / TIMELINE_BEATS) * 100}%`,
                 backgroundColor: `${clip.color || track.color || '#6366f1'}30`,
-                    backgroundImage: `url("data:image/svg+xml;utf8,${encodeURIComponent(getWaveSVG(clip.wave))}")`,
-                    backgroundSize: '20px 100%',
-                    backgroundRepeat: 'repeat-x',
+                backgroundImage: isPerformanceModeActive ? 'none' : `url("data:image/svg+xml;utf8,${encodeURIComponent(getWaveSVG(clip.wave))}")`,
+                backgroundSize: '20px 100%',
+                backgroundRepeat: 'repeat-x',
                 borderLeftColor: colorValue,
                 borderLeftWidth: 3,
                 opacity: clip.muted ? 0.5 : track.locked ? 0.6 : 1,
@@ -215,7 +217,7 @@ export function Timeline({
               </div>
 
               {/* Waveform preview */}
-              <WaveformSVG wave={clip.wave} color={colorValue} />
+              {!isPerformanceModeActive && <WaveformSVG wave={clip.wave} color={colorValue} />}
 
               {/* Label (used by tests for clip name) */}
               <span className="clip-label relative min-w-0 overflow-hidden text-ellipsis whitespace-nowrap z-1 text-[10px]" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)', position: 'absolute', bottom: 2, left: 4 }}>
@@ -290,13 +292,17 @@ type TimelineSectionProps = Pick<DAWActions, 'project' | 'toggleDrumStep' | 'sel
 
 export function TimelineSection(props: TimelineSectionProps) {
   const { project, effectiveTimelineBeats, ...rest } = props
+  const performanceMode = useDAWStore(s => s.performanceMode)
+  const totalClips = project.tracks.reduce((acc, t) => acc + t.clips.length, 0)
+  const isPerformanceModeActive = performanceMode === 'on' || (performanceMode === 'auto' && totalClips > 30)
+
   return (
     <section className="timeline flex-1 flex flex-col overflow-auto min-w-0 bg-[#151515]" data-testid="timeline">
       <TimelineHeader startPlayheadDrag={props.startPlayheadDrag} />
       <div className="relative flex-1">
         {project.tracks.map((track) => (
           <div className="track-row border-b border-gray-800/50" key={track.id} data-testid={`track-row-${track.id}`}>
-            <Timeline track={track} {...rest} />
+            <Timeline track={track} isPerformanceModeActive={isPerformanceModeActive} {...rest} />
           </div>
         ))}
         <GlobalPlayheadLine effectiveTimelineBeats={effectiveTimelineBeats} />

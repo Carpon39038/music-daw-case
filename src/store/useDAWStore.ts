@@ -41,6 +41,7 @@ interface PersistedDAWState {
   loopLengthBeats: number
   metronomeEnabled: boolean
   checkpoints: Checkpoint[]
+  performanceMode: 'auto' | 'on' | 'off'
 }
 
 interface DAWState extends PersistedDAWState {
@@ -59,6 +60,7 @@ interface DAWState extends PersistedDAWState {
   updateProject: (updater: (prev: ProjectState) => ProjectState, options?: { saveHistory?: boolean }) => void
   setIsPlaying: (value: boolean) => void
   setMetronomeEnabled: (value: boolean) => void
+  setPerformanceMode: (value: 'auto' | 'on' | 'off') => void
   setPlayheadBeat: (value: number) => void
   setMasterVolume: (value: number) => void
   setMasterEQ: (value: MasterEQ) => void
@@ -210,6 +212,7 @@ function getDefaultPersistedState(): PersistedDAWState {
     loopLengthBeats: 8,
     metronomeEnabled: false,
     checkpoints: [],
+    performanceMode: 'auto',
   }
 }
 
@@ -337,6 +340,7 @@ export const useDAWStore = create<DAWState>()(
         }),
       setIsPlaying: (value) => set({ isPlaying: value }),
       setMetronomeEnabled: (value) => set({ metronomeEnabled: value }),
+      setPerformanceMode: (value) => set({ performanceMode: value }),
       setPlayheadBeat: (value) => set({ playheadBeat: value }),
       setMasterVolume: (value) => set({ masterVolume: value }),
       setMasterEQ: (value) => set({ masterEQ: value }),

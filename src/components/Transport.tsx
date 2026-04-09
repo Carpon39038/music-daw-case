@@ -33,6 +33,8 @@ export function Transport({
   isRecording,
   toggleRecording
 }: DAWActions) {
+  const performanceMode = useDAWStore(s => s.performanceMode)
+  const setPerformanceMode = useDAWStore(s => s.setPerformanceMode)
   const playheadBeat = useDAWStore(s => s.playheadBeat)
   const checkpoints = useDAWStore(s => s.checkpoints || [])
   const restoreCheckpoint = useDAWStore(s => s.restoreCheckpoint)
@@ -161,6 +163,15 @@ export function Transport({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPerformanceMode(performanceMode === 'auto' ? 'on' : performanceMode === 'on' ? 'off' : 'auto')}
+            className={`px-1.5 py-0.5 rounded text-xs ${performanceMode === 'on' ? 'bg-amber-900/50 text-amber-400' : performanceMode === 'auto' ? 'text-gray-400' : 'text-gray-600'}`}
+            title={`Performance Mode: ${performanceMode.toUpperCase()}`}
+            data-testid="performance-mode-btn"
+          >
+            {performanceMode === 'on' ? 'Perf: ON' : performanceMode === 'auto' ? 'Perf: AUTO' : 'Perf: OFF'}
+          </button>
+
           <button
             onClick={() => setMetronomeEnabled(v => !v)}
             className={`px-1.5 py-0.5 rounded text-xs ${metronomeEnabled ? 'bg-emerald-900/50 text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
