@@ -288,6 +288,7 @@ export interface DAWActions {
   updateClipFades: (trackId: string, clipId: string, fadeIn: number, fadeOut: number) => void
   updateClipTranspose: (trackId: string, clipId: string, transposeSemitones: number) => void
   updateClipLengthBeats: (trackId: string, clipId: string, lengthBeats: number) => void
+  quantizeClip: (trackId: string, clipId: string, gridBeats: number) => void
   handleMIDIImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
@@ -1441,6 +1442,35 @@ export function useDAWActions(): DAWActions {
     }))
   }
 
+  const quantizeClip = (trackId: string, clipId: string, gridBeats: number) => {
+    applyProjectUpdate((prev) => {
+      const track = prev.tracks.find((t) => t.id === trackId)
+      if (!track || track.locked) return prev
+
+      const sourceClip = track.clips.find((c) => c.id === clipId)
+      if (!sourceClip) return prev
+
+      let snappedStart = Math.round(sourceClip.startBeat / gridBeats) * gridBeats
+      // Snap length as well? Requirements say: "一键量化到 1/4、1/8、1/16 网格"
+      const snappedLength = Math.max(gridBeats, Math.round(sourceClip.lengthBeats / gridBeats) * gridBeats)
+
+      snappedStart = Math.min(Math.max(0, snappedStart), TIMELINE_BEATS - snappedLength)
+      const resolvedStart = resolveNonOverlappingStart(track.clips, snappedLength, snappedStart, clipId)
+
+      return {
+        ...prev,
+        tracks: prev.tracks.map((t) =>
+          t.id === trackId
+            ? {
+                ...t,
+                clips: t.clips.map((c) => (c.id === clipId ? { ...c, startBeat: resolvedStart, lengthBeats: snappedLength } : c)),
+              }
+            : t,
+        ),
+      }
+    })
+  }
+
   const handleMIDIImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -2005,6 +2035,7 @@ export function useDAWActions(): DAWActions {
     updateClipFades,
     updateClipTranspose,
     updateClipLengthBeats,
+    quantizeClip,
     handleMIDIImport,
     handleMIDIExport,
     handleAudioExport,

@@ -9,7 +9,7 @@ export function Inspector(d: DAWActions) {
     setProject, applyProjectUpdate, setTrackFilterType, setTrackFilterCutoff,
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
   } = d
@@ -267,6 +267,16 @@ export function Inspector(d: DAWActions) {
                 <div><label className="text-xs text-gray-500 block mb-1">Fade In</label><input data-testid="selected-clip-fade-in-input" type="number" min={0} max={selectedClipData.clip.lengthBeats / 2} step={0.1} value={selectedClipData.clip.fadeIn ?? 0} onChange={(e) => updateClipFades(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value), selectedClipData.clip.fadeOut ?? 0)} disabled={isPlaying || selectedClipData.track.locked} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200" /></div>
               </div>
               <div><label className="text-xs text-gray-500 block mb-1">Fade Out</label><input data-testid="selected-clip-fade-out-input" type="number" min={0} max={selectedClipData.clip.lengthBeats / 2} step={0.1} value={selectedClipData.clip.fadeOut ?? 0} onChange={(e) => updateClipFades(selectedClipData.track.id, selectedClipData.clip.id, selectedClipData.clip.fadeIn ?? 0, Number(e.target.value))} disabled={isPlaying || selectedClipData.track.locked} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200" /></div>
+              
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Quantize</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button data-testid="quantize-1-4-btn" onClick={() => quantizeClip(selectedClipData.track.id, selectedClipData.clip.id, 1)} disabled={isPlaying || selectedClipData.track.locked} className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 border border-gray-800 rounded text-gray-300">1/4</button>
+                  <button data-testid="quantize-1-8-btn" onClick={() => quantizeClip(selectedClipData.track.id, selectedClipData.clip.id, 0.5)} disabled={isPlaying || selectedClipData.track.locked} className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 border border-gray-800 rounded text-gray-300">1/8</button>
+                  <button data-testid="quantize-1-16-btn" onClick={() => quantizeClip(selectedClipData.track.id, selectedClipData.clip.id, 0.25)} disabled={isPlaying || selectedClipData.track.locked} className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 border border-gray-800 rounded text-gray-300">1/16</button>
+                </div>
+              </div>
+
               <div className="inspector-meta text-xs text-gray-600 font-mono" data-testid="selected-clip-duplicate-target-beat">Duplicate target beat: {selectedClipData.duplicateStartBeat}</div>
 
               <div className="clip-actions-group grid grid-cols-2 gap-2 pt-4 border-t border-gray-800">
