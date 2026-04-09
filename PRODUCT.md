@@ -109,7 +109,7 @@
 - [x] **区域循环导出（Loop Export）** — 支持导出 loop 区间，而不仅是全曲导出
 
 #### P5-B（音乐性增强）
-- [ ] **基础鼓机轨（Step Sequencer）** — 提供 16-step 鼓机（Kick/Snare/Hihat）快速搭节奏
+- [x] **基础鼓机轨（Step Sequencer）** — 提供 16-step 鼓机（Kick/Snare/Hihat）快速搭节奏
 - [x] **音阶锁定（Scale Lock）** — 约束音高到指定调式，降低跑调概率
 
 #### P5-C（稳定性与工程化）

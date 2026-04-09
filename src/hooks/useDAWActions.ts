@@ -276,6 +276,8 @@ export interface DAWActions {
   setTrackFilterCutoff: (trackId: string, filterCutoff: number) => void
   renameTrack: (trackId: string, name: string) => void
   addTrack: () => void
+  addDrumTrack: () => void
+  toggleDrumStep: (trackId: string, type: 'kick'|'snare'|'hihat', stepIndex: number) => void
   deleteTrack: (trackId: string) => void
   moveTrack: (trackId: string, direction: 'up' | 'down') => void
   duplicateTrack: (trackId: string) => void
@@ -1238,6 +1240,56 @@ export function useDAWActions(): DAWActions {
     })
   }
 
+  const addDrumTrack = () => {
+    applyProjectUpdate((prev) => {
+      const newTrackId = `drum-${Date.now()}`
+      return {
+        ...prev,
+        tracks: [
+          ...prev.tracks,
+          {
+            id: newTrackId,
+            name: `Drum Machine`,
+            volume: 0.8,
+            pan: 0,
+            muted: false,
+            solo: false,
+            locked: false,
+            isDrumTrack: true,
+            drumSequence: {
+              kick: new Array(16).fill(false),
+              snare: new Array(16).fill(false),
+              hihat: new Array(16).fill(false)
+            },
+            transposeSemitones: 0,
+            filterType: 'none',
+            filterCutoff: 20000,
+            reverbEnabled: false,
+            distortionEnabled: false,
+            reverbMix: 0.3,
+            reverbDecay: 2,
+            clips: [],
+          },
+        ],
+      }
+    })
+  }
+
+  const toggleDrumStep = (trackId: string, type: 'kick'|'snare'|'hihat', stepIndex: number) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id === trackId && t.isDrumTrack && t.drumSequence) {
+          const newSeq = { ...t.drumSequence }
+          newSeq[type] = [...newSeq[type]]
+          newSeq[type][stepIndex] = !newSeq[type][stepIndex]
+          return { ...t, drumSequence: newSeq }
+        }
+        return t
+      }),
+    }))
+  }
+
   const deleteTrack = (trackId: string) => {
     applyProjectUpdate((prev) => {
       if (prev.tracks.length <= 1) return prev
@@ -2023,6 +2075,8 @@ export function useDAWActions(): DAWActions {
     setTrackFilterCutoff,
     renameTrack,
     addTrack,
+    addDrumTrack,
+    toggleDrumStep,
     deleteTrack,
     moveTrack,
     duplicateTrack,

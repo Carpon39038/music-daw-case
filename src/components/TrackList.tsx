@@ -120,7 +120,7 @@ export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackI
             className="track-btn w-6 h-6 rounded flex items-center justify-center text-xs font-bold bg-gray-800 text-gray-400 hover:bg-gray-700"
             data-testid={`add-clip-${track.id}`}
             onClick={(e) => { e.stopPropagation(); addClip(track.id); }}
-            disabled={isPlaying || track.locked}
+            disabled={isPlaying || track.locked || track.isDrumTrack}
           >
             +
           </button>
@@ -147,9 +147,9 @@ export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackI
   )
 }
 
-type TrackListPanelProps = Pick<DAWActions, 'project' | 'selectedTrackId' | 'isPlaying' | 'setSelectedTrackId' | 'toggleTrackMute' | 'toggleTrackSolo' | 'toggleTrackLock' | 'addClip' | 'setTrackVolume' | 'addTrack' | 'moveTrack' | 'duplicateTrack' | 'deleteTrack'>
+type TrackListPanelProps = Pick<DAWActions, 'project' | 'selectedTrackId' | 'isPlaying' | 'setSelectedTrackId' | 'toggleTrackMute' | 'toggleTrackSolo' | 'toggleTrackLock' | 'addClip' | 'setTrackVolume' | 'addTrack' | 'addDrumTrack' | 'moveTrack' | 'duplicateTrack' | 'deleteTrack'>
 
-export function TrackListPanel({ project, addTrack, ...rest }: TrackListPanelProps) {
+export function TrackListPanel({ project, addTrack, addDrumTrack, ...rest }: TrackListPanelProps) {
   return (
     <div className="tracklist-panel w-64 bg-[#111] border-r border-gray-800 flex flex-col overflow-y-auto overflow-x-hidden flex-shrink-0">
       <div
@@ -157,6 +157,15 @@ export function TrackListPanel({ project, addTrack, ...rest }: TrackListPanelPro
         data-testid="tracklist-header"
       >
         <span className="text-xs text-gray-500 font-medium">TRACKS</span>
+        <button
+          data-testid="add-drum-track-btn"
+          onClick={addDrumTrack}
+          disabled={rest.isPlaying}
+          className="add-track-btn text-gray-500 hover:text-emerald-400 p-1"
+          title="Add Drum Track"
+        >
+          <span className="text-xs font-bold font-mono">+ DRUM</span>
+        </button>
         <button
           data-testid="add-track-btn"
           onClick={addTrack}

@@ -3,7 +3,7 @@ import { TIMELINE_BEATS } from '../hooks/useDAWActions'
 import { useDAWStore } from '../store/useDAWStore'
 import type { Track } from '../types'
 
-interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'selectedClipRefs' | 'isPlaying' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'addClipAtBeat' | 'addAudioFileClip'> {
+interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'toggleDrumStep' | 'selectedClipRefs' | 'isPlaying' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'addClipAtBeat' | 'addAudioFileClip'> {
   track: Track
 }
 
@@ -54,12 +54,42 @@ export function Timeline({
   loopLengthBeats,
   addClipAtBeat,
   addAudioFileClip,
+  toggleDrumStep,
 }: TimelineProps) {
   const clipDrag = useDAWStore((s) => s.clipDrag)
 
   const isSelected = (clipId: string) =>
     (selectedClipRef?.clipId === clipId && selectedClipRef?.trackId === track.id) ||
     selectedClipRefs.some(r => r.clipId === clipId && r.trackId === track.id)
+
+
+  if (track.isDrumTrack && track.drumSequence) {
+    const seq = track.drumSequence;
+    const instruments = ['kick', 'snare', 'hihat'] as const;
+    return (
+      <div className="track-timeline-row h-24 bg-[#111] border-b border-gray-800 flex flex-col justify-between p-1">
+        {instruments.map(inst => (
+          <div key={inst} className="flex h-[30%] items-center gap-1">
+            <div className="w-12 text-[10px] text-gray-500 font-mono uppercase text-right pr-2 select-none">{inst}</div>
+            <div className="flex-1 grid grid-cols-16 gap-1 h-full pr-1">
+              {Array.from({ length: 16 }).map((_, i) => (
+                <button
+                  key={i}
+                  data-testid={`drum-step-${track.id}-${inst}-${i}`}
+                  className={`rounded-sm transition-colors border ${seq[inst][i] ? 'bg-emerald-500 border-emerald-400' : 'bg-gray-800 border-gray-700 hover:bg-gray-700'}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleDrumStep(track.id, inst, i);
+                  }}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="track-timeline-row h-24">
@@ -256,7 +286,7 @@ function GlobalPlayheadLine({ effectiveTimelineBeats }: { effectiveTimelineBeats
   )
 }
 
-type TimelineSectionProps = Pick<DAWActions, 'project' | 'selectedClipRef' | 'selectedClipRefs' | 'selectedTrackId' | 'isPlaying' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'setPlayheadBeat' | 'startPlayheadDrag' | 'addClipAtBeat' | 'addAudioFileClip'>
+type TimelineSectionProps = Pick<DAWActions, 'project' | 'toggleDrumStep' | 'selectedClipRef' | 'selectedClipRefs' | 'selectedTrackId' | 'isPlaying' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'setPlayheadBeat' | 'startPlayheadDrag' | 'addClipAtBeat' | 'addAudioFileClip'>
 
 export function TimelineSection(props: TimelineSectionProps) {
   const { project, effectiveTimelineBeats, ...rest } = props

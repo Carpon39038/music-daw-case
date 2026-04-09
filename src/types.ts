@@ -25,6 +25,12 @@ export interface Track {
   solo: boolean
   color?: string
   locked: boolean
+  isDrumTrack?: boolean
+  drumSequence?: {
+    kick: boolean[]
+    snare: boolean[]
+    hihat: boolean[]
+  }
   delayEnabled?: boolean
   delayTime?: number
   delayFeedback?: number
