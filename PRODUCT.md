@@ -115,7 +115,7 @@
 #### P5-C（稳定性与工程化）
 - [x] **自动保存版本点（Checkpoint）** — 关键操作自动留最近 N 个版本点，支持快速回退
 - [x] **大项目性能模式（Performance Mode）** — 轨道/Clip 较多时自动降级可视渲染，优先播放稳定
-- [ ] **测试补强（P5 新功能）** — 为 Quantize、Step Sequencer、Scale Lock、Loop Export 补齐 e2e 回归
+- [x] **测试补强（P5 新功能）** — 为 Quantize、Step Sequencer、Scale Lock、Loop Export 补齐 e2e 回归
 
 ---
 
