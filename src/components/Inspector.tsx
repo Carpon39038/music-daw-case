@@ -12,7 +12,14 @@ export function Inspector(d: DAWActions) {
     updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
+    selectedClipRef, selectedClipRefs,
   } = d
+
+  
+  const allSelectedClipRefs = [...(selectedClipRefs || [])]
+  if (selectedClipRef && !allSelectedClipRefs.some(r => r.clipId === selectedClipRef.clipId)) {
+    allSelectedClipRefs.unshift(selectedClipRef)
+  }
 
   return (
     <section className="inspector w-80 bg-[#111] border-l border-gray-800 flex flex-col overflow-y-auto flex-shrink-0" data-testid="inspector-panel">
@@ -246,7 +253,154 @@ export function Inspector(d: DAWActions) {
           <div className="inspector-empty text-gray-500 text-sm" data-testid="inspector-track-empty">Select a track header to edit track name.</div>
         )}
 
-        {selectedClipData ? (
+        
+        {allSelectedClipRefs.length > 1 ? (
+          <details className="inspector-group sm" data-testid="inspector-clip-multi" open>
+            <summary className="inspector-subtitle">Multi-Clip Settings ({allSelectedClipRefs.length} clips)</summary>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Volume (All)</label>
+                <input
+                  data-testid="multi-clip-gain-input"
+                  type="range" min={0} max={200} step={1} defaultValue={100}
+                  onMouseUp={(e) => {
+                    const gain = Number((e.target as HTMLInputElement).value) / 100;
+                    applyProjectUpdate(prev => ({
+                      ...prev,
+                      tracks: prev.tracks.map(t => {
+                        let changed = false;
+                        const nextClips = t.clips.map(c => {
+                          if (allSelectedClipRefs.some(r => r.clipId === c.id) && !t.locked) {
+                            changed = true; return { ...c, gain };
+                          }
+                          return c;
+                        });
+                        return changed ? { ...t, clips: nextClips } : t;
+                      })
+                    }));
+                  }}
+                  disabled={isPlaying} className="w-full h-1 accent-emerald-500"
+                />
+              </div>
+              
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Transpose (st) (All)</label>
+                <input
+                  data-testid="multi-clip-transpose-input"
+                  type="number" min={-24} max={24} step={1} defaultValue={0}
+                  onBlur={(e) => {
+                    const st = Number((e.target as HTMLInputElement).value);
+                    applyProjectUpdate(prev => ({
+                      ...prev,
+                      tracks: prev.tracks.map(t => {
+                        let changed = false;
+                        const nextClips = t.clips.map(c => {
+                          if (allSelectedClipRefs.some(r => r.clipId === c.id) && !t.locked) {
+                            changed = true; return { ...c, transposeSemitones: st };
+                          }
+                          return c;
+                        });
+                        return changed ? { ...t, clips: nextClips } : t;
+                      })
+                    }));
+                  }}
+                  disabled={isPlaying} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">Fade In (All)</label>
+                  <input
+                    data-testid="multi-clip-fade-in-input"
+                    type="number" min={0} step={0.1} defaultValue={0}
+                    onBlur={(e) => {
+                      const fadeIn = Number((e.target as HTMLInputElement).value);
+                      applyProjectUpdate(prev => ({
+                        ...prev,
+                        tracks: prev.tracks.map(t => {
+                          let changed = false;
+                          const nextClips = t.clips.map(c => {
+                            if (allSelectedClipRefs.some(r => r.clipId === c.id) && !t.locked) {
+                              changed = true; return { ...c, fadeIn: Math.min(fadeIn, c.lengthBeats / 2) };
+                            }
+                            return c;
+                          });
+                          return changed ? { ...t, clips: nextClips } : t;
+                        })
+                      }));
+                    }}
+                    disabled={isPlaying} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">Fade Out (All)</label>
+                  <input
+                    data-testid="multi-clip-fade-out-input"
+                    type="number" min={0} step={0.1} defaultValue={0}
+                    onBlur={(e) => {
+                      const fadeOut = Number((e.target as HTMLInputElement).value);
+                      applyProjectUpdate(prev => ({
+                        ...prev,
+                        tracks: prev.tracks.map(t => {
+                          let changed = false;
+                          const nextClips = t.clips.map(c => {
+                            if (allSelectedClipRefs.some(r => r.clipId === c.id) && !t.locked) {
+                              changed = true; return { ...c, fadeOut: Math.min(fadeOut, c.lengthBeats / 2) };
+                            }
+                            return c;
+                          });
+                          return changed ? { ...t, clips: nextClips } : t;
+                        })
+                      }));
+                    }}
+                    disabled={isPlaying} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200"
+                  />
+                </div>
+              </div>
+
+              <div className="clip-actions-group grid grid-cols-2 gap-2 pt-4 border-t border-gray-800">
+                <button
+                  data-testid="multi-clip-mute-btn"
+                  onClick={() => {
+                    applyProjectUpdate(prev => ({
+                      ...prev,
+                      tracks: prev.tracks.map(t => {
+                        let changed = false;
+                        const nextClips = t.clips.map(c => {
+                          if (allSelectedClipRefs.some(r => r.clipId === c.id) && !t.locked) {
+                            changed = true; return { ...c, muted: !c.muted };
+                          }
+                          return c;
+                        });
+                        return changed ? { ...t, clips: nextClips } : t;
+                      })
+                    }));
+                  }}
+                  disabled={isPlaying} className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 border border-gray-800 rounded text-gray-300"
+                >
+                  Toggle Mute All
+                </button>
+                <button
+                  data-testid="multi-clip-delete-btn"
+                  onClick={() => {
+                    applyProjectUpdate(prev => ({
+                      ...prev,
+                      tracks: prev.tracks.map(t => {
+                        if (t.locked) return t;
+                        const nextClips = t.clips.filter(c => !allSelectedClipRefs.some(r => r.clipId === c.id));
+                        return nextClips.length !== t.clips.length ? { ...t, clips: nextClips } : t;
+                      })
+                    }));
+                  }}
+                  disabled={isPlaying} className="danger-btn px-2 py-1 text-xs bg-red-900/30 text-red-400 hover:bg-red-900/50 rounded border border-red-900/50"
+                >
+                  Delete All
+                </button>
+              </div>
+            </div>
+          </details>
+        ) : selectedClipData ? (
           <details className="inspector-group sm" data-testid="inspector-clip" open>
             <summary className="inspector-subtitle">Clip Settings</summary>
             <div className="space-y-3">

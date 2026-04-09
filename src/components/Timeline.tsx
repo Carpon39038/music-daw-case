@@ -91,6 +91,7 @@ export function Timeline({
             <div
               key={beat}
               className={`beat-cell border-r ${beat % 4 === 0 ? 'beat-cell-bar border-gray-700 bg-white/[0.01]' : 'border-gray-800/50'}`}
+              onClick={() => { setSelectedTrackId(track.id); setSelectedClipRef(null); setSelectedClipRefs([]); }}
               onDoubleClick={() => {
                 if (isPlaying || track.locked) return
                 const clip = track.clips.find(c => beat >= c.startBeat && beat < c.startBeat + c.lengthBeats)
