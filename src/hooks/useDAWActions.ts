@@ -1787,6 +1787,13 @@ export function useDAWActions(): DAWActions {
         return
       }
 
+      const isMetaRedoY = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'y'
+      if (isMetaRedoY) {
+        event.preventDefault()
+        redo()
+        return
+      }
+
       if (event.code === 'Space') {
         event.preventDefault()
         if (isPlaying) {

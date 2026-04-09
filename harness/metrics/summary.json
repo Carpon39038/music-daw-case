@@ -1,21 +1,21 @@
 {
-  "generatedAt": "2026-04-08T22:10:10.385Z",
-  "total": 158,
-  "pass": 137,
-  "fail": 21,
+  "generatedAt": "2026-04-08T23:10:26.332Z",
+  "total": 160,
+  "pass": 138,
+  "fail": 22,
   "failedSteps": {
-    "lint": 6,
+    "lint": 7,
     "unit": 1,
     "e2e": 15,
     "build": 1
   },
   "failureTaxonomy": {
-    "R3_rules_missing": 6,
+    "R3_rules_missing": 7,
     "R4_toolchain_or_build": 1,
     "R6_validation_gap": 16
   },
   "scoreSummary": {
-    "count": 137,
+    "count": 138,
     "avgTotal": 24.91,
     "maxTotal": 25,
     "latestTotal": 25
@@ -1264,6 +1264,24 @@
       "totalScore": 25
     },
     {
+      "taskId": "daily-dev-2026-04-09-0709",
+      "verdict": "FAIL",
+      "lintFail": true,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": null
+    },
+    {
+      "taskId": "daily-dev-2026-04-09-0710-2",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
       "taskId": "daily-dev-distort",
       "verdict": "PASS",
       "lintFail": false,
@@ -1444,5 +1462,5 @@
       "totalScore": 25
     }
   ],
-  "passRate": 0.8671
+  "passRate": 0.8625
 }
