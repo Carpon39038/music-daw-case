@@ -9,6 +9,13 @@ export interface PlayheadDragState {
   beatWidthPx: number
 }
 
+export interface Checkpoint {
+  id: string;
+  timestamp: number;
+  name: string;
+  project: ProjectState;
+}
+
 export interface ClipDragState {
   isDragging: boolean
   trackId: string
@@ -33,6 +40,7 @@ interface PersistedDAWState {
   loopEnabled: boolean
   loopLengthBeats: number
   metronomeEnabled: boolean
+  checkpoints: Checkpoint[]
 }
 
 interface DAWState extends PersistedDAWState {
@@ -68,6 +76,8 @@ interface DAWState extends PersistedDAWState {
   undo: () => void
   redo: () => void
   resetProject: () => void
+  saveCheckpoint: (name: string) => void
+  restoreCheckpoint: (id: string) => void
 }
 
 function createInitialProject(): ProjectState {
@@ -199,6 +209,7 @@ function getDefaultPersistedState(): PersistedDAWState {
     loopEnabled: false,
     loopLengthBeats: 8,
     metronomeEnabled: false,
+    checkpoints: [],
   }
 }
 
@@ -279,10 +290,24 @@ export const useDAWStore = create<DAWState>()(
           const nextProject = normalizeProject({ ...project, lastSavedAt: Date.now() })
           if (JSON.stringify(nextProject) === JSON.stringify(state.project)) return state
           const saveHistory = options?.saveHistory ?? false
+          let checkpoints = state.checkpoints || [];
+          if (saveHistory) {
+             const lastCp = checkpoints[0];
+             if (!lastCp || Date.now() - lastCp.timestamp > 60 * 1000) {
+                const newCheckpoint: Checkpoint = {
+                  id: crypto.randomUUID(),
+                  timestamp: Date.now(),
+                  name: "Auto-save",
+                  project: cloneProject(nextProject)
+                };
+                checkpoints = [newCheckpoint, ...checkpoints].slice(0, 20);
+             }
+          }
           return {
             project: nextProject,
             past: saveHistory ? [...state.past, cloneProject(state.project)].slice(-100) : state.past,
             future: saveHistory ? [] : state.future,
+            checkpoints
           }
         }),
       updateProject: (updater, options) =>
@@ -290,10 +315,24 @@ export const useDAWStore = create<DAWState>()(
           const nextProject = normalizeProject({ ...updater(state.project), lastSavedAt: Date.now() })
           if (nextProject === state.project) return state
           const saveHistory = options?.saveHistory ?? false
+          let checkpoints = state.checkpoints || [];
+          if (saveHistory) {
+             const lastCp = checkpoints.find(c => c.name === "Auto-save");
+             if (!lastCp || Date.now() - lastCp.timestamp > 60 * 1000) {
+                const newCheckpoint: Checkpoint = {
+                  id: crypto.randomUUID(),
+                  timestamp: Date.now(),
+                  name: "Auto-save",
+                  project: cloneProject(nextProject)
+                };
+                checkpoints = [newCheckpoint, ...checkpoints].slice(0, 20);
+             }
+          }
           return {
             project: nextProject,
             past: saveHistory ? [...state.past, cloneProject(state.project)].slice(-100) : state.past,
             future: saveHistory ? [] : state.future,
+            checkpoints
           }
         }),
       setIsPlaying: (value) => set({ isPlaying: value }),
@@ -343,6 +382,26 @@ export const useDAWStore = create<DAWState>()(
             future,
           }
         }),
+      saveCheckpoint: (name) =>
+        set((state) => {
+          const newCheckpoint: Checkpoint = {
+            id: crypto.randomUUID(),
+            timestamp: Date.now(),
+            name,
+            project: cloneProject(state.project),
+          };
+          return { checkpoints: [newCheckpoint, ...state.checkpoints].slice(0, 20) }; // Keep last 20
+        }),
+      restoreCheckpoint: (id) =>
+        set((state) => {
+          const cp = state.checkpoints.find(c => c.id === id);
+          if (!cp) return state;
+          return {
+            project: cloneProject(cp.project),
+            past: [...state.past, cloneProject(state.project)].slice(-100),
+            future: [],
+          };
+        }),
       resetProject: () =>
         set({
           ...getDefaultPersistedState(),
@@ -365,6 +424,7 @@ export const useDAWStore = create<DAWState>()(
         loopEnabled: state.loopEnabled,
         loopLengthBeats: state.loopLengthBeats,
         metronomeEnabled: state.metronomeEnabled,
+        checkpoints: state.checkpoints || [],
       }),
     },
   ),

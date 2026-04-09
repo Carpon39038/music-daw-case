@@ -34,6 +34,8 @@ export function Transport({
   toggleRecording
 }: DAWActions) {
   const playheadBeat = useDAWStore(s => s.playheadBeat)
+  const checkpoints = useDAWStore(s => s.checkpoints || [])
+  const restoreCheckpoint = useDAWStore(s => s.restoreCheckpoint)
   return (
     <section className="transport h-16 bg-[#111] border-b border-gray-800 flex items-center px-4 justify-between flex-shrink-0" data-testid="transport">
       <div className="transport-primary flex items-center gap-4">
@@ -262,6 +264,24 @@ export function Transport({
         
         <ShareButton />
 
+        <select
+          disabled={isPlaying}
+          onChange={(e) => {
+            if (e.target.value) {
+              restoreCheckpoint(e.target.value);
+              e.target.value = '';
+            }
+          }}
+          className="px-2 py-1 text-xs bg-[#1a1a1a] text-gray-300 border border-gray-800 rounded focus:outline-none"
+          defaultValue=""
+          data-testid="checkpoint-select"
+        >
+          <option value="" disabled>Checkpoints</option>
+          {checkpoints.map((cp) => (
+            <option key={cp.id} value={cp.id}>{new Date(cp.timestamp).toLocaleTimeString()} - {cp.name}</option>
+          ))}
+        </select>
+        
         <select
           disabled={isPlaying}
           onChange={(e) => {
