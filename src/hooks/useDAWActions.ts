@@ -516,7 +516,7 @@ export function useDAWActions(): DAWActions {
 
   const handleAudioExport = async () => {
     try {
-      const wavData = await audioEngine.exportWav(project.tracks, project.bpm, TIMELINE_BEATS)
+      const wavData = await audioEngine.exportWav(project.tracks, project.bpm, effectiveTimelineBeats)
       const blob = new Blob([wavData], { type: 'audio/wav' })
       const url = URL.createObjectURL(blob)
       
@@ -534,7 +534,7 @@ export function useDAWActions(): DAWActions {
 
   const handleMp3Export = async () => {
     try {
-      const audioBuffer = await audioEngine.renderBuffer(project.tracks, project.bpm, TIMELINE_BEATS)
+      const audioBuffer = await audioEngine.renderBuffer(project.tracks, project.bpm, effectiveTimelineBeats)
       const mp3Data = audioBufferToMp3(audioBuffer)
       const blob = new Blob([mp3Data], { type: 'audio/mp3' })
       const url = URL.createObjectURL(blob)
