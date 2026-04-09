@@ -83,6 +83,30 @@ export function Transport({
             SPACE TO {isPlaying ? 'PAUSE' : 'PLAY'}
           </div>
         </div>
+        
+        <div className="flex flex-col ml-4">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={project.name || 'Untitled Project'}
+              onChange={(e) => setProject({ ...project, name: e.target.value })}
+              className="bg-transparent text-sm font-semibold text-gray-200 border-b border-transparent hover:border-gray-600 focus:border-emerald-500 focus:outline-none w-32"
+              placeholder="Project Name"
+              data-testid="project-name-input"
+            />
+            <button
+              onClick={() => setProject({ ...project, id: crypto.randomUUID(), name: `${project.name || 'Untitled Project'} (Copy)`, lastSavedAt: Date.now() }, { saveHistory: true })}
+              className="text-[10px] bg-gray-800 hover:bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded border border-gray-700"
+              title="Save as Copy"
+              data-testid="save-as-copy-btn"
+            >
+              Clone
+            </button>
+          </div>
+          <span className="text-[10px] text-gray-500">
+            {project.lastSavedAt ? `Saved ${new Date(project.lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not saved'}
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center gap-6">

@@ -56,6 +56,9 @@ export interface Track {
 }
 
 export interface ProjectState {
+  id?: string
+  name?: string
+  lastSavedAt?: number
   bpm: number
   tracks: Track[]
 }

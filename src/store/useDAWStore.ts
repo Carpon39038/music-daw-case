@@ -73,6 +73,9 @@ interface DAWState extends PersistedDAWState {
 function createInitialProject(): ProjectState {
   const defaultNotes = [261.63, 329.63, 392.0, 523.25]
   return {
+    id: crypto.randomUUID(),
+    name: 'Untitled Project',
+    lastSavedAt: Date.now(),
     bpm: 120,
     tracks: Array.from({ length: TRACK_COUNT }).map((_, i) => ({
       id: `track-${i + 1}`,
@@ -107,6 +110,8 @@ function isValidProjectState(value: unknown): value is ProjectState {
   if (!value || typeof value !== 'object') return false
   const p = value as Partial<ProjectState>
   if (typeof p.bpm !== 'number' || !Array.isArray(p.tracks)) return false
+  if (p.name !== undefined && typeof p.name !== 'string') return false
+  if (p.lastSavedAt !== undefined && typeof p.lastSavedAt !== 'number') return false
   return p.tracks.every((t) => {
     if (!t || typeof t !== 'object') return false
     if (
@@ -152,6 +157,9 @@ function isValidProjectState(value: unknown): value is ProjectState {
 function normalizeProject(project: ProjectState): ProjectState {
   return {
     ...project,
+    id: project.id ?? crypto.randomUUID(),
+    name: project.name ?? 'Untitled Project',
+    lastSavedAt: project.lastSavedAt ?? Date.now(),
     tracks: project.tracks.map((track) => ({
       ...track,
       locked: track.locked ?? false,
@@ -264,7 +272,7 @@ export const useDAWStore = create<DAWState>()(
       clipDrag: null,
       setProject: (project, options) =>
         set((state) => {
-          const nextProject = normalizeProject(project)
+          const nextProject = normalizeProject({ ...project, lastSavedAt: Date.now() })
           if (JSON.stringify(nextProject) === JSON.stringify(state.project)) return state
           const saveHistory = options?.saveHistory ?? false
           return {
@@ -275,7 +283,7 @@ export const useDAWStore = create<DAWState>()(
         }),
       updateProject: (updater, options) =>
         set((state) => {
-          const nextProject = normalizeProject(updater(state.project))
+          const nextProject = normalizeProject({ ...updater(state.project), lastSavedAt: Date.now() })
           if (nextProject === state.project) return state
           const saveHistory = options?.saveHistory ?? false
           return {
