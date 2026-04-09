@@ -60,6 +60,8 @@ export interface ProjectState {
   name?: string
   lastSavedAt?: number
   bpm: number
+  scaleKey?: string
+  scaleType?: string
   tracks: Track[]
 }
 

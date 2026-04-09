@@ -77,6 +77,8 @@ function createInitialProject(): ProjectState {
     name: 'Untitled Project',
     lastSavedAt: Date.now(),
     bpm: 120,
+    scaleKey: 'C',
+    scaleType: 'chromatic',
     tracks: Array.from({ length: TRACK_COUNT }).map((_, i) => ({
       id: `track-${i + 1}`,
       name: `Track ${i + 1}`,
@@ -160,6 +162,8 @@ function normalizeProject(project: ProjectState): ProjectState {
     id: project.id ?? crypto.randomUUID(),
     name: project.name ?? 'Untitled Project',
     lastSavedAt: project.lastSavedAt ?? Date.now(),
+    scaleKey: project.scaleKey ?? 'C',
+    scaleType: project.scaleType ?? 'chromatic',
     tracks: project.tracks.map((track) => ({
       ...track,
       locked: track.locked ?? false,

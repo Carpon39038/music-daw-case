@@ -133,6 +133,31 @@ export function Transport({
           </button>
         </div>
 
+        <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded">
+          <select
+            value={project.scaleKey || 'C'}
+            onChange={(e) => setProject({ ...project, scaleKey: e.target.value })}
+            className="bg-transparent text-xs text-gray-400 focus:outline-none cursor-pointer"
+            data-testid="scale-key-select"
+          >
+            {['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map(k => (
+              <option key={k} value={k}>{k}</option>
+            ))}
+          </select>
+          <select
+            value={project.scaleType || 'chromatic'}
+            onChange={(e) => setProject({ ...project, scaleType: e.target.value })}
+            className="bg-transparent text-xs text-gray-400 focus:outline-none cursor-pointer"
+            data-testid="scale-type-select"
+          >
+            <option value="chromatic">Chromatic</option>
+            <option value="major">Major</option>
+            <option value="minor">Minor</option>
+            <option value="pentatonic_major">Major Pentatonic</option>
+            <option value="pentatonic_minor">Minor Pentatonic</option>
+          </select>
+        </div>
+
         <div className="flex items-center gap-2">
           <button
             onClick={() => setMetronomeEnabled(v => !v)}

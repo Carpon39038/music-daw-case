@@ -1,6 +1,7 @@
 import type { WaveType } from '../types'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { SELECTABLE_NOTES, hzToClosestNoteLabel } from '../utils/notes'
+import { isNoteInScale, type ScaleType } from '../utils/scales'
 
 export function Inspector(d: DAWActions) {
   const {
@@ -14,6 +15,17 @@ export function Inspector(d: DAWActions) {
     duplicateClip, splitClip, clipboard, previewClip,
     selectedClipRef, selectedClipRefs,
   } = d
+
+  const scaleKey = project.scaleKey || 'C'
+  const scaleType = (project.scaleType || 'chromatic') as ScaleType
+  const scaleKeyIndex = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(scaleKey)
+
+  const availableNotes = SELECTABLE_NOTES.filter(n => {
+    if (scaleType === 'chromatic') return true
+    const noteIndex = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(n.label.replace(/-?\d+$/, ''))
+    if (noteIndex === -1) return true
+    return isNoteInScale(noteIndex, scaleKeyIndex, scaleType)
+  })
 
   
   const allSelectedClipRefs = [...(selectedClipRefs || [])]
@@ -414,7 +426,7 @@ export function Inspector(d: DAWActions) {
               </div>
               <div><label className="text-xs text-gray-500 flex justify-between mb-1"><span>Volume</span><span>{Math.round((selectedClipData.clip.gain ?? 1.0) * 100)}%</span></label><input data-testid="selected-clip-gain-input" type="range" min={0} max={200} step={1} value={Math.round((selectedClipData.clip.gain ?? 1.0) * 100)} onChange={(e) => updateClipGain(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value) / 100)} disabled={isPlaying || selectedClipData.track.locked} className="w-full h-1 accent-emerald-500" /></div>
               <div><label className="text-xs text-gray-500 flex justify-between mb-1"><span>Transpose (st)</span><span>{selectedClipData.clip.transposeSemitones ?? 0}</span></label><input data-testid="selected-clip-transpose-input" type="number" min={-24} max={24} step={1} value={selectedClipData.clip.transposeSemitones ?? 0} onChange={(e) => updateClipTranspose(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value))} disabled={isPlaying || selectedClipData.track.locked} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200" /></div>
-              <div><label className="text-xs text-gray-500 block mb-1">Note</label><select data-testid="selected-clip-note-select" value={hzToClosestNoteLabel(selectedClipData.clip.noteHz)} onChange={(e) => { const note = SELECTABLE_NOTES.find(n => n.label === e.target.value); if (note) setSelectedClipNote(selectedClipData.track.id, selectedClipData.clip.id, note.hz); }} disabled={isPlaying || selectedClipData.track.locked} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200">{SELECTABLE_NOTES.map(n => <option key={n.label} value={n.label}>{n.label}</option>)}</select></div>
+              <div><label className="text-xs text-gray-500 block mb-1">Note</label><select data-testid="selected-clip-note-select" value={hzToClosestNoteLabel(selectedClipData.clip.noteHz)} onChange={(e) => { const note = SELECTABLE_NOTES.find(n => n.label === e.target.value); if (note) setSelectedClipNote(selectedClipData.track.id, selectedClipData.clip.id, note.hz); }} disabled={isPlaying || selectedClipData.track.locked} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200">{availableNotes.map(n => <option key={n.label} value={n.label}>{n.label}</option>)}</select></div>
               <div className="inspector-meta text-xs text-gray-600 font-mono" data-testid="selected-clip-scheduled-frequency">Scheduled: {selectedClipData.scheduledFrequencyHz.toFixed(2)} Hz</div>
               <div className="grid grid-cols-2 gap-2">
                 <div><label className="text-xs text-gray-500 block mb-1">Length (beats)</label><input data-testid="selected-clip-length-input" type="number" min={1} max={32} step={1} value={selectedClipData.clip.lengthBeats} onChange={(e) => updateClipLengthBeats(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value))} disabled={isPlaying || selectedClipData.track.locked} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200" /></div>
