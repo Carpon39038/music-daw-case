@@ -64,7 +64,7 @@ export function Timeline({
 
   return (
     <div className="track-timeline-row h-24">
-      <div className="track-grid relative grid grid-cols-16 h-full gap-0 bg-[#151515] overflow-hidden" ref={timelineRef}>
+      <div className={`track-grid relative grid grid-cols-16 h-full gap-0 ${clipDrag?.isDragging && clipDrag.targetTrackId === track.id ? "bg-white/[0.04]" : "bg-[#151515]"} overflow-hidden`} ref={timelineRef}>
         {/* Beat grid lines */}
         {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => {
           const isPlayingBeat = isPlaying && playheadBeat >= beat && playheadBeat < beat + 1;
@@ -90,6 +90,22 @@ export function Timeline({
             style={{ width: `${(loopLengthBeats / TIMELINE_BEATS) * 100}%` }}
             data-testid="loop-region"
           />
+        )}
+
+        {/* Ghost Clip for Dragging Feedback */}
+        {clipDrag?.isDragging && clipDrag.targetTrackId === track.id && (
+          <div
+            className={`ghost-clip absolute border border-dashed rounded z-20 pointer-events-none ${clipDrag.targetConflicts ? 'bg-red-500/20 border-red-500' : 'bg-white/20 border-white/50'}`}
+            style={{
+              top: 4,
+              height: 'calc(100% - 8px)',
+              left: `${(clipDrag.targetStartBeat / TIMELINE_BEATS) * 100}%`,
+              width: `${(clipDrag.lengthBeats / TIMELINE_BEATS) * 100}%`
+            }}
+          >
+             {/* Snap line indicating start beat */}
+             <div className="absolute top-0 bottom-0 left-0 w-px bg-white/70" />
+          </div>
         )}
 
         {/* Clips */}
