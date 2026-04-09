@@ -256,6 +256,7 @@ export interface DAWActions {
   applyProjectUpdate: (updater: (prev: ProjectState) => ProjectState) => void
   addClip: (trackId: string) => void
   addClipAtBeat: (trackId: string, beat: number) => void
+  addAudioFileClip: (trackId: string, beat: number, file: File) => void
   removeClip: (trackId: string, clipId: string) => void
   duplicateClip: (trackId: string, clipId: string) => void
   splitClip: (trackId: string, clipId: string) => void
@@ -1541,6 +1542,37 @@ export function useDAWActions(): DAWActions {
     })
   }
 
+  const addAudioFileClip = (trackId: string, beat: number, file: File) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const base64data = e.target?.result as string
+      if (!base64data) return
+      
+      applyProjectUpdate((prev) => {
+        const next = structuredClone(prev)
+        const track = next.tracks.find((t) => t.id === trackId)
+        if (!track || track.locked) return prev
+        const lengthBeats = 4 // Default length for imported audio
+        const startBeat = resolveNonOverlappingStart(track.clips, lengthBeats, Math.min(beat, TIMELINE_BEATS - lengthBeats))
+        const newClip: Clip = {
+          id: `${trackId}-clip-${Date.now()}`,
+          name: file.name.substring(0, 20),
+          startBeat,
+          lengthBeats,
+          noteHz: 440,
+          wave: 'sine',
+          audioData: base64data
+        }
+        track.clips.push(newClip)
+        return next
+      })
+      // The audio engine will load it when it plays, but we can preemptively cache it
+      // Wait, we don't have the new clip ID easily outside unless we generate it here
+      // But it's fine, AudioEngine will fetch/decode it on first play or preview.
+    }
+    reader.readAsDataURL(file)
+  }
+
   const startPlayheadDrag = (e: React.MouseEvent) => {
     if (isPlaying) return
     const grid = timelineRef.current
@@ -1944,6 +1976,7 @@ export function useDAWActions(): DAWActions {
     applyProjectUpdate,
     addClip,
     addClipAtBeat,
+    addAudioFileClip,
     removeClip,
     duplicateClip,
     splitClip,

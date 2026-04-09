@@ -3,7 +3,7 @@ import { TIMELINE_BEATS } from '../hooks/useDAWActions'
 import { useDAWStore } from '../store/useDAWStore'
 import type { Track } from '../types'
 
-interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'selectedClipRefs' | 'isPlaying' | 'playheadBeat' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'addClipAtBeat'> {
+interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'selectedClipRefs' | 'isPlaying' | 'playheadBeat' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'addClipAtBeat' | 'addAudioFileClip'> {
   track: Track
 }
 
@@ -55,6 +55,7 @@ export function Timeline({
   loopEnabled,
   loopLengthBeats,
   addClipAtBeat,
+  addAudioFileClip,
 }: TimelineProps) {
   const clipDrag = useDAWStore((s) => s.clipDrag)
 
@@ -64,7 +65,28 @@ export function Timeline({
 
   return (
     <div className="track-timeline-row h-24">
-      <div className={`track-grid relative grid grid-cols-16 h-full gap-0 ${clipDrag?.isDragging && clipDrag.targetTrackId === track.id ? "bg-white/[0.04]" : "bg-[#151515]"} overflow-hidden`} ref={timelineRef}>
+      <div 
+        className={`track-grid relative grid grid-cols-16 h-full gap-0 ${clipDrag?.isDragging && clipDrag.targetTrackId === track.id ? "bg-white/[0.04]" : "bg-[#151515]"} overflow-hidden`} 
+        ref={timelineRef}
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes('Files')) {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'copy'
+          }
+        }}
+        onDrop={(e) => {
+          if (track.locked) return
+          const files = Array.from(e.dataTransfer.files)
+          const audioFile = files.find(f => f.type.startsWith('audio/'))
+          if (audioFile) {
+            e.preventDefault()
+            const rect = e.currentTarget.getBoundingClientRect()
+            const beatWidthPx = rect.width / TIMELINE_BEATS
+            const dropBeat = Math.max(0, Math.min(TIMELINE_BEATS - 1, Math.round((e.clientX - rect.left) / beatWidthPx)))
+            addAudioFileClip(track.id, dropBeat, audioFile)
+          }
+        }}
+      >
         {/* Beat grid lines */}
         {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => {
           const isPlayingBeat = isPlaying && playheadBeat >= beat && playheadBeat < beat + 1;
@@ -236,7 +258,7 @@ export function TimelineHeader({ startPlayheadDrag, isPlaying, playheadBeat }: T
   )
 }
 
-type TimelineSectionProps = Pick<DAWActions, 'project' | 'selectedClipRef' | 'selectedClipRefs' | 'selectedTrackId' | 'isPlaying' | 'playheadBeat' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'setPlayheadBeat' | 'startPlayheadDrag' | 'addClipAtBeat'>
+type TimelineSectionProps = Pick<DAWActions, 'project' | 'selectedClipRef' | 'selectedClipRefs' | 'selectedTrackId' | 'isPlaying' | 'playheadBeat' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'setPlayheadBeat' | 'startPlayheadDrag' | 'addClipAtBeat' | 'addAudioFileClip'>
 
 export function TimelineSection(props: TimelineSectionProps) {
   const { project, ...rest } = props
