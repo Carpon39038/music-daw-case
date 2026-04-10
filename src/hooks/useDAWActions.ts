@@ -487,6 +487,7 @@ export interface DAWActions {
   generateMelody: (trackId: string, options?: { startBeat?: number; noteCount?: number; stepBeats?: number }) => void
   normalizeClipGains: () => void
   generateStyleStarter: (genre: 'lofi' | 'edm' | 'hiphop') => void
+  continueTrackIdea: (trackId: string, profile: 'conservative' | 'balanced' | 'bold') => void
   handleMIDIImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
@@ -2006,6 +2007,79 @@ export function useDAWActions(): DAWActions {
     })
   }
 
+  const continueTrackIdea = (trackId: string, profile: 'conservative' | 'balanced' | 'bold') => {
+    if (isPlaying) return
+
+    applyProjectUpdate((prev) => {
+      const track = prev.tracks.find((t) => t.id === trackId)
+      if (!track || track.locked || track.isDrumTrack) return prev
+
+      const safeScaleType = resolveScaleType(prev.scaleType)
+      const scaleFrequencies = buildScaleNoteFrequencies(prev.scaleKey ?? 'C', safeScaleType)
+      if (scaleFrequencies.length === 0) return prev
+
+      const sorted = [...track.clips].sort((a, b) => a.startBeat - b.startBeat)
+      const recent = sorted.slice(-8)
+      const lastClip = recent[recent.length - 1]
+      const baseStart = lastClip ? clampTimelineBeat(lastClip.startBeat + lastClip.lengthBeats) : 0
+
+      const variants: Record<'conservative' | 'balanced' | 'bold', { noteCount: number; step: number; jumpRange: number; minLen: number; maxLen: number; wavePool: WaveType[] }> = {
+        conservative: { noteCount: 4, step: 0.5, jumpRange: 2, minLen: 0.5, maxLen: 1, wavePool: ['sine', 'triangle', 'organ'] },
+        balanced: { noteCount: 5, step: 0.5, jumpRange: 4, minLen: 0.5, maxLen: 1.5, wavePool: ['sine', 'triangle', 'organ', 'brass'] },
+        bold: { noteCount: 6, step: 0.25, jumpRange: 7, minLen: 0.25, maxLen: 1.5, wavePool: ['square', 'sawtooth', 'brass', 'organ'] },
+      }
+      const cfg = variants[profile]
+
+      const avgGain = recent.length > 0
+        ? recent.reduce((sum, clip) => sum + (clip.gain ?? 1), 0) / recent.length
+        : 0.9
+      const baseWave = recent.length > 0 ? (recent[recent.length - 1]?.wave ?? 'sine') : 'sine'
+
+      const lastHz = lastClip?.noteHz
+      const nearestIndex = typeof lastHz === 'number'
+        ? scaleFrequencies.reduce((best, hz, idx) => Math.abs(hz - lastHz) < Math.abs(scaleFrequencies[best] - lastHz) ? idx : best, 0)
+        : Math.floor(scaleFrequencies.length / 2)
+
+      const generated: Clip[] = []
+      for (let i = 0; i < cfg.noteCount; i++) {
+        const startBeat = clampTimelineBeat(baseStart + i * cfg.step)
+        if (startBeat >= TIMELINE_BEATS) break
+
+        const jitter = Math.floor((Math.random() * (cfg.jumpRange * 2 + 1)) - cfg.jumpRange)
+        const idx = Math.max(0, Math.min(scaleFrequencies.length - 1, nearestIndex + jitter))
+        const noteHz = scaleFrequencies[idx]
+        const lengthBase = cfg.minLen + Math.random() * (cfg.maxLen - cfg.minLen)
+        const lengthBeats = clampMelodyLength(startBeat, normalizeMelodyStep(lengthBase))
+
+        const preferBaseWave = Math.random() < 0.6
+        const wave = preferBaseWave
+          ? baseWave
+          : cfg.wavePool[Math.floor(Math.random() * cfg.wavePool.length)]
+
+        generated.push({
+          id: makeMelodyClipId(trackId),
+          startBeat,
+          lengthBeats,
+          noteHz,
+          wave,
+          gain: Math.max(0, Math.min(1.25, avgGain + (Math.random() - 0.5) * 0.12)),
+          name: `Continue ${profile} ${i + 1}`,
+        })
+      }
+
+      if (generated.length === 0) return prev
+
+      return {
+        ...prev,
+        tracks: prev.tracks.map((t) =>
+          t.id === trackId
+            ? { ...t, clips: [...t.clips, ...generated] }
+            : t,
+        ),
+      }
+    })
+  }
+
   const handleMIDIImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -2603,6 +2677,7 @@ export function useDAWActions(): DAWActions {
     generateMelody,
     normalizeClipGains,
     generateStyleStarter,
+    continueTrackIdea,
     handleMIDIImport,
     handleMIDIExport,
     handleAudioExport,

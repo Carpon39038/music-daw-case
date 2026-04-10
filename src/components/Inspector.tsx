@@ -10,7 +10,7 @@ export function Inspector(d: DAWActions) {
     setProject, applyProjectUpdate, setTrackFilterType, setTrackFilterCutoff,
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, generateStyleStarter,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, generateStyleStarter, continueTrackIdea,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
     selectedClipRef, selectedClipRefs, chordSuggestions,
@@ -146,6 +146,38 @@ export function Inspector(d: DAWActions) {
                 >
                   Generate scale-locked melody (8 notes)
                 </button>
+                <div className="rounded border border-gray-700 bg-[#101010] p-2 space-y-1" data-testid="continue-mvp-panel">
+                  <label className="text-[10px] text-gray-500 block">Continue MVP (next-bar ideas)</label>
+                  <div className="grid grid-cols-3 gap-1">
+                    <button
+                      type="button"
+                      data-testid="continue-conservative-btn"
+                      onClick={() => continueTrackIdea(selectedTrackId, 'conservative')}
+                      disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
+                      className="text-[10px] px-1 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                    >
+                      Conservative
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="continue-balanced-btn"
+                      onClick={() => continueTrackIdea(selectedTrackId, 'balanced')}
+                      disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
+                      className="text-[10px] px-1 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                    >
+                      Balanced
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="continue-bold-btn"
+                      onClick={() => continueTrackIdea(selectedTrackId, 'bold')}
+                      disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
+                      className="text-[10px] px-1 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                    >
+                      Bold
+                    </button>
+                  </div>
+                </div>
                 <button
                   type="button"
                   data-testid="normalize-all-clips-btn"
