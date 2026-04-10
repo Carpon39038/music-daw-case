@@ -1,5 +1,11 @@
-export function formatTime(beat: number, bpm: number): string {
-  const totalSeconds = (beat * 60) / bpm
+import { beatToSeconds, type TempoCurveSettings } from './tempoCurve'
+
+export function formatTime(beat: number, bpm: number, tempo?: Pick<TempoCurveSettings, 'curveType' | 'targetBpm'>): string {
+  const totalSeconds = beatToSeconds(beat, {
+    bpm,
+    curveType: tempo?.curveType,
+    targetBpm: tempo?.targetBpm,
+  })
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
   const mm = String(minutes).padStart(2, '0')

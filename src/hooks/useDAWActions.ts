@@ -3,6 +3,7 @@ import type { Clip, MasterEQ, ProjectState, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
+import { getTimelineDurationSec, secondsToBeat } from '../utils/tempoCurve'
 
 export const TIMELINE_BEATS = 16
 
@@ -598,7 +599,13 @@ export function useDAWActions(): DAWActions {
 
   const beatDuration = useMemo(() => 60 / project.bpm, [project.bpm])
   const effectiveTimelineBeats = loopEnabled ? loopLengthBeats : TIMELINE_BEATS
-  const totalDurationSec = effectiveTimelineBeats * beatDuration
+  const tempoCurveType = project.tempoCurveType ?? 'constant'
+  const tempoCurveTargetBpm = project.tempoCurveTargetBpm ?? project.bpm
+  const totalDurationSec = useMemo(() => getTimelineDurationSec(effectiveTimelineBeats, {
+    bpm: project.bpm,
+    curveType: tempoCurveType,
+    targetBpm: tempoCurveTargetBpm,
+  }), [effectiveTimelineBeats, project.bpm, tempoCurveType, tempoCurveTargetBpm])
   const totalClipCount = useMemo(
     () => project.tracks.reduce((sum, t) => sum + t.clips.length, 0),
     [project.tracks],
@@ -649,7 +656,13 @@ export function useDAWActions(): DAWActions {
 
   const handleAudioExport = async () => {
     try {
-      const wavData = await audioEngine.exportWav(project.tracks, project.bpm, effectiveTimelineBeats)
+      const wavData = await audioEngine.exportWav(
+        project.tracks,
+        project.bpm,
+        effectiveTimelineBeats,
+        tempoCurveType,
+        tempoCurveTargetBpm,
+      )
       const blob = new Blob([wavData], { type: 'audio/wav' })
       const url = URL.createObjectURL(blob)
       
@@ -667,7 +680,13 @@ export function useDAWActions(): DAWActions {
 
   const handleMp3Export = async () => {
     try {
-      const audioBuffer = await audioEngine.renderBuffer(project.tracks, project.bpm, effectiveTimelineBeats)
+      const audioBuffer = await audioEngine.renderBuffer(
+        project.tracks,
+        project.bpm,
+        effectiveTimelineBeats,
+        tempoCurveType,
+        tempoCurveTargetBpm,
+      )
       const mp3Data = audioBufferToMp3(audioBuffer)
       const blob = new Blob([mp3Data], { type: 'audio/mp3' })
       const url = URL.createObjectURL(blob)
@@ -698,7 +717,13 @@ export function useDAWActions(): DAWActions {
       const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length
       const bpm = Math.round(60000 / avgInterval)
       if (bpm >= 60 && bpm <= 200) {
-        setProject((prev) => ({ ...prev, bpm }))
+        setProject((prev) => ({
+          ...prev,
+          bpm,
+          tempoCurveTargetBpm: (prev.tempoCurveType ?? 'constant') === 'constant'
+            ? bpm
+            : prev.tempoCurveTargetBpm,
+        }))
       }
     }
   }
@@ -790,13 +815,15 @@ export function useDAWActions(): DAWActions {
       loopLengthBeats,
       metronomeEnabled,
       TIMELINE_BEATS,
+      tempoCurveType,
+      tempoCurveTargetBpm,
     )
   }
 
   const previewClip = async (clip: Clip, track: Track) => {
     if (isPlaying) return;
     await audioEngine.ensureAudio(masterVolume);
-    audioEngine.previewClip(clip, track, project.bpm);
+    audioEngine.previewClip(clip, track, project.bpm, tempoCurveType, tempoCurveTargetBpm);
   }
 
   const startPlayback = async () => {
@@ -813,7 +840,11 @@ export function useDAWActions(): DAWActions {
 
     const update = () => {
       const elapsed = audioEngine.getElapsed()
-      const beat = elapsed / beatDuration
+      const beat = secondsToBeat(elapsed, {
+        bpm: project.bpm,
+        curveType: tempoCurveType,
+        targetBpm: tempoCurveTargetBpm,
+      }, effectiveTimelineBeats)
       const wrappedBeat = loopEnabled ? beat % effectiveTimelineBeats : beat
       setPlayheadBeat(wrappedBeat)
 
@@ -840,7 +871,7 @@ export function useDAWActions(): DAWActions {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, beatDuration, totalDurationSec])
+  }, [isPlaying, totalDurationSec, project.bpm, tempoCurveType, tempoCurveTargetBpm, effectiveTimelineBeats, loopEnabled])
 
   useEffect(() => {
     const drawMeter = () => {

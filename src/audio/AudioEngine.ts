@@ -1,4 +1,5 @@
 import type { Clip, Track } from '../types'
+import { beatToSeconds, getTimelineDurationSec, type TempoCurveType } from '../utils/tempoCurve'
 
 function applyWaveType(ctx: BaseAudioContext, osc: OscillatorNode, waveType: string) {
   if (["sine", "square", "sawtooth", "triangle"].includes(waveType)) {
@@ -132,9 +133,14 @@ export class AudioEngine {
     tracks: Track[],
     bpm: number,
     timelineBeats: number,
+    tempoCurveType: TempoCurveType = 'constant',
+    tempoCurveTargetBpm?: number,
   ): Promise<AudioBuffer> {
-    const beatDuration = 60 / bpm;
-    const durationSec = timelineBeats * beatDuration;
+    const durationSec = getTimelineDurationSec(timelineBeats, {
+      bpm,
+      curveType: tempoCurveType,
+      targetBpm: tempoCurveTargetBpm,
+    });
     const sampleRate = 44100;
     const offlineCtx = new OfflineAudioContext(2, Math.ceil(sampleRate * durationSec), sampleRate);
     
@@ -142,7 +148,18 @@ export class AudioEngine {
     masterGain.gain.value = 1.0;
     masterGain.connect(offlineCtx.destination);
     
-    this.scheduleProject(tracks, bpm, false, timelineBeats, false, timelineBeats, offlineCtx, masterGain);
+    this.scheduleProject(
+      tracks,
+      bpm,
+      false,
+      timelineBeats,
+      false,
+      timelineBeats,
+      tempoCurveType,
+      tempoCurveTargetBpm,
+      offlineCtx,
+      masterGain,
+    );
     
     return await offlineCtx.startRendering();
   }
@@ -151,8 +168,10 @@ export class AudioEngine {
     tracks: Track[],
     bpm: number,
     timelineBeats: number,
+    tempoCurveType: TempoCurveType = 'constant',
+    tempoCurveTargetBpm?: number,
   ): Promise<ArrayBuffer> {
-    const renderedBuffer = await this.renderBuffer(tracks, bpm, timelineBeats);
+    const renderedBuffer = await this.renderBuffer(tracks, bpm, timelineBeats, tempoCurveType, tempoCurveTargetBpm);
     
     const numChannels = renderedBuffer.numberOfChannels;
     const format = 1;
@@ -209,6 +228,8 @@ export class AudioEngine {
     loopLengthBeats: number,
     metronomeEnabled: boolean,
     timelineBeats: number,
+    tempoCurveType: TempoCurveType = 'constant',
+    tempoCurveTargetBpm?: number,
     customCtx?: BaseAudioContext,
     customMaster?: GainNode,
   ) {
@@ -217,16 +238,16 @@ export class AudioEngine {
     if (!ctx || !master) return
 
     const soloActive = tracks.some((t) => t.solo)
-    const beatDuration = 60 / bpm
     const loopBeats = loopEnabled ? loopLengthBeats : timelineBeats
-    const loopDurationSec = loopBeats * beatDuration
+    const tempoSettings = { bpm, curveType: tempoCurveType, targetBpm: tempoCurveTargetBpm }
+    const loopDurationSec = getTimelineDurationSec(loopBeats, tempoSettings)
     const startAt = ctx.currentTime + (customCtx ? 0 : 0.05)
     if (!customCtx) this.startTime = startAt
 
     // Metronome
     if (metronomeEnabled) {
       for (let i = 0; i < loopBeats; i++) {
-        const beatTime = startAt + i * beatDuration
+        const beatTime = startAt + beatToSeconds(i, tempoSettings, loopBeats)
         const clickOsc = ctx.createOscillator()
         const clickGain = ctx.createGain()
 
@@ -274,10 +295,9 @@ export class AudioEngine {
 
           const seq = track.drumSequence;
           const totalSteps = loopBeats * 4;
-          const stepDurationSec = beatDuration / 4;
           for (let i = 0; i < totalSteps; i++) {
-             const stepOffsetSec = i * stepDurationSec;
-             const stepStart = startAt + stepOffsetSec;
+             const stepBeat = i / 4;
+             const stepStart = startAt + beatToSeconds(stepBeat, tempoSettings, loopBeats);
              const seqIndex = i % 16;
              
              if (seq.kick[seqIndex]) {
@@ -331,8 +351,9 @@ export class AudioEngine {
       track.clips.forEach((clip) => {
         if (clip.startBeat >= loopBeats) return
 
-        const clipOffsetSec = clip.startBeat * beatDuration
-        const clipDurationSec = Math.min(loopDurationSec - clipOffsetSec, clip.lengthBeats * beatDuration)
+        const clipOffsetSec = beatToSeconds(clip.startBeat, tempoSettings, loopBeats)
+        const clipEndSec = beatToSeconds(clip.startBeat + clip.lengthBeats, tempoSettings, loopBeats)
+        const clipDurationSec = Math.min(loopDurationSec - clipOffsetSec, clipEndSec - clipOffsetSec)
         if (clipDurationSec <= 0) return
 
         let osc: AudioScheduledSourceNode
@@ -362,8 +383,13 @@ export class AudioEngine {
         const clipGain = clip.gain ?? 1.0
         const effectiveTrackVolume = isTrackAudible ? (track.volume * clipGain) : 0
 
-        const fadeInSec = (clip.fadeIn || 0) * beatDuration
-        const fadeOutSec = (clip.fadeOut || 0) * beatDuration
+        const beatAtClipStart = clip.startBeat
+        const fadeInSec = (clip.fadeIn || 0) > 0
+          ? beatToSeconds(beatAtClipStart + (clip.fadeIn || 0), tempoSettings, loopBeats) - beatToSeconds(beatAtClipStart, tempoSettings, loopBeats)
+          : 0
+        const fadeOutSec = (clip.fadeOut || 0) > 0
+          ? beatToSeconds(clip.startBeat + clip.lengthBeats, tempoSettings, loopBeats) - beatToSeconds(clip.startBeat + clip.lengthBeats - (clip.fadeOut || 0), tempoSettings, loopBeats)
+          : 0
         const actualFadeIn = fadeInSec > 0 ? fadeInSec : 0.01
         const actualFadeOut = fadeOutSec > 0 ? fadeOutSec : 0.02
 
@@ -560,7 +586,13 @@ export class AudioEngine {
     })
   }
 
-  async previewClip(clip: Clip, track: Track, bpm: number) {
+  async previewClip(
+    clip: Clip,
+    track: Track,
+    bpm: number,
+    tempoCurveType: TempoCurveType = 'constant',
+    tempoCurveTargetBpm?: number,
+  ) {
     if (!this.ctx || !this.masterGain) return
 
     const ctx = this.ctx
@@ -587,9 +619,12 @@ export class AudioEngine {
     const finalGain = clipGain * track.volume
     if (track.muted || finalGain <= 0.001) return
 
-    const beatDuration = 60 / bpm
+    const previewDuration = Math.min(
+      beatToSeconds(clip.lengthBeats, { bpm, curveType: tempoCurveType, targetBpm: tempoCurveTargetBpm }, clip.lengthBeats),
+      1.0,
+    )
     gain.gain.linearRampToValueAtTime(finalGain, ctx.currentTime + 0.05)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + Math.min(clip.lengthBeats * beatDuration, 1.0))
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + previewDuration)
 
     panner.pan.value = track.pan || 0
 
@@ -598,7 +633,7 @@ export class AudioEngine {
     panner.connect(master)
 
     osc.start(ctx.currentTime)
-    osc.stop(ctx.currentTime + Math.min(clip.lengthBeats * beatDuration, 1.0))
+    osc.stop(ctx.currentTime + previewDuration)
   }
 
   getRMS(): number {

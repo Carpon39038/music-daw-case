@@ -82,7 +82,7 @@ export function Transport({
 
         <div className="status flex flex-col items-center justify-center bg-[#1a1a1a] px-4 py-1 rounded-md w-48">
           <div className="font-mono text-emerald-400 text-lg tracking-wider">
-            {formatTime(playheadBeat, project.bpm)}
+            {formatTime(playheadBeat, project.bpm, { curveType: project.tempoCurveType, targetBpm: project.tempoCurveTargetBpm })}
           </div>
           <div className="text-[10px] text-gray-500 font-sans tracking-wide">
             SPACE TO {isPlaying ? 'PAUSE' : 'PLAY'}
@@ -121,7 +121,16 @@ export function Transport({
             data-testid="bpm-input"
             type="number"
             value={project.bpm}
-            onChange={(e) => setProject({ ...project, bpm: Number(e.target.value) || 120 })}
+            onChange={(e) => {
+              const nextBpm = Number(e.target.value) || 120
+              setProject({
+                ...project,
+                bpm: nextBpm,
+                tempoCurveTargetBpm: project.tempoCurveType === 'constant'
+                  ? nextBpm
+                  : project.tempoCurveTargetBpm,
+              })
+            }}
             disabled={isPlaying}
             className="w-16 bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm text-center focus:outline-none focus:border-emerald-500"
             min={60}
@@ -135,6 +144,44 @@ export function Transport({
           >
             Tap Tempo
           </button>
+          <select
+            data-testid="tempo-curve-type"
+            value={project.tempoCurveType || 'constant'}
+            onChange={(e) => {
+              const curveType = e.target.value as 'constant' | 'accelerando' | 'ritardando'
+              const fallbackTarget = curveType === 'accelerando'
+                ? Math.min(200, project.bpm + 20)
+                : curveType === 'ritardando'
+                  ? Math.max(60, project.bpm - 20)
+                  : project.bpm
+              setProject({
+                ...project,
+                tempoCurveType: curveType,
+                tempoCurveTargetBpm: curveType === 'constant'
+                  ? project.bpm
+                  : project.tempoCurveTargetBpm ?? fallbackTarget,
+              })
+            }}
+            disabled={isPlaying}
+            className="bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-emerald-500"
+          >
+            <option value="constant">Constant</option>
+            <option value="accelerando">Accelerando</option>
+            <option value="ritardando">Ritardando</option>
+          </select>
+          <input
+            data-testid="tempo-curve-target-bpm"
+            type="number"
+            min={60}
+            max={200}
+            value={project.tempoCurveTargetBpm ?? project.bpm}
+            onChange={(e) => setProject({
+              ...project,
+              tempoCurveTargetBpm: Number(e.target.value) || project.bpm,
+            })}
+            disabled={isPlaying || (project.tempoCurveType || 'constant') === 'constant'}
+            className="w-18 bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-xs text-center focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+          />
         </div>
 
         <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded">

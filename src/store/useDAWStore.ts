@@ -89,6 +89,8 @@ function createInitialProject(): ProjectState {
     name: 'Untitled Project',
     lastSavedAt: Date.now(),
     bpm: 120,
+    tempoCurveType: 'constant',
+    tempoCurveTargetBpm: 120,
     scaleKey: 'C',
     scaleType: 'chromatic',
     tracks: Array.from({ length: TRACK_COUNT }).map((_, i) => ({
@@ -174,6 +176,8 @@ function normalizeProject(project: ProjectState): ProjectState {
     id: project.id ?? crypto.randomUUID(),
     name: project.name ?? 'Untitled Project',
     lastSavedAt: project.lastSavedAt ?? Date.now(),
+    tempoCurveType: project.tempoCurveType ?? 'constant',
+    tempoCurveTargetBpm: project.tempoCurveTargetBpm ?? project.bpm,
     scaleKey: project.scaleKey ?? 'C',
     scaleType: project.scaleType ?? 'chromatic',
     tracks: project.tracks.map((track) => ({

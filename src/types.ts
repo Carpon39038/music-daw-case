@@ -66,6 +66,8 @@ export interface ProjectState {
   name?: string
   lastSavedAt?: number
   bpm: number
+  tempoCurveType?: 'constant' | 'accelerando' | 'ritardando'
+  tempoCurveTargetBpm?: number
   scaleKey?: string
   scaleType?: string
   tracks: Track[]
