@@ -1,5 +1,5 @@
 import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2, FileAudio, Mic } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { formatTime } from '../utils/formatTime'
 import { DEMOS } from '../utils/demos'
@@ -38,6 +38,12 @@ const CHALLENGE_STYLES = [
   { key: 'edm', label: 'EDM' },
   { key: 'hiphop', label: 'HipHop' },
 ] as const
+
+const ACHIEVEMENT_META = {
+  firstExport: { label: '首次导出', description: '第一次导出作品' },
+  firstChord: { label: '首次用和弦', description: '第一次使用和弦功能' },
+  first16Bars: { label: '16 小节完成', description: '时间轴覆盖到 16 小节' },
+} as const
 
 type ChallengeStyle = (typeof CHALLENGE_STYLES)[number]['key']
 
@@ -145,12 +151,16 @@ export function Transport({
   const projectTemplates = useDAWStore(s => s.projectTemplates || [])
   const saveProjectTemplate = useDAWStore(s => s.saveProjectTemplate)
   const loadProjectTemplate = useDAWStore(s => s.loadProjectTemplate)
+  const achievements = useDAWStore(s => s.achievements)
+  const unlockAchievement = useDAWStore(s => s.unlockAchievement)
 
   const [challengeOpen, setChallengeOpen] = useState(false)
   const [challengeStyle, setChallengeStyle] = useState<ChallengeStyle | null>(null)
   const [challengeBaselineSignature, setChallengeBaselineSignature] = useState<string | null>(null)
   const [challengeCompleted, setChallengeCompleted] = useState(false)
   const [challengeExporting, setChallengeExporting] = useState(false)
+  const [achievementToast, setAchievementToast] = useState<keyof typeof ACHIEVEMENT_META | null>(null)
+  const achievementTimerRef = useRef<number | null>(null)
 
   const challengeStep = useMemo(
     () => getCurrentChallengeStep(project, challengeBaselineSignature, challengeStyle, challengeCompleted),
@@ -170,6 +180,46 @@ export function Transport({
       setChallengeBaselineSignature(null)
     }
   }, [challengeOpen, challengeStyle, project])
+
+  useEffect(() => {
+    return () => {
+      if (achievementTimerRef.current) {
+        window.clearTimeout(achievementTimerRef.current)
+      }
+    }
+  }, [])
+
+  const showAchievementToast = useCallback((key: keyof typeof ACHIEVEMENT_META) => {
+    setAchievementToast(key)
+    if (achievementTimerRef.current) {
+      window.clearTimeout(achievementTimerRef.current)
+    }
+    achievementTimerRef.current = window.setTimeout(() => {
+      setAchievementToast(null)
+      achievementTimerRef.current = null
+    }, 2400)
+  }, [])
+
+  const unlockIfNeeded = useCallback((key: keyof typeof ACHIEVEMENT_META) => {
+    if (achievements[key]?.unlocked) return
+    unlockAchievement(key)
+    showAchievementToast(key)
+  }, [achievements, showAchievementToast, unlockAchievement])
+
+  useEffect(() => {
+    const hasChordClip = project.tracks.some((track) =>
+      track.clips.some((clip) => (clip.name || '').includes('Chord')),
+    )
+    if (hasChordClip) {
+      unlockIfNeeded('firstChord')
+    }
+  }, [project.tracks, unlockIfNeeded])
+
+  useEffect(() => {
+    if (has16Beats(project)) {
+      unlockIfNeeded('first16Bars')
+    }
+  }, [project, unlockIfNeeded])
 
   const handleSaveTemplate = () => {
     const suggested = `${project.name || 'Untitled'} Template`
@@ -191,6 +241,7 @@ export function Transport({
     setChallengeExporting(true)
     try {
       await handleMp3Export()
+      unlockIfNeeded('firstExport')
       setChallengeCompleted(true)
     } finally {
       setChallengeExporting(false)
@@ -458,7 +509,10 @@ export function Transport({
           <Download size={18} />
         </button>
         <button
-          onClick={() => { void handleAudioExport() }}
+          onClick={async () => {
+            await handleAudioExport()
+            unlockIfNeeded('firstExport')
+          }}
           disabled={isPlaying}
           data-testid="audio-export-btn"
           className="p-2 text-gray-500 hover:text-gray-300"
@@ -467,7 +521,10 @@ export function Transport({
           <FileAudio size={18} />
         </button>
         <button
-          onClick={() => { void handleMp3Export() }}
+          onClick={async () => {
+            await handleMp3Export()
+            unlockIfNeeded('firstExport')
+          }}
           disabled={isPlaying}
           data-testid="mp3-export-btn"
           className="p-2 text-gray-500 hover:text-gray-300"
@@ -476,7 +533,10 @@ export function Transport({
           <span className="text-xs font-bold">MP3</span>
         </button>
         <button
-          onClick={() => { void handleSocialPublish() }}
+          onClick={async () => {
+            await handleSocialPublish()
+            unlockIfNeeded('firstExport')
+          }}
           disabled={isPlaying}
           data-testid="social-publish-btn"
           className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded"
@@ -493,6 +553,22 @@ export function Transport({
         >
           30s Challenge
         </button>
+
+        <div className="flex items-center gap-1" data-testid="achievement-status-row">
+          {Object.entries(ACHIEVEMENT_META).map(([key, meta]) => {
+            const unlocked = achievements[key as keyof typeof ACHIEVEMENT_META]?.unlocked
+            return (
+              <span
+                key={key}
+                data-testid={`achievement-badge-${key}`}
+                className={`px-1.5 py-0.5 text-[10px] rounded border ${unlocked ? 'bg-emerald-900/40 border-emerald-700 text-emerald-300' : 'bg-[#171717] border-gray-800 text-gray-500'}`}
+                title={`${meta.label}：${meta.description}`}
+              >
+                {unlocked ? '🏅' : '⬜'} {meta.label}
+              </span>
+            )
+          })}
+        </div>
         <button
           onClick={undo}
           disabled={undoDepth === 0 || isPlaying}
@@ -646,6 +722,15 @@ export function Transport({
           Reset
         </button>
       </div>
+      {achievementToast && (
+        <div
+          data-testid="achievement-toast"
+          className="fixed bottom-4 right-4 z-50 rounded border border-emerald-700 bg-emerald-900/90 px-3 py-2 text-xs text-emerald-100 shadow-lg"
+        >
+          <div className="font-semibold">🏆 成就达成：{ACHIEVEMENT_META[achievementToast].label}</div>
+          <div className="text-[10px] text-emerald-200">{ACHIEVEMENT_META[achievementToast].description}</div>
+        </div>
+      )}
     </section>
   )
 }

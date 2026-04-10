@@ -48,6 +48,19 @@ export interface GalleryProject {
   project: ProjectState
 }
 
+export type AchievementKey = 'firstExport' | 'firstChord' | 'first16Bars'
+
+export interface AchievementProgress {
+  unlocked: boolean
+  unlockedAt?: number
+}
+
+export interface AchievementsState {
+  firstExport: AchievementProgress
+  firstChord: AchievementProgress
+  first16Bars: AchievementProgress
+}
+
 interface PersistedDAWState {
   project: ProjectState
   masterVolume: number
@@ -59,6 +72,7 @@ interface PersistedDAWState {
   performanceMode: 'auto' | 'on' | 'off'
   projectTemplates: ProjectTemplate[]
   galleryProjects: GalleryProject[]
+  achievements: AchievementsState
 }
 
 interface DAWState extends PersistedDAWState {
@@ -100,6 +114,7 @@ interface DAWState extends PersistedDAWState {
   saveProjectTemplate: (name: string) => void
   loadProjectTemplate: (id: string) => void
   saveProjectToGallery: () => void
+  unlockAchievement: (key: AchievementKey) => void
   deleteGalleryProject: (id: string) => void
   loadGalleryProject: (id: string) => void
 }
@@ -229,6 +244,14 @@ function cloneProject(project: ProjectState): ProjectState {
   return structuredClone(project)
 }
 
+function createInitialAchievements(): AchievementsState {
+  return {
+    firstExport: { unlocked: false },
+    firstChord: { unlocked: false },
+    first16Bars: { unlocked: false },
+  }
+}
+
 function getDefaultPersistedState(): PersistedDAWState {
   return {
     project: createInitialProject(),
@@ -241,6 +264,7 @@ function getDefaultPersistedState(): PersistedDAWState {
     performanceMode: 'auto',
     projectTemplates: [],
     galleryProjects: [],
+    achievements: createInitialAchievements(),
   }
 }
 
@@ -487,11 +511,26 @@ export const useDAWStore = create<DAWState>()(
             future: [],
           }
         }),
+      unlockAchievement: (key) =>
+        set((state) => {
+          const current = state.achievements[key]
+          if (current?.unlocked) return state
+          return {
+            achievements: {
+              ...state.achievements,
+              [key]: {
+                unlocked: true,
+                unlockedAt: Date.now(),
+              },
+            },
+          }
+        }),
       resetProject: () =>
         set((state) => ({
           ...getDefaultPersistedState(),
           projectTemplates: state.projectTemplates,
           galleryProjects: state.galleryProjects,
+          achievements: state.achievements,
           isPlaying: false,
           playheadBeat: 0,
           selectedTrackId: null,
@@ -515,6 +554,7 @@ export const useDAWStore = create<DAWState>()(
         performanceMode: state.performanceMode,
         projectTemplates: state.projectTemplates || [],
         galleryProjects: state.galleryProjects || [],
+        achievements: state.achievements || createInitialAchievements(),
       }),
     },
   ),
