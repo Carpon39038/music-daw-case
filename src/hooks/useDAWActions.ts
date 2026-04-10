@@ -5,6 +5,7 @@ import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
 import { getTimelineDurationSec, secondsToBeat } from '../utils/tempoCurve'
 import { buildSocialExportBaseName, createSocialCardBlob, createSocialPackageZipBlob, triggerDownload } from '../utils/socialPublish'
+import { analyzeChordSuggestions } from '../utils/chordSuggestion'
 
 export const TIMELINE_BEATS = 16
 
@@ -363,6 +364,7 @@ export interface DAWActions {
     canDuplicate: boolean
     canSplit: boolean
   } | null
+  chordSuggestions: { name: string; confidence: number; notesHz: number[] }[]
   // Refs
   meterCanvasRef: React.RefObject<HTMLCanvasElement | null>
   timelineRef: React.RefObject<HTMLDivElement | null>
@@ -652,6 +654,8 @@ export function useDAWActions(): DAWActions {
       canSplit,
     }
   }, [project.tracks, selectedClipRef, isPlaying])
+
+  const chordSuggestions = useMemo(() => analyzeChordSuggestions(project), [project])
 
   useEffect(() => {
     audioEngine.setMasterVolume(masterVolume)
@@ -2382,6 +2386,7 @@ export function useDAWActions(): DAWActions {
     reverbEnabledTrackCount,
     pannedTrackCount,
     selectedClipData,
+    chordSuggestions,
     meterCanvasRef,
     timelineRef,
     setProject,

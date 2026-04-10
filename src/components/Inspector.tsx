@@ -13,7 +13,7 @@ export function Inspector(d: DAWActions) {
     updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
-    selectedClipRef, selectedClipRefs,
+    selectedClipRef, selectedClipRefs, chordSuggestions,
   } = d
 
   const scaleKey = project.scaleKey || 'C'
@@ -122,6 +122,22 @@ export function Inspector(d: DAWActions) {
                   Normalize clip volumes
                 </button>
                 <p className="text-[10px] text-gray-500">Uses current Scale Key / Scale Type to create inspiration clips.</p>
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-chord-suggestions">
+                <label className="text-xs text-gray-500 block">Chord Suggestions</label>
+                {chordSuggestions.length > 0 ? (
+                  <ul className="space-y-1">
+                    {chordSuggestions.map((item, index) => (
+                      <li key={`${item.name}-${index}`} className="flex items-center justify-between text-xs text-gray-300">
+                        <span>{item.name}</span>
+                        <span className="text-gray-500">{Math.round(item.confidence * 100)}%</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[10px] text-gray-500">Add a few clips first, then suggestions will appear.</p>
+                )}
               </div>
 
               <div>
