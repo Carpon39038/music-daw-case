@@ -25,4 +25,22 @@ test.describe('P7 Continue MVP', () => {
     const afterBold = await getClipCount()
     expect(afterBold).toBeGreaterThan(afterBalanced)
   })
+
+  test('supports reroll and lock rhythm / lock pitch options', async ({ page }) => {
+    await expect(page.getByTestId('continue-mvp-panel')).toBeVisible()
+
+    await expect(page.getByTestId('continue-reroll-btn')).toBeVisible()
+    await page.getByTestId('continue-reroll-btn').click()
+
+    await page.getByTestId('continue-lock-rhythm').check()
+    await expect(page.getByTestId('continue-lock-rhythm')).toBeChecked()
+
+    await page.getByTestId('continue-lock-pitch').check()
+    await expect(page.getByTestId('continue-lock-pitch')).toBeChecked()
+
+    const countBeforeLockedRun = await page.locator('.clip').count()
+    await page.getByTestId('continue-balanced-btn').click()
+    const countAfterLockedRun = await page.locator('.clip').count()
+    expect(countAfterLockedRun).toBeGreaterThan(countBeforeLockedRun)
+  })
 })

@@ -487,7 +487,11 @@ export interface DAWActions {
   generateMelody: (trackId: string, options?: { startBeat?: number; noteCount?: number; stepBeats?: number }) => void
   normalizeClipGains: () => void
   generateStyleStarter: (genre: 'lofi' | 'edm' | 'hiphop') => void
-  continueTrackIdea: (trackId: string, profile: 'conservative' | 'balanced' | 'bold') => void
+  continueTrackIdea: (
+    trackId: string,
+    profile: 'conservative' | 'balanced' | 'bold',
+    options?: { lockRhythm?: boolean; lockPitch?: boolean }
+  ) => void
   handleMIDIImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
@@ -2007,8 +2011,15 @@ export function useDAWActions(): DAWActions {
     })
   }
 
-  const continueTrackIdea = (trackId: string, profile: 'conservative' | 'balanced' | 'bold') => {
+  const continueTrackIdea = (
+    trackId: string,
+    profile: 'conservative' | 'balanced' | 'bold',
+    options?: { lockRhythm?: boolean; lockPitch?: boolean },
+  ) => {
     if (isPlaying) return
+
+    const lockRhythm = Boolean(options?.lockRhythm)
+    const lockPitch = Boolean(options?.lockPitch)
 
     applyProjectUpdate((prev) => {
       const track = prev.tracks.find((t) => t.id === trackId)
@@ -2040,16 +2051,33 @@ export function useDAWActions(): DAWActions {
         ? scaleFrequencies.reduce((best, hz, idx) => Math.abs(hz - lastHz) < Math.abs(scaleFrequencies[best] - lastHz) ? idx : best, 0)
         : Math.floor(scaleFrequencies.length / 2)
 
+      const pitchPattern = recent.slice(-cfg.noteCount).map((clip) => clip.noteHz)
+      const rhythmPattern = recent.slice(-cfg.noteCount).map((clip) => ({
+        startOffset: clip.startBeat - baseStart,
+        lengthBeats: clip.lengthBeats,
+      }))
+
       const generated: Clip[] = []
       for (let i = 0; i < cfg.noteCount; i++) {
-        const startBeat = clampTimelineBeat(baseStart + i * cfg.step)
+        const startBeat = lockRhythm && rhythmPattern[i]
+          ? clampTimelineBeat(baseStart + Math.max(0, rhythmPattern[i].startOffset))
+          : clampTimelineBeat(baseStart + i * cfg.step)
         if (startBeat >= TIMELINE_BEATS) break
 
-        const jitter = Math.floor((Math.random() * (cfg.jumpRange * 2 + 1)) - cfg.jumpRange)
-        const idx = Math.max(0, Math.min(scaleFrequencies.length - 1, nearestIndex + jitter))
-        const noteHz = scaleFrequencies[idx]
-        const lengthBase = cfg.minLen + Math.random() * (cfg.maxLen - cfg.minLen)
-        const lengthBeats = clampMelodyLength(startBeat, normalizeMelodyStep(lengthBase))
+        const noteHz = lockPitch && typeof pitchPattern[i] === 'number'
+          ? pitchPattern[i]
+          : (() => {
+            const jitter = Math.floor((Math.random() * (cfg.jumpRange * 2 + 1)) - cfg.jumpRange)
+            const idx = Math.max(0, Math.min(scaleFrequencies.length - 1, nearestIndex + jitter))
+            return scaleFrequencies[idx]
+          })()
+
+        const lengthBeats = lockRhythm && rhythmPattern[i]
+          ? clampMelodyLength(startBeat, normalizeMelodyStep(rhythmPattern[i].lengthBeats))
+          : (() => {
+            const lengthBase = cfg.minLen + Math.random() * (cfg.maxLen - cfg.minLen)
+            return clampMelodyLength(startBeat, normalizeMelodyStep(lengthBase))
+          })()
 
         const preferBaseWave = Math.random() < 0.6
         const wave = preferBaseWave

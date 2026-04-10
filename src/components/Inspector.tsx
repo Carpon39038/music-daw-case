@@ -1,6 +1,7 @@
 import type { WaveType } from '../types'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { SELECTABLE_NOTES, hzToClosestNoteLabel } from '../utils/notes'
+import { useState } from 'react'
 import { isNoteInScale, type ScaleType } from '../utils/scales'
 
 export function Inspector(d: DAWActions) {
@@ -27,7 +28,9 @@ export function Inspector(d: DAWActions) {
     return isNoteInScale(noteIndex, scaleKeyIndex, scaleType)
   })
 
-  
+  const [continueLockRhythm, setContinueLockRhythm] = useState(false)
+  const [continueLockPitch, setContinueLockPitch] = useState(false)
+
   const allSelectedClipRefs = [...(selectedClipRefs || [])]
   if (selectedClipRef && !allSelectedClipRefs.some(r => r.clipId === selectedClipRef.clipId)) {
     allSelectedClipRefs.unshift(selectedClipRef)
@@ -146,13 +149,37 @@ export function Inspector(d: DAWActions) {
                 >
                   Generate scale-locked melody (8 notes)
                 </button>
-                <div className="rounded border border-gray-700 bg-[#101010] p-2 space-y-1" data-testid="continue-mvp-panel">
+                <div className="rounded border border-gray-700 bg-[#101010] p-2 space-y-2" data-testid="continue-mvp-panel">
                   <label className="text-[10px] text-gray-500 block">Continue MVP (next-bar ideas)</label>
+                  <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                    <label className="inline-flex items-center gap-1" data-testid="continue-lock-rhythm-label">
+                      <input
+                        type="checkbox"
+                        data-testid="continue-lock-rhythm"
+                        checked={continueLockRhythm}
+                        onChange={(e) => setContinueLockRhythm(e.target.checked)}
+                        disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
+                        className="accent-emerald-500"
+                      />
+                      Lock Rhythm
+                    </label>
+                    <label className="inline-flex items-center gap-1" data-testid="continue-lock-pitch-label">
+                      <input
+                        type="checkbox"
+                        data-testid="continue-lock-pitch"
+                        checked={continueLockPitch}
+                        onChange={(e) => setContinueLockPitch(e.target.checked)}
+                        disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
+                        className="accent-emerald-500"
+                      />
+                      Lock Pitch
+                    </label>
+                  </div>
                   <div className="grid grid-cols-3 gap-1">
                     <button
                       type="button"
                       data-testid="continue-conservative-btn"
-                      onClick={() => continueTrackIdea(selectedTrackId, 'conservative')}
+                      onClick={() => continueTrackIdea(selectedTrackId, 'conservative', { lockRhythm: continueLockRhythm, lockPitch: continueLockPitch })}
                       disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
                       className="text-[10px] px-1 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
                     >
@@ -161,7 +188,7 @@ export function Inspector(d: DAWActions) {
                     <button
                       type="button"
                       data-testid="continue-balanced-btn"
-                      onClick={() => continueTrackIdea(selectedTrackId, 'balanced')}
+                      onClick={() => continueTrackIdea(selectedTrackId, 'balanced', { lockRhythm: continueLockRhythm, lockPitch: continueLockPitch })}
                       disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
                       className="text-[10px] px-1 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
                     >
@@ -170,13 +197,22 @@ export function Inspector(d: DAWActions) {
                     <button
                       type="button"
                       data-testid="continue-bold-btn"
-                      onClick={() => continueTrackIdea(selectedTrackId, 'bold')}
+                      onClick={() => continueTrackIdea(selectedTrackId, 'bold', { lockRhythm: continueLockRhythm, lockPitch: continueLockPitch })}
                       disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
                       className="text-[10px] px-1 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
                     >
                       Bold
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    data-testid="continue-reroll-btn"
+                    onClick={() => continueTrackIdea(selectedTrackId, 'balanced', { lockRhythm: continueLockRhythm, lockPitch: continueLockPitch })}
+                    disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
+                    className="w-full text-[10px] px-1 py-1 rounded bg-[#0f766e] hover:bg-[#115e59] text-white disabled:opacity-40"
+                  >
+                    再来一版（Balanced）
+                  </button>
                 </div>
                 <button
                   type="button"
