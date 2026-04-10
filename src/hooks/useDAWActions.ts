@@ -537,6 +537,7 @@ export interface DAWActions {
   handleAudioExport: () => Promise<void>
   handleMp3Export: () => Promise<void>
   handleSocialPublish: () => Promise<void>
+  handleExportProjectCard: () => Promise<void>
   handleTapTempo: () => void
   isRecording: boolean
   toggleRecording: () => Promise<void>
@@ -834,6 +835,16 @@ export function useDAWActions(): DAWActions {
       triggerDownload(zipBlob, `${baseName}-social-package.zip`)
     } catch (error) {
       console.error('Failed to publish social package:', error)
+    }
+  }
+
+  const handleExportProjectCard = async () => {
+    try {
+      const cardBlob = await createSocialCardBlob(project, totalDurationSec)
+      const baseName = buildSocialExportBaseName(project.name)
+      triggerDownload(cardBlob, `${baseName}-project-card.png`)
+    } catch (error) {
+      console.error('Failed to export project card:', error)
     }
   }
 
@@ -2845,6 +2856,7 @@ export function useDAWActions(): DAWActions {
     handleAudioExport,
     handleMp3Export,
     handleSocialPublish,
+    handleExportProjectCard,
     handleTapTempo,
     isRecording,
     toggleRecording,

@@ -135,6 +135,7 @@ export function Transport({
   handleAudioExport,
   handleMp3Export,
   handleSocialPublish,
+  handleExportProjectCard,
   generateStyleStarter,
   handleTapTempo,
   startPlayback,
@@ -543,6 +544,18 @@ export function Transport({
           title="Export social package ZIP (MP3 + cover card)"
         >
           Publish
+        </button>
+        <button
+          onClick={async () => {
+            await handleExportProjectCard()
+            unlockIfNeeded('firstExport')
+          }}
+          disabled={isPlaying}
+          data-testid="project-card-export-btn"
+          className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded"
+          title="Export local project cover card as PNG"
+        >
+          Card
         </button>
         <button
           onClick={() => setChallengeOpen((prev) => !prev)}
