@@ -112,4 +112,20 @@ test.describe('interaction enhancements', () => {
     const clipCountAfter = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
     expect(clipCountAfter).toBe(clipCountBefore - 1)
   })
+
+
+  test('clip right-click menu supports quick actions', async ({ page }) => {
+    const clip = page.locator('[data-testid="clip-track-1-clip-1-1"]')
+    await clip.click({ button: 'right' })
+
+    const menu = page.locator('[data-testid="clip-context-menu"]')
+    await expect(menu).toBeVisible()
+    await expect(page.locator('[data-testid="clip-context-copy"]')).toBeVisible()
+    await expect(page.locator('[data-testid="clip-context-delete"]')).toBeVisible()
+
+    const clipCountBefore = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    await page.click('[data-testid="clip-context-duplicate"]')
+    await expect.poll(async () => page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)).toBe(clipCountBefore + 1)
+  })
+
 })

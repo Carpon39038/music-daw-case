@@ -1,9 +1,10 @@
+import { useEffect, useState } from 'react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { TIMELINE_BEATS } from '../hooks/useDAWActions'
 import { useDAWStore } from '../store/useDAWStore'
 import type { Track } from '../types'
 
-interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'toggleDrumStep' | 'selectedClipRefs' | 'isPlaying' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'addClipAtBeat' | 'addAudioFileClip'> {
+interface TimelineProps extends Pick<DAWActions, 'selectedClipRef' | 'toggleDrumStep' | 'selectedClipRefs' | 'isPlaying' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'copyClip' | 'updateClipTranspose' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'addClipAtBeat' | 'addAudioFileClip'> {
   track: Track
   isPerformanceModeActive: boolean
 }
@@ -48,6 +49,8 @@ export function Timeline({
   startClipDrag,
   startClipResize,
   removeClip,
+  copyClip,
+  updateClipTranspose,
   cycleClipWave,
   duplicateClip,
   splitClip,
@@ -59,6 +62,21 @@ export function Timeline({
   isPerformanceModeActive,
 }: TimelineProps) {
   const clipDrag = useDAWStore((s) => s.clipDrag)
+  const [clipMenu, setClipMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
+
+  useEffect(() => {
+    if (!clipMenu) return
+    const close = () => setClipMenu(null)
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setClipMenu(null)
+    }
+    window.addEventListener('click', close)
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('click', close)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [clipMenu])
 
   const isSelected = (clipId: string) =>
     (selectedClipRef?.clipId === clipId && selectedClipRef?.trackId === track.id) ||
@@ -209,6 +227,13 @@ export function Timeline({
                 if (e.shiftKey) { duplicateClip(track.id, clip.id); return }
                 cycleClipWave(track.id, clip.id)
               }}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                setSelectedTrackId(track.id)
+                setSelectedClipRef({ trackId: track.id, clipId: clip.id })
+                setSelectedClipRefs([])
+                setClipMenu({ clipId: clip.id, x: e.clientX, y: e.clientY })
+              }}
             >
               {/* Clip header with name */}
               <div className="h-5 bg-black/20 px-1 flex items-center text-[10px] text-white/90 truncate relative z-1">
@@ -242,6 +267,70 @@ export function Timeline({
             </button>
           )
         })}
+
+        {clipMenu && (() => {
+          const targetClip = track.clips.find((c) => c.id === clipMenu.clipId)
+          if (!targetClip) return null
+          return (
+            <div
+              data-testid="clip-context-menu"
+              className="fixed z-50 min-w-[160px] rounded border border-gray-700 bg-[#101010] p-1 shadow-xl"
+              style={{ left: clipMenu.x, top: clipMenu.y }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                data-testid="clip-context-copy"
+                className="w-full rounded px-2 py-1 text-left text-xs text-gray-200 hover:bg-gray-800"
+                onClick={() => {
+                  copyClip(track.id, targetClip.id)
+                  setClipMenu(null)
+                }}
+              >
+                Copy Clip
+              </button>
+              <button
+                data-testid="clip-context-duplicate"
+                className="w-full rounded px-2 py-1 text-left text-xs text-gray-200 hover:bg-gray-800"
+                onClick={() => {
+                  duplicateClip(track.id, targetClip.id)
+                  setClipMenu(null)
+                }}
+              >
+                Duplicate Clip
+              </button>
+              <button
+                data-testid="clip-context-transpose-up"
+                className="w-full rounded px-2 py-1 text-left text-xs text-gray-200 hover:bg-gray-800"
+                onClick={() => {
+                  updateClipTranspose(track.id, targetClip.id, (targetClip.transposeSemitones ?? 0) + 1)
+                  setClipMenu(null)
+                }}
+              >
+                Transpose +1
+              </button>
+              <button
+                data-testid="clip-context-transpose-down"
+                className="w-full rounded px-2 py-1 text-left text-xs text-gray-200 hover:bg-gray-800"
+                onClick={() => {
+                  updateClipTranspose(track.id, targetClip.id, (targetClip.transposeSemitones ?? 0) - 1)
+                  setClipMenu(null)
+                }}
+              >
+                Transpose -1
+              </button>
+              <button
+                data-testid="clip-context-delete"
+                className="w-full rounded px-2 py-1 text-left text-xs text-red-400 hover:bg-red-900/40"
+                onClick={() => {
+                  removeClip(track.id, targetClip.id)
+                  setClipMenu(null)
+                }}
+              >
+                Delete Clip
+              </button>
+            </div>
+          )
+        })()}
       </div>
     </div>
   )
@@ -288,7 +377,7 @@ function GlobalPlayheadLine({ effectiveTimelineBeats }: { effectiveTimelineBeats
   )
 }
 
-type TimelineSectionProps = Pick<DAWActions, 'project' | 'toggleDrumStep' | 'selectedClipRef' | 'selectedClipRefs' | 'selectedTrackId' | 'isPlaying' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'setPlayheadBeat' | 'startPlayheadDrag' | 'addClipAtBeat' | 'addAudioFileClip'>
+type TimelineSectionProps = Pick<DAWActions, 'project' | 'toggleDrumStep' | 'selectedClipRef' | 'selectedClipRefs' | 'selectedTrackId' | 'isPlaying' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'copyClip' | 'updateClipTranspose' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'setPlayheadBeat' | 'startPlayheadDrag' | 'addClipAtBeat' | 'addAudioFileClip'>
 
 export function TimelineSection(props: TimelineSectionProps) {
   const { project, effectiveTimelineBeats, ...rest } = props
