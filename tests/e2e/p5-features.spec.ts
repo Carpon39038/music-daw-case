@@ -65,4 +65,14 @@ test.describe('P5 Features', () => {
     await loopLengthSelect.selectOption('4');
     await expect(loopLengthSelect).toHaveValue('4');
   });
+
+  test('Chord preset insertion adds progression clips', async ({ page }) => {
+    await page.getByTestId('track-header-track-1').click();
+
+    const beforeCount = await page.locator('.clip').count();
+
+    await page.getByTestId('insert-chord-I-V-vi-IV').click();
+
+    await expect(page.locator('.clip')).toHaveCount(beforeCount + 12);
+  });
 });

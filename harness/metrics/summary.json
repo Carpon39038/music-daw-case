@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-04-09T17:10:06.917Z",
-  "total": 178,
-  "pass": 156,
+  "generatedAt": "2026-04-10T03:17:16.016Z",
+  "total": 182,
+  "pass": 160,
   "fail": 22,
   "failedSteps": {
     "lint": 7,
@@ -15,8 +15,8 @@
     "R6_validation_gap": 16
   },
   "scoreSummary": {
-    "count": 156,
-    "avgTotal": 24.92,
+    "count": 160,
+    "avgTotal": 24.93,
     "maxTotal": 25,
     "latestTotal": 25
   },
@@ -347,6 +347,24 @@
     },
     {
       "taskId": "daily-2026-04-09",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-10-0300",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-2026-04-10",
       "verdict": "PASS",
       "lintFail": false,
       "unitFail": false,
@@ -1444,6 +1462,24 @@
       "totalScore": 25
     },
     {
+      "taskId": "daily-dev-2026-04-10-0209",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-10-1117",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
       "taskId": "daily-dev-distort",
       "verdict": "PASS",
       "lintFail": false,
@@ -1624,5 +1660,5 @@
       "totalScore": 25
     }
   ],
-  "passRate": 0.8764
+  "passRate": 0.8791
 }

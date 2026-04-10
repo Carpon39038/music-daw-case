@@ -10,7 +10,7 @@ export function Inspector(d: DAWActions) {
     setProject, applyProjectUpdate, setTrackFilterType, setTrackFilterCutoff,
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
     selectedClipRef, selectedClipRefs,
@@ -66,6 +66,39 @@ export function Inspector(d: DAWActions) {
                   disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked}
                   className="w-full h-8 bg-[#1a1a1a] border border-gray-800 rounded cursor-pointer"
                 />
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-chord-progression">
+                <label className="text-xs text-gray-500 block">Quick Chord Progression</label>
+                <div className="grid grid-cols-1 gap-1">
+                  <button
+                    type="button"
+                    data-testid="insert-chord-I-V-vi-IV"
+                    onClick={() => insertChordPreset(selectedTrackId, 'I-V-vi-IV')}
+                    disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    Insert I–V–vi–IV
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="insert-chord-vi-IV-I-V"
+                    onClick={() => insertChordPreset(selectedTrackId, 'vi-IV-I-V')}
+                    disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    Insert vi–IV–I–V
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="insert-chord-I-vi-IV-V"
+                    onClick={() => insertChordPreset(selectedTrackId, 'I-vi-IV-V')}
+                    disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    Insert I–vi–IV–V
+                  </button>
+                </div>
               </div>
 
               <div>

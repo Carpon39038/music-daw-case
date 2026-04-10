@@ -43,10 +43,88 @@ export function resolveNonOverlappingStart(
   return clamped
 }
 
-// MIDI utilities
+type ChordPreset = 'I-V-vi-IV' | 'vi-IV-I-V' | 'I-vi-IV-V'
+
+const CHORD_PRESETS: Record<ChordPreset, string[]> = {
+  'I-V-vi-IV': ['I', 'V', 'vi', 'IV'],
+  'vi-IV-I-V': ['vi', 'IV', 'I', 'V'],
+  'I-vi-IV-V': ['I', 'vi', 'IV', 'V'],
+}
+
+const CHORD_PRESET_OPTIONS: ChordPreset[] = ['I-V-vi-IV', 'vi-IV-I-V', 'I-vi-IV-V']
+const NOTE_CLASSES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
+
 function midiNoteToFrequency(noteNumber: number): number {
   return 440 * Math.pow(2, (noteNumber - 69) / 12)
 }
+
+function parseRomanDegree(token: string): number {
+  const normalized = token.replace(/[^IViv]/g, '').toUpperCase()
+  switch (normalized) {
+    case 'I': return 1
+    case 'II': return 2
+    case 'III': return 3
+    case 'IV': return 4
+    case 'V': return 5
+    case 'VI': return 6
+    case 'VII': return 7
+    default: return 1
+  }
+}
+
+function chordIntervalsFromRoman(token: string): [number, number, number] {
+  if (token.includes('°')) return [0, 3, 6]
+  const isMinor = token === token.toLowerCase()
+  return isMinor ? [0, 3, 7] : [0, 4, 7]
+}
+
+function resolveScaleSemitoneRoot(scaleKey?: string): number {
+  const key = scaleKey ?? 'C'
+  const index = NOTE_CLASSES.indexOf(key as (typeof NOTE_CLASSES)[number])
+  return index === -1 ? 0 : index
+}
+
+function resolveScaleType(scaleType?: string): 'major' | 'minor' | 'chromatic' {
+  if (scaleType === 'minor' || scaleType === 'chromatic') return scaleType
+  return 'major'
+}
+
+function buildChordFrequencies(
+  preset: ChordPreset,
+  scaleKey: string,
+  scaleType: 'major' | 'minor' | 'chromatic',
+): number[][] {
+  const rootSemitone = resolveScaleSemitoneRoot(scaleKey)
+  const scaleDegrees = scaleType === 'minor'
+    ? [0, 2, 3, 5, 7, 8, 10]
+    : scaleType === 'chromatic'
+      ? [0, 1, 2, 3, 4, 5, 6]
+      : [0, 2, 4, 5, 7, 9, 11]
+
+  const rootMidi = (4 + 1) * 12 + rootSemitone
+  return CHORD_PRESETS[preset].map((token) => {
+    const degree = parseRomanDegree(token)
+    const degreeOffset = scaleDegrees[Math.max(0, Math.min(scaleDegrees.length - 1, degree - 1))] ?? 0
+    const chordRootMidi = rootMidi + degreeOffset
+    const intervals = chordIntervalsFromRoman(token)
+    return intervals.map((itv) => midiNoteToFrequency(chordRootMidi + itv))
+  })
+}
+
+function makeChordClipId(trackId: string) {
+  return `${trackId}-chord-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+function clampChordLength(startBeat: number, length: number) {
+  return Math.max(0.25, Math.min(length, TIMELINE_BEATS - startBeat))
+}
+
+function randomChordWave(): WaveType {
+  const waves: WaveType[] = ['triangle', 'organ', 'sine', 'square']
+  return waves[Math.floor(Math.random() * waves.length)]
+}
+
+// MIDI utilities
 
 function frequencyToMIDINote(frequency: number): number {
   return Math.round(12 * Math.log2(frequency / 440) + 69)
@@ -291,6 +369,7 @@ export interface DAWActions {
   updateClipTranspose: (trackId: string, clipId: string, transposeSemitones: number) => void
   updateClipLengthBeats: (trackId: string, clipId: string, lengthBeats: number) => void
   quantizeClip: (trackId: string, clipId: string, gridBeats: number) => void
+  insertChordPreset: (trackId: string, preset?: 'I-V-vi-IV' | 'vi-IV-I-V' | 'I-vi-IV-V', startBeat?: number, chordLengthBeats?: number) => void
   handleMIDIImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
@@ -1523,6 +1602,61 @@ export function useDAWActions(): DAWActions {
     })
   }
 
+  const insertChordPreset = (
+    trackId: string,
+    preset: ChordPreset = 'I-V-vi-IV',
+    startBeat?: number,
+    chordLengthBeats = 2,
+  ) => {
+    if (isPlaying) return
+
+    applyProjectUpdate((prev) => {
+      const track = prev.tracks.find((t) => t.id === trackId)
+      if (!track || track.locked || track.isDrumTrack) return prev
+
+      const safePreset = CHORD_PRESET_OPTIONS.includes(preset) ? preset : 'I-V-vi-IV'
+      const safeLength = Number.isFinite(chordLengthBeats) ? Math.max(0.25, chordLengthBeats) : 2
+      const start = Number.isFinite(startBeat)
+        ? Math.max(0, Math.min(TIMELINE_BEATS - 0.25, Number(startBeat)))
+        : Math.round(useDAWStore.getState().playheadBeat * 2) / 2
+
+      const chordProgression = buildChordFrequencies(
+        safePreset,
+        prev.scaleKey ?? 'C',
+        resolveScaleType(prev.scaleType),
+      )
+
+      const generatedClips: Clip[] = []
+      chordProgression.forEach((notes, chordIndex) => {
+        const chordStart = Math.max(0, Math.min(TIMELINE_BEATS - 0.25, start + chordIndex * safeLength))
+        if (chordStart >= TIMELINE_BEATS) return
+        const lengthBeats = clampChordLength(chordStart, safeLength)
+
+        notes.forEach((noteHz) => {
+          generatedClips.push({
+            id: makeChordClipId(trackId),
+            startBeat: chordStart,
+            lengthBeats,
+            noteHz,
+            wave: randomChordWave(),
+            name: `Chord ${safePreset} ${chordIndex + 1}`,
+          })
+        })
+      })
+
+      if (generatedClips.length === 0) return prev
+
+      return {
+        ...prev,
+        tracks: prev.tracks.map((t) =>
+          t.id === trackId
+            ? { ...t, clips: [...t.clips, ...generatedClips] }
+            : t,
+        ),
+      }
+    })
+  }
+
   const handleMIDIImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -2090,6 +2224,7 @@ export function useDAWActions(): DAWActions {
     updateClipTranspose,
     updateClipLengthBeats,
     quantizeClip,
+    insertChordPreset,
     handleMIDIImport,
     handleMIDIExport,
     handleAudioExport,
