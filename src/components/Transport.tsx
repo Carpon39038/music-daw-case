@@ -1,10 +1,111 @@
 import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2, FileAudio, Mic } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { formatTime } from '../utils/formatTime'
 import { DEMOS } from '../utils/demos'
 import { ShareButton } from './ShareButton'
 import { ProjectGallery } from './ProjectGallery'
 import { useDAWStore } from '../store/useDAWStore'
+
+function buildProjectEditSignature(project: DAWActions['project']) {
+  return JSON.stringify({
+    bpm: project.bpm,
+    scaleKey: project.scaleKey,
+    scaleType: project.scaleType,
+    tracks: project.tracks.map((track) => ({
+      id: track.id,
+      volume: track.volume,
+      pan: track.pan,
+      muted: track.muted,
+      solo: track.solo,
+      transposeSemitones: track.transposeSemitones,
+      clips: track.clips.map((clip) => ({
+        id: clip.id,
+        startBeat: clip.startBeat,
+        lengthBeats: clip.lengthBeats,
+        noteHz: clip.noteHz,
+        wave: clip.wave,
+        gain: clip.gain,
+        muted: clip.muted,
+        transposeSemitones: clip.transposeSemitones,
+      })),
+    })),
+  })
+}
+
+const CHALLENGE_STYLES = [
+  { key: 'lofi', label: 'Lo-Fi' },
+  { key: 'edm', label: 'EDM' },
+  { key: 'hiphop', label: 'HipHop' },
+] as const
+
+type ChallengeStyle = (typeof CHALLENGE_STYLES)[number]['key']
+
+function toChallengeStyle(value: string): ChallengeStyle {
+  if (value === 'edm' || value === 'hiphop') return value
+  return 'lofi'
+}
+
+function styleLabel(style: ChallengeStyle | null) {
+  if (style === 'edm') return 'EDM'
+  if (style === 'hiphop') return 'HipHop'
+  if (style === 'lofi') return 'Lo-Fi'
+  return '未选择'
+}
+
+function detectStep(project: DAWActions['project']) {
+  return Math.max(...project.tracks.flatMap((t) => t.clips.map((c) => c.startBeat + c.lengthBeats)))
+}
+
+function has16Beats(project: DAWActions['project']) {
+  return detectStep(project) >= 16
+}
+
+function getChallengeBadge(step: 1 | 2 | 3, currentStep: 1 | 2 | 3 | 4) {
+  if (currentStep > step) return '✅'
+  if (currentStep === step) return '👉'
+  return '⬜'
+}
+
+function getStepClass(step: 1 | 2 | 3, currentStep: 1 | 2 | 3 | 4) {
+  if (currentStep > step) return 'text-emerald-400'
+  if (currentStep === step) return 'text-amber-300'
+  return 'text-gray-500'
+}
+
+function getChallengeStepLabel(step: 1 | 2 | 3 | 4) {
+  if (step === 1) return 'Step 1/3: 选风格'
+  if (step === 2) return 'Step 2/3: 改一点'
+  if (step === 3) return 'Step 3/3: 导出'
+  return '挑战完成'
+}
+
+function getInitialChallengeStep(project: DAWActions['project']) {
+  return has16Beats(project) ? 2 : 1
+}
+
+function computeStep(project: DAWActions['project'], baselineSignature: string | null, style: ChallengeStyle | null, completed: boolean) {
+  if (completed) return 4 as const
+  if (!style) return 1 as const
+  if (!baselineSignature) return 2 as const
+  return buildProjectEditSignature(project) !== baselineSignature ? 3 as const : 2 as const
+}
+
+function readCurrentProject() {
+  return useDAWStore.getState().project
+}
+
+function isReadyForChallenge(project: DAWActions['project']) {
+  return project.tracks.length > 0
+}
+
+function ensureChallengeStyle(value: string): ChallengeStyle {
+  return toChallengeStyle(value)
+}
+
+function getCurrentChallengeStep(project: DAWActions['project'], baselineSignature: string | null, style: ChallengeStyle | null, completed: boolean) {
+  return computeStep(project, baselineSignature, style, completed)
+}
 
 export function Transport({
   isPlaying,
@@ -28,6 +129,7 @@ export function Transport({
   handleAudioExport,
   handleMp3Export,
   handleSocialPublish,
+  generateStyleStarter,
   handleTapTempo,
   startPlayback,
   pausePlayback,
@@ -44,12 +146,72 @@ export function Transport({
   const saveProjectTemplate = useDAWStore(s => s.saveProjectTemplate)
   const loadProjectTemplate = useDAWStore(s => s.loadProjectTemplate)
 
+  const [challengeOpen, setChallengeOpen] = useState(false)
+  const [challengeStyle, setChallengeStyle] = useState<ChallengeStyle | null>(null)
+  const [challengeBaselineSignature, setChallengeBaselineSignature] = useState<string | null>(null)
+  const [challengeCompleted, setChallengeCompleted] = useState(false)
+  const [challengeExporting, setChallengeExporting] = useState(false)
+
+  const challengeStep = useMemo(
+    () => getCurrentChallengeStep(project, challengeBaselineSignature, challengeStyle, challengeCompleted),
+    [project, challengeBaselineSignature, challengeStyle, challengeCompleted],
+  )
+
+  useEffect(() => {
+    if (!challengeOpen) return
+    if (!isReadyForChallenge(project)) {
+      setChallengeStyle(null)
+      setChallengeBaselineSignature(null)
+      setChallengeCompleted(false)
+      return
+    }
+    if (!challengeStyle) {
+      setChallengeCompleted(false)
+      setChallengeBaselineSignature(null)
+    }
+  }, [challengeOpen, challengeStyle, project])
+
   const handleSaveTemplate = () => {
     const suggested = `${project.name || 'Untitled'} Template`
     const templateName = window.prompt('保存为项目模板：请输入模板名称', suggested)
     if (!templateName) return
     saveProjectTemplate(templateName)
   }
+
+  const handleChallengeStart = (style: ChallengeStyle) => {
+    const targetStyle = ensureChallengeStyle(style)
+    generateStyleStarter(targetStyle)
+    const nextProject = readCurrentProject()
+    setChallengeStyle(targetStyle)
+    setChallengeBaselineSignature(buildProjectEditSignature(nextProject))
+    setChallengeCompleted(false)
+  }
+
+  const handleChallengeExport = async () => {
+    setChallengeExporting(true)
+    try {
+      await handleMp3Export()
+      setChallengeCompleted(true)
+    } finally {
+      setChallengeExporting(false)
+    }
+  }
+
+  const challengeStatusLabel = challengeCompleted
+    ? '挑战完成：已导出 MP3'
+    : getChallengeStepLabel(challengeStep)
+
+  const challengeCanExport = challengeStep >= 3 && !isPlaying && !challengeExporting
+
+  const challengeNote = challengeCompleted
+    ? `风格：${styleLabel(challengeStyle)} · 已完成 30 秒闭环`
+    : challengeStyle
+      ? `当前风格：${styleLabel(challengeStyle)}`
+      : '先选一个风格，系统会自动生成可播放草稿'
+
+  const challenge16BeatDone = has16Beats(project)
+
+  const challengeInitialStep = getInitialChallengeStep(project)
 
   return (
     <section className="transport h-16 bg-[#111] border-b border-gray-800 flex items-center px-4 justify-between flex-shrink-0" data-testid="transport">
@@ -323,6 +485,15 @@ export function Transport({
           Publish
         </button>
         <button
+          onClick={() => setChallengeOpen((prev) => !prev)}
+          disabled={isPlaying}
+          data-testid="challenge-mode-toggle"
+          className={`px-2 py-1 text-xs border rounded ${challengeOpen ? 'bg-amber-900/40 border-amber-700 text-amber-300' : 'bg-[#1a1a1a] hover:bg-gray-800 border-gray-800 text-gray-300'}`}
+          title="30 秒出歌挑战模式"
+        >
+          30s Challenge
+        </button>
+        <button
           onClick={undo}
           disabled={undoDepth === 0 || isPlaying}
           data-testid="undo-btn"
@@ -392,6 +563,61 @@ export function Transport({
         </button>
 
         <ProjectGallery />
+
+        {challengeOpen && (
+          <div
+            className="ml-2 px-2 py-2 rounded border border-amber-800/60 bg-[#14120f] min-w-[280px]"
+            data-testid="challenge-mode-panel"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-amber-300 font-semibold">30 秒出歌挑战</span>
+              <span className="text-[10px] text-gray-400" data-testid="challenge-status-label">{challengeStatusLabel}</span>
+            </div>
+            <p className="text-[10px] text-gray-500 mt-1" data-testid="challenge-note">{challengeNote}</p>
+
+            <div className="grid grid-cols-3 gap-1 mt-2" data-testid="challenge-style-grid">
+              {CHALLENGE_STYLES.map((style) => (
+                <button
+                  key={style.key}
+                  type="button"
+                  data-testid={`challenge-style-${style.key}`}
+                  onClick={() => handleChallengeStart(style.key)}
+                  disabled={isPlaying}
+                  className={`text-[10px] px-2 py-1 rounded border ${challengeStyle === style.key ? 'bg-amber-900/40 border-amber-600 text-amber-200' : 'bg-[#1a1a1a] border-gray-800 text-gray-300 hover:bg-gray-800'}`}
+                >
+                  {style.label}
+                </button>
+              ))}
+            </div>
+
+            <ul className="mt-2 space-y-1 text-[10px]" data-testid="challenge-steps">
+              <li className={getStepClass(1, challengeStep)} data-testid="challenge-step-1">
+                {getChallengeBadge(1, challengeStep)} Step 1：选风格并生成草稿
+              </li>
+              <li className={getStepClass(2, challengeStep)} data-testid="challenge-step-2">
+                {getChallengeBadge(2, challengeStep)} Step 2：改一点（音色/音高/片段）
+              </li>
+              <li className={getStepClass(3, challengeStep)} data-testid="challenge-step-3">
+                {getChallengeBadge(3, challengeStep)} Step 3：导出 MP3
+              </li>
+            </ul>
+
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span className="text-[10px] text-gray-500" data-testid="challenge-16beat-status">
+                {challenge16BeatDone ? '已达到 16 小节以上片段覆盖' : `当前进度：${challengeInitialStep === 2 ? '已具备基础片段' : '建议先补到 16 小节'}`}
+              </span>
+              <button
+                type="button"
+                data-testid="challenge-export-btn"
+                onClick={() => { void handleChallengeExport() }}
+                disabled={!challengeCanExport}
+                className="text-[10px] px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white disabled:opacity-40"
+              >
+                {challengeExporting ? '导出中…' : challengeCompleted ? '再次导出' : '完成并导出'}
+              </button>
+            </div>
+          </div>
+        )}
 
         <select
           disabled={isPlaying || projectTemplates.length === 0}
