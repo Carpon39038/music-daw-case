@@ -4,6 +4,7 @@ import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
 import { getTimelineDurationSec, secondsToBeat } from '../utils/tempoCurve'
+import { buildSocialExportBaseName, createSocialCardBlob, createSocialPackageZipBlob, triggerDownload } from '../utils/socialPublish'
 
 export const TIMELINE_BEATS = 16
 
@@ -427,6 +428,7 @@ export interface DAWActions {
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
   handleMp3Export: () => Promise<void>
+  handleSocialPublish: () => Promise<void>
   handleTapTempo: () => void
   isRecording: boolean
   toggleRecording: () => Promise<void>
@@ -700,6 +702,27 @@ export function useDAWActions(): DAWActions {
       URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Failed to export MP3:', error)
+    }
+  }
+
+  const handleSocialPublish = async () => {
+    try {
+      const audioBuffer = await audioEngine.renderBuffer(
+        project.tracks,
+        project.bpm,
+        effectiveTimelineBeats,
+        tempoCurveType,
+        tempoCurveTargetBpm,
+      )
+      const mp3Data = audioBufferToMp3(audioBuffer)
+      const mp3Blob = new Blob([mp3Data], { type: 'audio/mp3' })
+      const cardBlob = await createSocialCardBlob(project, totalDurationSec)
+      const baseName = buildSocialExportBaseName(project.name)
+      const zipBlob = await createSocialPackageZipBlob(baseName, mp3Blob, cardBlob)
+
+      triggerDownload(zipBlob, `${baseName}-social-package.zip`)
+    } catch (error) {
+      console.error('Failed to publish social package:', error)
     }
   }
 
@@ -2395,6 +2418,7 @@ export function useDAWActions(): DAWActions {
     handleMIDIExport,
     handleAudioExport,
     handleMp3Export,
+    handleSocialPublish,
     handleTapTempo,
     isRecording,
     toggleRecording,

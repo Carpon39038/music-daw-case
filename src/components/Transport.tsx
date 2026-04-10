@@ -27,6 +27,7 @@ export function Transport({
   handleMIDIExport,
   handleAudioExport,
   handleMp3Export,
+  handleSocialPublish,
   handleTapTempo,
   startPlayback,
   pausePlayback,
@@ -311,6 +312,15 @@ export function Transport({
           title="Export MP3"
         >
           <span className="text-xs font-bold">MP3</span>
+        </button>
+        <button
+          onClick={() => { void handleSocialPublish() }}
+          disabled={isPlaying}
+          data-testid="social-publish-btn"
+          className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded"
+          title="Export social package ZIP (MP3 + cover card)"
+        >
+          Publish
         </button>
         <button
           onClick={undo}
