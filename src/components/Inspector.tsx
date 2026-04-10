@@ -10,7 +10,7 @@ export function Inspector(d: DAWActions) {
     setProject, applyProjectUpdate, setTrackFilterType, setTrackFilterCutoff,
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, generateStyleStarter,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
     selectedClipRef, selectedClipRefs, chordSuggestions,
@@ -99,6 +99,40 @@ export function Inspector(d: DAWActions) {
                     Insert I–vi–IV–V
                   </button>
                 </div>
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-style-starter">
+                <label className="text-xs text-gray-500 block">Style Starter (8-bar draft)</label>
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    type="button"
+                    data-testid="style-starter-lofi-btn"
+                    onClick={() => generateStyleStarter('lofi')}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    Lo-Fi
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="style-starter-edm-btn"
+                    onClick={() => generateStyleStarter('edm')}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    EDM
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="style-starter-hiphop-btn"
+                    onClick={() => generateStyleStarter('hiphop')}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    HipHop
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-500">One click generates drum + chord + bass draft and sets BPM/scale.</p>
               </div>
 
               <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-melody-generator">

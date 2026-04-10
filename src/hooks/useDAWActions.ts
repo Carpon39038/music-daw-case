@@ -177,6 +177,66 @@ function pickScaleFrequency(scaleFrequencies: number[], previous?: number) {
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
+type StyleStarterGenre = 'lofi' | 'edm' | 'hiphop'
+
+const STYLE_STARTER_PRESETS: Record<StyleStarterGenre, {
+  bpm: number
+  scaleKey: string
+  scaleType: 'major' | 'minor'
+  chordPreset: ChordPreset
+  chordWave: WaveType
+  bassWave: WaveType
+  bassPattern: number[]
+  drum: {
+    kick: number[]
+    snare: number[]
+    hihat: number[]
+  }
+}> = {
+  lofi: {
+    bpm: 82,
+    scaleKey: 'C',
+    scaleType: 'minor',
+    chordPreset: 'I-vi-IV-V',
+    chordWave: 'organ',
+    bassWave: 'triangle',
+    bassPattern: [0, 2, 4, 6, 8, 10, 12, 14],
+    drum: {
+      kick: [0, 6, 8, 14],
+      snare: [4, 12],
+      hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+    },
+  },
+  edm: {
+    bpm: 126,
+    scaleKey: 'F',
+    scaleType: 'minor',
+    chordPreset: 'I-V-vi-IV',
+    chordWave: 'sawtooth',
+    bassWave: 'square',
+    bassPattern: [0, 2, 4, 6, 8, 10, 12, 14],
+    drum: {
+      kick: [0, 4, 8, 12],
+      snare: [4, 12],
+      hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+    },
+  },
+  hiphop: {
+    bpm: 92,
+    scaleKey: 'D#',
+    scaleType: 'minor',
+    chordPreset: 'vi-IV-I-V',
+    chordWave: 'brass',
+    bassWave: 'sine',
+    bassPattern: [0, 3, 4, 7, 8, 11, 12, 15],
+    drum: {
+      kick: [0, 3, 8, 11],
+      snare: [4, 12],
+      hihat: [0, 2, 3, 6, 8, 10, 11, 14],
+    },
+  },
+}
+
 // MIDI utilities
 
 function frequencyToMIDINote(frequency: number): number {
@@ -426,6 +486,7 @@ export interface DAWActions {
   insertChordPreset: (trackId: string, preset?: 'I-V-vi-IV' | 'vi-IV-I-V' | 'I-vi-IV-V', startBeat?: number, chordLengthBeats?: number) => void
   generateMelody: (trackId: string, options?: { startBeat?: number; noteCount?: number; stepBeats?: number }) => void
   normalizeClipGains: () => void
+  generateStyleStarter: (genre: 'lofi' | 'edm' | 'hiphop') => void
   handleMIDIImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
@@ -1849,6 +1910,102 @@ export function useDAWActions(): DAWActions {
     })
   }
 
+  const generateStyleStarter = (genre: StyleStarterGenre) => {
+    if (isPlaying) return
+
+    applyProjectUpdate((prev) => {
+      const preset = STYLE_STARTER_PRESETS[genre] ?? STYLE_STARTER_PRESETS.lofi
+      const unlockedTracks = prev.tracks.filter((t) => !t.locked)
+      if (unlockedTracks.length === 0) return prev
+
+      const totalBars = 8
+      const totalBeats = Math.min(TIMELINE_BEATS, totalBars * 2)
+      const chordTrackId = unlockedTracks[0]?.id
+      const bassTrackId = unlockedTracks[1]?.id ?? unlockedTracks[0]?.id
+      const drumTrackId = unlockedTracks[2]?.id ?? unlockedTracks[0]?.id
+      if (!chordTrackId || !bassTrackId || !drumTrackId) return prev
+
+      const chordTrack = prev.tracks.find((t) => t.id === chordTrackId)
+      const bassTrack = prev.tracks.find((t) => t.id === bassTrackId)
+      const drumTrack = prev.tracks.find((t) => t.id === drumTrackId)
+      if (!chordTrack || !bassTrack || !drumTrack) return prev
+      if (chordTrack.isDrumTrack || bassTrack.isDrumTrack) return prev
+
+      const progression = buildChordFrequencies(preset.chordPreset, preset.scaleKey, preset.scaleType)
+      const chordLength = 2
+      const chordClips: Clip[] = []
+      progression.forEach((notes, chordIndex) => {
+        const chordStart = chordIndex * chordLength
+        if (chordStart >= totalBeats) return
+        notes.forEach((noteHz) => {
+          chordClips.push({
+            id: makeChordClipId(chordTrackId),
+            startBeat: chordStart,
+            lengthBeats: chordLength,
+            noteHz,
+            wave: preset.chordWave,
+            gain: 0.9,
+            name: `${genre.toUpperCase()} Chord ${chordIndex + 1}`,
+          })
+        })
+      })
+
+      const scaleFreq = buildScaleNoteFrequencies(preset.scaleKey, preset.scaleType)
+      const bassRoot = scaleFreq[0] ?? 110
+      const bassClips: Clip[] = preset.bassPattern
+        .filter((step) => step < totalBeats)
+        .map((step, idx) => ({
+          id: makeMelodyClipId(bassTrackId),
+          startBeat: step,
+          lengthBeats: 1,
+          noteHz: bassRoot / 2,
+          wave: preset.bassWave,
+          gain: 0.85,
+          name: `${genre.toUpperCase()} Bass ${idx + 1}`,
+        }))
+
+      const drumSeq = {
+        kick: Array.from({ length: TIMELINE_BEATS }, (_, i) => preset.drum.kick.includes(i) && i < totalBeats),
+        snare: Array.from({ length: TIMELINE_BEATS }, (_, i) => preset.drum.snare.includes(i) && i < totalBeats),
+        hihat: Array.from({ length: TIMELINE_BEATS }, (_, i) => preset.drum.hihat.includes(i) && i < totalBeats),
+      }
+
+      return {
+        ...prev,
+        bpm: preset.bpm,
+        tempoCurveType: 'constant',
+        tempoCurveTargetBpm: preset.bpm,
+        scaleKey: preset.scaleKey,
+        scaleType: preset.scaleType,
+        tracks: prev.tracks.map((track) => {
+          if (track.id === chordTrackId) {
+            return {
+              ...track,
+              clips: [...track.clips.filter((clip) => clip.startBeat >= totalBeats), ...chordClips],
+            }
+          }
+
+          if (track.id === bassTrackId) {
+            return {
+              ...track,
+              clips: [...track.clips.filter((clip) => clip.startBeat >= totalBeats), ...bassClips],
+            }
+          }
+
+          if (track.id === drumTrackId) {
+            return {
+              ...track,
+              isDrumTrack: true,
+              drumSequence: drumSeq,
+            }
+          }
+
+          return track
+        }),
+      }
+    })
+  }
+
   const handleMIDIImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -2445,6 +2602,7 @@ export function useDAWActions(): DAWActions {
     insertChordPreset,
     generateMelody,
     normalizeClipGains,
+    generateStyleStarter,
     handleMIDIImport,
     handleMIDIExport,
     handleAudioExport,
