@@ -10,7 +10,7 @@ export function Inspector(d: DAWActions) {
     setProject, applyProjectUpdate, setTrackFilterType, setTrackFilterCutoff,
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
     selectedClipRef, selectedClipRefs,
@@ -99,6 +99,20 @@ export function Inspector(d: DAWActions) {
                     Insert I–vi–IV–V
                   </button>
                 </div>
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-melody-generator">
+                <label className="text-xs text-gray-500 block">Melody Generator</label>
+                <button
+                  type="button"
+                  data-testid="generate-melody-btn"
+                  onClick={() => generateMelody(selectedTrackId, { noteCount: 8, stepBeats: 0.5 })}
+                  disabled={isPlaying || project.tracks.find((t) => t.id === selectedTrackId)?.locked || project.tracks.find((t) => t.id === selectedTrackId)?.isDrumTrack}
+                  className="w-full text-xs px-2 py-1 rounded bg-[#0f766e] hover:bg-[#115e59] text-white disabled:opacity-40"
+                >
+                  Generate scale-locked melody (8 notes)
+                </button>
+                <p className="text-[10px] text-gray-500">Uses current Scale Key / Scale Type to create inspiration clips.</p>
               </div>
 
               <div>

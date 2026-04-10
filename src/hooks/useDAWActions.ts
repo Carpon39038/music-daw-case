@@ -124,6 +124,56 @@ function randomChordWave(): WaveType {
   return waves[Math.floor(Math.random() * waves.length)]
 }
 
+function randomMelodyWave(): WaveType {
+  const waves: WaveType[] = ['sine', 'triangle', 'organ', 'brass', 'square']
+  return waves[Math.floor(Math.random() * waves.length)]
+}
+
+function buildScaleNoteFrequencies(scaleKey: string, scaleType: 'major' | 'minor' | 'chromatic'): number[] {
+  const rootSemitone = resolveScaleSemitoneRoot(scaleKey)
+  const scaleDegrees = scaleType === 'minor'
+    ? [0, 2, 3, 5, 7, 8, 10]
+    : scaleType === 'chromatic'
+      ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      : [0, 2, 4, 5, 7, 9, 11]
+
+  const rootMidi = (4 + 1) * 12 + rootSemitone
+  return scaleDegrees.map((degree) => midiNoteToFrequency(rootMidi + degree))
+}
+
+function makeMelodyClipId(trackId: string) {
+  return `${trackId}-melody-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+function clampTimelineBeat(beat: number) {
+  return Math.max(0, Math.min(TIMELINE_BEATS - 0.25, beat))
+}
+
+function normalizeMelodyStep(step: number) {
+  if (step <= 0.25) return 0.25
+  if (step <= 0.5) return 0.5
+  if (step <= 1) return 1
+  return 2
+}
+
+function clampMelodyLength(startBeat: number, length: number) {
+  return Math.max(0.25, Math.min(length, TIMELINE_BEATS - startBeat))
+}
+
+function randomMelodyDuration() {
+  const durations = [0.5, 0.5, 1, 1, 2]
+  return durations[Math.floor(Math.random() * durations.length)]
+}
+
+function pickScaleFrequency(scaleFrequencies: number[], previous?: number) {
+  if (scaleFrequencies.length === 0) return 440
+  if (!previous) return scaleFrequencies[Math.floor(Math.random() * scaleFrequencies.length)]
+
+  const nearby = scaleFrequencies.filter((hz) => Math.abs(hz - previous) <= 400)
+  const pool = nearby.length > 0 ? nearby : scaleFrequencies
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
 // MIDI utilities
 
 function frequencyToMIDINote(frequency: number): number {
@@ -370,6 +420,7 @@ export interface DAWActions {
   updateClipLengthBeats: (trackId: string, clipId: string, lengthBeats: number) => void
   quantizeClip: (trackId: string, clipId: string, gridBeats: number) => void
   insertChordPreset: (trackId: string, preset?: 'I-V-vi-IV' | 'vi-IV-I-V' | 'I-vi-IV-V', startBeat?: number, chordLengthBeats?: number) => void
+  generateMelody: (trackId: string, options?: { startBeat?: number; noteCount?: number; stepBeats?: number }) => void
   handleMIDIImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
@@ -1657,6 +1708,64 @@ export function useDAWActions(): DAWActions {
     })
   }
 
+  const generateMelody = (
+    trackId: string,
+    options?: { startBeat?: number; noteCount?: number; stepBeats?: number },
+  ) => {
+    if (isPlaying) return
+
+    applyProjectUpdate((prev) => {
+      const track = prev.tracks.find((t) => t.id === trackId)
+      if (!track || track.locked || track.isDrumTrack) return prev
+
+      const safeScaleType = resolveScaleType(prev.scaleType)
+      const scaleFrequencies = buildScaleNoteFrequencies(prev.scaleKey ?? 'C', safeScaleType)
+      if (scaleFrequencies.length === 0) return prev
+
+      const noteCount = Number.isFinite(options?.noteCount)
+        ? Math.max(4, Math.min(16, Math.round(Number(options?.noteCount))))
+        : 8
+      const stepBeats = Number.isFinite(options?.stepBeats)
+        ? normalizeMelodyStep(Number(options?.stepBeats))
+        : 0.5
+      const start = Number.isFinite(options?.startBeat)
+        ? clampTimelineBeat(Number(options?.startBeat))
+        : clampTimelineBeat(Math.round(useDAWStore.getState().playheadBeat * 2) / 2)
+
+      const generatedClips: Clip[] = []
+      let prevNote: number | undefined
+
+      for (let i = 0; i < noteCount; i++) {
+        const clipStart = clampTimelineBeat(start + i * stepBeats)
+        if (clipStart >= TIMELINE_BEATS) break
+
+        const lengthBeats = clampMelodyLength(clipStart, randomMelodyDuration())
+        const noteHz = pickScaleFrequency(scaleFrequencies, prevNote)
+        prevNote = noteHz
+
+        generatedClips.push({
+          id: makeMelodyClipId(trackId),
+          startBeat: clipStart,
+          lengthBeats,
+          noteHz,
+          wave: randomMelodyWave(),
+          name: `Melody ${i + 1}`,
+        })
+      }
+
+      if (generatedClips.length === 0) return prev
+
+      return {
+        ...prev,
+        tracks: prev.tracks.map((t) =>
+          t.id === trackId
+            ? { ...t, clips: [...t.clips, ...generatedClips] }
+            : t,
+        ),
+      }
+    })
+  }
+
   const handleMIDIImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -2225,6 +2334,7 @@ export function useDAWActions(): DAWActions {
     updateClipLengthBeats,
     quantizeClip,
     insertChordPreset,
+    generateMelody,
     handleMIDIImport,
     handleMIDIExport,
     handleAudioExport,

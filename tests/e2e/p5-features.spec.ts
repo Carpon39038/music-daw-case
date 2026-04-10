@@ -75,4 +75,16 @@ test.describe('P5 Features', () => {
 
     await expect(page.locator('.clip')).toHaveCount(beforeCount + 12);
   });
+
+  test('Melody generator inserts scale-locked melody clips', async ({ page }) => {
+    await page.getByTestId('track-header-track-1').click();
+
+    const beforeCount = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0);
+
+    await page.getByTestId('generate-melody-btn').click();
+
+    const afterCount = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0);
+    expect(afterCount).toBeGreaterThan(beforeCount);
+    expect(afterCount - beforeCount).toBeGreaterThanOrEqual(4);
+  });
 });
