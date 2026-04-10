@@ -11,7 +11,7 @@ export function Inspector(d: DAWActions) {
     setProject, applyProjectUpdate, setTrackFilterType, setTrackFilterCutoff,
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, generateStyleStarter, continueTrackIdea,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, continueTrackIdea,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
     selectedClipRef, selectedClipRefs, chordSuggestions,
@@ -136,6 +136,49 @@ export function Inspector(d: DAWActions) {
                   </button>
                 </div>
                 <p className="text-[10px] text-gray-500">One click generates drum + chord + bass draft and sets BPM/scale.</p>
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-mood-presets">
+                <label className="text-xs text-gray-500 block">Mood Presets</label>
+                <div className="grid grid-cols-2 gap-1">
+                  <button
+                    type="button"
+                    data-testid="mood-preset-happy-btn"
+                    onClick={() => applyMoodPreset('happy')}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    开心
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="mood-preset-healing-btn"
+                    onClick={() => applyMoodPreset('healing')}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    治愈
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="mood-preset-tense-btn"
+                    onClick={() => applyMoodPreset('tense')}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    紧张
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="mood-preset-cyber-btn"
+                    onClick={() => applyMoodPreset('cyber')}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    赛博
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-500">一键应用 BPM/调式/音色组合，并生成对应风格草稿。</p>
               </div>
 
               <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-melody-generator">

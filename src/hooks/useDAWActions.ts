@@ -178,6 +178,7 @@ function pickScaleFrequency(scaleFrequencies: number[], previous?: number) {
 }
 
 type StyleStarterGenre = 'lofi' | 'edm' | 'hiphop'
+type MoodPreset = 'happy' | 'healing' | 'tense' | 'cyber'
 
 const STYLE_STARTER_PRESETS: Record<StyleStarterGenre, {
   bpm: number
@@ -234,6 +235,43 @@ const STYLE_STARTER_PRESETS: Record<StyleStarterGenre, {
       snare: [4, 12],
       hihat: [0, 2, 3, 6, 8, 10, 11, 14],
     },
+  },
+}
+
+const MOOD_PRESETS: Record<MoodPreset, {
+  bpm: number
+  scaleKey: string
+  scaleType: 'major' | 'minor'
+  chordPreset: ChordPreset
+  styleGenre: StyleStarterGenre
+}> = {
+  happy: {
+    bpm: 118,
+    scaleKey: 'G',
+    scaleType: 'major',
+    chordPreset: 'I-V-vi-IV',
+    styleGenre: 'edm',
+  },
+  healing: {
+    bpm: 78,
+    scaleKey: 'C',
+    scaleType: 'major',
+    chordPreset: 'I-vi-IV-V',
+    styleGenre: 'lofi',
+  },
+  tense: {
+    bpm: 132,
+    scaleKey: 'D',
+    scaleType: 'minor',
+    chordPreset: 'vi-IV-I-V',
+    styleGenre: 'hiphop',
+  },
+  cyber: {
+    bpm: 128,
+    scaleKey: 'F#',
+    scaleType: 'minor',
+    chordPreset: 'I-V-vi-IV',
+    styleGenre: 'edm',
   },
 }
 
@@ -487,6 +525,7 @@ export interface DAWActions {
   generateMelody: (trackId: string, options?: { startBeat?: number; noteCount?: number; stepBeats?: number }) => void
   normalizeClipGains: () => void
   applyMagicPolish: () => void
+  applyMoodPreset: (mood: MoodPreset) => void
   generateStyleStarter: (genre: 'lofi' | 'edm' | 'hiphop') => void
   continueTrackIdea: (
     trackId: string,
@@ -1952,6 +1991,62 @@ export function useDAWActions(): DAWActions {
     setMasterVolume(0.85)
   }
 
+
+  const applyMoodPreset = (mood: MoodPreset) => {
+    if (isPlaying) return
+
+    const preset = MOOD_PRESETS[mood]
+    if (!preset) return
+
+    generateStyleStarter(preset.styleGenre)
+
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      bpm: preset.bpm,
+      tempoCurveType: 'constant',
+      tempoCurveTargetBpm: preset.bpm,
+      scaleKey: preset.scaleKey,
+      scaleType: preset.scaleType,
+    }))
+
+    const firstUnlockedTrackId = useDAWStore.getState().project.tracks.find((t) => !t.locked && !t.isDrumTrack)?.id
+    if (!firstUnlockedTrackId) return
+
+    const progression = buildChordFrequencies(preset.chordPreset, preset.scaleKey, preset.scaleType)
+    const chordLength = 2
+
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((track) => {
+        if (track.id !== firstUnlockedTrackId || track.locked || track.isDrumTrack) return track
+
+        const clipsOutsideDraft = track.clips.filter((clip) => clip.startBeat >= 16)
+        const moodChordClips: Clip[] = []
+
+        progression.forEach((notes, chordIndex) => {
+          const chordStart = chordIndex * chordLength
+          if (chordStart >= 8) return
+          notes.forEach((noteHz) => {
+            moodChordClips.push({
+              id: makeChordClipId(track.id),
+              startBeat: chordStart,
+              lengthBeats: chordLength,
+              noteHz,
+              wave: track.clips[0]?.wave ?? 'organ',
+              gain: 0.9,
+              name: `${mood.toUpperCase()} Chord ${chordIndex + 1}`,
+            })
+          })
+        })
+
+        return {
+          ...track,
+          clips: [...moodChordClips, ...clipsOutsideDraft],
+        }
+      }),
+    }))
+  }
+
   const generateStyleStarter = (genre: StyleStarterGenre) => {
     if (isPlaying) return
 
@@ -2742,6 +2837,7 @@ export function useDAWActions(): DAWActions {
     generateMelody,
     normalizeClipGains,
     applyMagicPolish,
+    applyMoodPreset,
     generateStyleStarter,
     continueTrackIdea,
     handleMIDIImport,
