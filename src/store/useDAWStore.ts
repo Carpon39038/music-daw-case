@@ -25,6 +25,7 @@ export interface ClipDragState {
   targetTrackId: string
   targetStartBeat: number
   targetConflicts: boolean
+  isCopy: boolean
 }
 
 const TRACK_COUNT = 4

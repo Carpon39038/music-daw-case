@@ -80,4 +80,59 @@ test.describe('clipboard copy/paste', () => {
     const clipCountAfter = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount)
     expect(clipCountAfter).toBe(clipCountBefore)
   })
+
+  test('alt-drag copies clip to another track without removing original', async ({ page }) => {
+    const sourceClip = page.locator('[data-testid="clip-track-1-clip-1-1"]')
+    const sourceBox = await sourceClip.boundingBox()
+    expect(sourceBox).not.toBeNull()
+
+    const targetTrack = page.locator('[data-testid="track-row-track-2"]')
+    const targetBox = await targetTrack.boundingBox()
+    expect(targetBox).not.toBeNull()
+
+    const totalBefore = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    const track1Before = await page.locator('[data-testid^="clip-track-1-"]').count()
+
+    await page.evaluate(({ sx, sy, tx, ty }) => {
+      const clipEl = document.querySelector('[data-testid="clip-track-1-clip-1-1"]') as HTMLElement | null
+      if (!clipEl) return
+
+      clipEl.dispatchEvent(new MouseEvent('mousedown', {
+        bubbles: true,
+        button: 0,
+        clientX: sx,
+        clientY: sy,
+        altKey: true,
+      }))
+
+      window.dispatchEvent(new MouseEvent('mousemove', {
+        bubbles: true,
+        buttons: 1,
+        clientX: tx,
+        clientY: ty,
+        altKey: true,
+      }))
+
+      window.dispatchEvent(new MouseEvent('mouseup', {
+        bubbles: true,
+        button: 0,
+        clientX: tx,
+        clientY: ty,
+        altKey: true,
+      }))
+    }, {
+      sx: sourceBox!.x + sourceBox!.width / 2,
+      sy: sourceBox!.y + sourceBox!.height / 2,
+      tx: targetBox!.x + 120,
+      ty: targetBox!.y + targetBox!.height / 2,
+    })
+
+    const totalAfter = await page.evaluate(() => window.__DAW_DEBUG__?.clipCount ?? 0)
+    const track1After = await page.locator('[data-testid^="clip-track-1-"]').count()
+    const track2After = await page.locator('[data-testid^="clip-track-2-"]').count()
+
+    expect(totalAfter).toBe(totalBefore + 1)
+    expect(track1After).toBe(track1Before)
+    expect(track2After).toBeGreaterThan(1)
+  })
 })

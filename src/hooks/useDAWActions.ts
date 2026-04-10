@@ -577,6 +577,7 @@ export function useDAWActions(): DAWActions {
     lengthBeats: number
     originProject: ProjectState
     hasMoved: boolean
+    isCopyDrag: boolean
   } | null>(null)
   const resizeStateRef = useRef<{
     trackId: string
@@ -2026,6 +2027,7 @@ export function useDAWActions(): DAWActions {
       lengthBeats,
       originProject: structuredClone(project),
       hasMoved: false,
+      isCopyDrag: e.altKey,
     }
     
     useDAWStore.getState().setClipDrag({
@@ -2036,7 +2038,8 @@ export function useDAWActions(): DAWActions {
       lengthBeats,
       targetTrackId: trackId,
       targetStartBeat: originStartBeat,
-      targetConflicts: false
+      targetConflicts: false,
+      isCopy: e.altKey,
     })
 
     let cancelled = false
@@ -2071,6 +2074,8 @@ export function useDAWActions(): DAWActions {
       const targetTrack = project.tracks.find(t => t.id === targetTrackId)
       let conflicts = false
       let resolvedStart = nextStart
+      const isCopyDrag = moveEvent.altKey
+      state.isCopyDrag = isCopyDrag
       
       if (targetTrack && !targetTrack.locked) {
         const srcTrack = state.originProject.tracks.find(t => t.id === state.trackId)
@@ -2092,7 +2097,8 @@ export function useDAWActions(): DAWActions {
         lengthBeats: state.lengthBeats,
         targetTrackId,
         targetStartBeat: resolvedStart,
-        targetConflicts: conflicts
+        targetConflicts: conflicts,
+        isCopy: isCopyDrag,
       })
     }
 
@@ -2118,30 +2124,50 @@ export function useDAWActions(): DAWActions {
           const clipId = currentDrag.clipId
           const nextStart = currentDrag.targetStartBeat
           
-          if (srcTrackId === tgtTrackId) {
-             updateClipStartBeat(srcTrackId, clipId, nextStart)
-             pushHistory(state.originProject)
+          if (currentDrag.isCopy) {
+            const sourceTrack = state.originProject.tracks.find(t => t.id === srcTrackId)
+            const sourceClip = sourceTrack?.clips.find(c => c.id === clipId)
+            const targetTrack = project.tracks.find(t => t.id === tgtTrackId)
+            if (sourceClip && targetTrack && !targetTrack.locked) {
+              const copyClipId = `${tgtTrackId}-copy-${Date.now()}`
+              setProject(prev => ({
+                ...prev,
+                tracks: prev.tracks.map(t => {
+                  if (t.id !== tgtTrackId) return t
+                  return {
+                    ...t,
+                    clips: [...t.clips, { ...sourceClip, id: copyClipId, startBeat: nextStart }],
+                  }
+                }),
+              }))
+              pushHistory(state.originProject)
+              setSelectedTrackId(tgtTrackId)
+              setSelectedClipRef({ trackId: tgtTrackId, clipId: copyClipId })
+            }
+          } else if (srcTrackId === tgtTrackId) {
+            updateClipStartBeat(srcTrackId, clipId, nextStart)
+            pushHistory(state.originProject)
           } else {
-             const targetTrack = project.tracks.find(t => t.id === tgtTrackId)
-             if (targetTrack && !targetTrack.locked) {
-                 const srcTrack = state.originProject.tracks.find(t => t.id === srcTrackId)
-                 const srcClip = srcTrack?.clips.find(c => c.id === clipId)
-                 if (srcClip) {
-                     setProject(prev => ({
-                      ...prev,
-                      tracks: prev.tracks.map(t => {
-                        if (t.id === srcTrackId) {
-                          return { ...t, clips: t.clips.filter(c => c.id !== clipId) }
-                        }
-                        if (t.id === tgtTrackId) {
-                          return { ...t, clips: [...t.clips, { ...srcClip, startBeat: nextStart }] }
-                        }
-                        return t
-                      })
-                     }))
-                     pushHistory(state.originProject)
-                 }
-             }
+            const targetTrack = project.tracks.find(t => t.id === tgtTrackId)
+            if (targetTrack && !targetTrack.locked) {
+              const srcTrack = state.originProject.tracks.find(t => t.id === srcTrackId)
+              const srcClip = srcTrack?.clips.find(c => c.id === clipId)
+              if (srcClip) {
+                setProject(prev => ({
+                  ...prev,
+                  tracks: prev.tracks.map(t => {
+                    if (t.id === srcTrackId) {
+                      return { ...t, clips: t.clips.filter(c => c.id !== clipId) }
+                    }
+                    if (t.id === tgtTrackId) {
+                      return { ...t, clips: [...t.clips, { ...srcClip, startBeat: nextStart }] }
+                    }
+                    return t
+                  })
+                }))
+                pushHistory(state.originProject)
+              }
+            }
           }
         }
       }
