@@ -51,7 +51,11 @@ function makeDistortionCurve(amount = 50) {
 export class AudioEngine {
   ctx: AudioContext | null = null
   masterGain: GainNode | null = null
+  masterLimiter: DynamicsCompressorNode | null = null
   analyser: AnalyserNode | null = null
+
+  private readonly masterVolumeCeiling = 0.9
+  private readonly limiterThresholdDb = -3
 
   scheduledNodes: Array<{ osc: AudioScheduledSourceNode; gain: GainNode }> = []
   scheduledFrequencyPreview: number[] = []
@@ -78,14 +82,22 @@ export class AudioEngine {
     if (!this.ctx) {
       const ctx = new AudioContext()
       const masterGain = ctx.createGain()
+      const limiter = ctx.createDynamicsCompressor()
       const analyser = ctx.createAnalyser()
       analyser.fftSize = 256
-      masterGain.gain.value = masterVolume
-      masterGain.connect(analyser)
+      masterGain.gain.value = Math.min(this.masterVolumeCeiling, masterVolume)
+      limiter.threshold.value = this.limiterThresholdDb
+      limiter.knee.value = 0
+      limiter.ratio.value = 20
+      limiter.attack.value = 0.003
+      limiter.release.value = 0.08
+      masterGain.connect(limiter)
+      limiter.connect(analyser)
       analyser.connect(ctx.destination)
 
       this.ctx = ctx
       this.masterGain = masterGain
+      this.masterLimiter = limiter
       this.analyser = analyser
     }
 
@@ -116,7 +128,7 @@ export class AudioEngine {
 
   setMasterVolume(volume: number) {
     if (this.masterGain) {
-      this.masterGain.gain.value = volume
+      this.masterGain.gain.value = Math.min(this.masterVolumeCeiling, volume)
     }
   }
 
@@ -659,6 +671,7 @@ export class AudioEngine {
     this.ctx?.close()
     this.ctx = null
     this.masterGain = null
+    this.masterLimiter = null
     this.analyser = null
   }
 }
