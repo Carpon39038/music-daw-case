@@ -3,6 +3,7 @@ import type { DAWActions } from '../hooks/useDAWActions'
 import { formatTime } from '../utils/formatTime'
 import { DEMOS } from '../utils/demos'
 import { ShareButton } from './ShareButton'
+import { ProjectGallery } from './ProjectGallery'
 import { useDAWStore } from '../store/useDAWStore'
 
 export function Transport({
@@ -379,6 +380,8 @@ export function Transport({
         >
           Save Template
         </button>
+
+        <ProjectGallery />
 
         <select
           disabled={isPlaying || projectTemplates.length === 0}

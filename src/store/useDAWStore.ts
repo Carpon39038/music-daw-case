@@ -40,6 +40,13 @@ export interface ProjectTemplate {
   project: ProjectState
 }
 
+export interface GalleryProject {
+  id: string
+  name: string
+  savedAt: number
+  project: ProjectState
+}
+
 interface PersistedDAWState {
   project: ProjectState
   masterVolume: number
@@ -50,6 +57,7 @@ interface PersistedDAWState {
   checkpoints: Checkpoint[]
   performanceMode: 'auto' | 'on' | 'off'
   projectTemplates: ProjectTemplate[]
+  galleryProjects: GalleryProject[]
 }
 
 interface DAWState extends PersistedDAWState {
@@ -90,6 +98,9 @@ interface DAWState extends PersistedDAWState {
   restoreCheckpoint: (id: string) => void
   saveProjectTemplate: (name: string) => void
   loadProjectTemplate: (id: string) => void
+  saveProjectToGallery: () => void
+  deleteGalleryProject: (id: string) => void
+  loadGalleryProject: (id: string) => void
 }
 
 function createInitialProject(): ProjectState {
@@ -228,6 +239,7 @@ function getDefaultPersistedState(): PersistedDAWState {
     checkpoints: [],
     performanceMode: 'auto',
     projectTemplates: [],
+    galleryProjects: [],
   }
 }
 
@@ -446,10 +458,39 @@ export const useDAWStore = create<DAWState>()(
             future: [],
           }
         }),
+      saveProjectToGallery: () =>
+        set((state) => {
+          const galleryEntry: GalleryProject = {
+            id: state.project.id ?? crypto.randomUUID(),
+            name: state.project.name?.trim() || 'Untitled Project',
+            savedAt: Date.now(),
+            project: cloneProject(state.project),
+          }
+          const withoutCurrent = state.galleryProjects.filter((p) => p.id !== galleryEntry.id)
+          return {
+            galleryProjects: [galleryEntry, ...withoutCurrent].slice(0, 100),
+          }
+        }),
+      deleteGalleryProject: (id) =>
+        set((state) => ({
+          galleryProjects: state.galleryProjects.filter((p) => p.id !== id),
+        })),
+      loadGalleryProject: (id) =>
+        set((state) => {
+          const galleryProject = state.galleryProjects.find((p) => p.id === id)
+          if (!galleryProject) return state
+          const nextProject = normalizeProject({ ...cloneProject(galleryProject.project), lastSavedAt: Date.now() })
+          return {
+            project: nextProject,
+            past: [...state.past, cloneProject(state.project)].slice(-100),
+            future: [],
+          }
+        }),
       resetProject: () =>
         set((state) => ({
           ...getDefaultPersistedState(),
           projectTemplates: state.projectTemplates,
+          galleryProjects: state.galleryProjects,
           isPlaying: false,
           playheadBeat: 0,
           selectedTrackId: null,
@@ -472,6 +513,7 @@ export const useDAWStore = create<DAWState>()(
         checkpoints: state.checkpoints || [],
         performanceMode: state.performanceMode,
         projectTemplates: state.projectTemplates || [],
+        galleryProjects: state.galleryProjects || [],
       }),
     },
   ),
