@@ -486,6 +486,7 @@ export interface DAWActions {
   insertChordPreset: (trackId: string, preset?: 'I-V-vi-IV' | 'vi-IV-I-V' | 'I-vi-IV-V', startBeat?: number, chordLengthBeats?: number) => void
   generateMelody: (trackId: string, options?: { startBeat?: number; noteCount?: number; stepBeats?: number }) => void
   normalizeClipGains: () => void
+  applyMagicPolish: () => void
   generateStyleStarter: (genre: 'lofi' | 'edm' | 'hiphop') => void
   continueTrackIdea: (
     trackId: string,
@@ -1915,6 +1916,42 @@ export function useDAWActions(): DAWActions {
     })
   }
 
+  const applyMagicPolish = () => {
+    if (isPlaying) return
+
+    applyProjectUpdate((prev) => {
+      const hasAnyUnlockedTrack = prev.tracks.some((track) => !track.locked)
+      if (!hasAnyUnlockedTrack) return prev
+
+      const polishedTracks = prev.tracks.map((track) => {
+        if (track.locked) return track
+
+        const clips = track.clips.map((clip) => ({
+          ...clip,
+          gain: 0.9,
+        }))
+
+        return {
+          ...track,
+          clips,
+          compressorEnabled: true,
+          compressorThreshold: -20,
+          compressorRatio: 4,
+          reverbEnabled: true,
+          reverbMix: 0.2,
+          reverbDecay: 1.8,
+        }
+      })
+
+      return {
+        ...prev,
+        tracks: polishedTracks,
+      }
+    })
+
+    setMasterVolume(0.85)
+  }
+
   const generateStyleStarter = (genre: StyleStarterGenre) => {
     if (isPlaying) return
 
@@ -2704,6 +2741,7 @@ export function useDAWActions(): DAWActions {
     insertChordPreset,
     generateMelody,
     normalizeClipGains,
+    applyMagicPolish,
     generateStyleStarter,
     continueTrackIdea,
     handleMIDIImport,

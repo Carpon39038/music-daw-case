@@ -11,7 +11,7 @@ export function Inspector(d: DAWActions) {
     setProject, applyProjectUpdate, setTrackFilterType, setTrackFilterCutoff,
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, generateStyleStarter, continueTrackIdea,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, generateStyleStarter, continueTrackIdea,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
     selectedClipRef, selectedClipRefs, chordSuggestions,
@@ -222,6 +222,15 @@ export function Inspector(d: DAWActions) {
                   className="w-full text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
                 >
                   Normalize clip volumes
+                </button>
+                <button
+                  type="button"
+                  data-testid="magic-polish-btn"
+                  onClick={applyMagicPolish}
+                  disabled={isPlaying}
+                  className="w-full text-xs px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white disabled:opacity-40"
+                >
+                  Magic Polish (Beginner Mix)
                 </button>
                 <p className="text-[10px] text-gray-500">Uses current Scale Key / Scale Type to create inspiration clips.</p>
               </div>
