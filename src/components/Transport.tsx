@@ -38,6 +38,17 @@ export function Transport({
   const playheadBeat = useDAWStore(s => s.playheadBeat)
   const checkpoints = useDAWStore(s => s.checkpoints || [])
   const restoreCheckpoint = useDAWStore(s => s.restoreCheckpoint)
+  const projectTemplates = useDAWStore(s => s.projectTemplates || [])
+  const saveProjectTemplate = useDAWStore(s => s.saveProjectTemplate)
+  const loadProjectTemplate = useDAWStore(s => s.loadProjectTemplate)
+
+  const handleSaveTemplate = () => {
+    const suggested = `${project.name || 'Untitled'} Template`
+    const templateName = window.prompt('保存为项目模板：请输入模板名称', suggested)
+    if (!templateName) return
+    saveProjectTemplate(templateName)
+  }
+
   return (
     <section className="transport h-16 bg-[#111] border-b border-gray-800 flex items-center px-4 justify-between flex-shrink-0" data-testid="transport">
       <div className="transport-primary flex items-center gap-4">
@@ -358,6 +369,35 @@ export function Transport({
             <option key={idx} value={idx}>{demo.name}</option>
           ))}
         </select>
+
+        <button
+          onClick={handleSaveTemplate}
+          disabled={isPlaying}
+          data-testid="save-template-btn"
+          className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded"
+          title="Save current project as reusable template"
+        >
+          Save Template
+        </button>
+
+        <select
+          disabled={isPlaying || projectTemplates.length === 0}
+          onChange={(e) => {
+            if (e.target.value) {
+              loadProjectTemplate(e.target.value)
+              e.target.value = ''
+            }
+          }}
+          className="px-2 py-1 text-xs bg-[#1a1a1a] text-gray-300 border border-gray-800 rounded focus:outline-none disabled:opacity-50"
+          defaultValue=""
+          data-testid="load-template-select"
+        >
+          <option value="" disabled>{projectTemplates.length ? 'Load Template...' : 'No Templates'}</option>
+          {projectTemplates.map((template) => (
+            <option key={template.id} value={template.id}>{template.name}</option>
+          ))}
+        </select>
+
         <button
           onClick={() => { resetProjectState(); clearHistory(); }}
           disabled={isPlaying}

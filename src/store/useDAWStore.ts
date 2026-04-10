@@ -33,6 +33,13 @@ const LEGACY_PROJECT_STORAGE_KEY = 'music-daw-case.project.v1'
 const LEGACY_MASTER_VOLUME_KEY = 'music-daw-case.masterVolume.v1'
 const LEGACY_MASTER_EQ_KEY = 'music-daw-case.masterEQ.v1'
 
+export interface ProjectTemplate {
+  id: string
+  name: string
+  createdAt: number
+  project: ProjectState
+}
+
 interface PersistedDAWState {
   project: ProjectState
   masterVolume: number
@@ -42,6 +49,7 @@ interface PersistedDAWState {
   metronomeEnabled: boolean
   checkpoints: Checkpoint[]
   performanceMode: 'auto' | 'on' | 'off'
+  projectTemplates: ProjectTemplate[]
 }
 
 interface DAWState extends PersistedDAWState {
@@ -80,6 +88,8 @@ interface DAWState extends PersistedDAWState {
   resetProject: () => void
   saveCheckpoint: (name: string) => void
   restoreCheckpoint: (id: string) => void
+  saveProjectTemplate: (name: string) => void
+  loadProjectTemplate: (id: string) => void
 }
 
 function createInitialProject(): ProjectState {
@@ -217,6 +227,7 @@ function getDefaultPersistedState(): PersistedDAWState {
     metronomeEnabled: false,
     checkpoints: [],
     performanceMode: 'auto',
+    projectTemplates: [],
   }
 }
 
@@ -410,9 +421,35 @@ export const useDAWStore = create<DAWState>()(
             future: [],
           };
         }),
+      saveProjectTemplate: (name) =>
+        set((state) => {
+          const trimmedName = name.trim()
+          if (!trimmedName) return state
+          const newTemplate: ProjectTemplate = {
+            id: crypto.randomUUID(),
+            name: trimmedName,
+            createdAt: Date.now(),
+            project: cloneProject(state.project),
+          }
+          return {
+            projectTemplates: [newTemplate, ...state.projectTemplates].slice(0, 50),
+          }
+        }),
+      loadProjectTemplate: (id) =>
+        set((state) => {
+          const template = state.projectTemplates.find((t) => t.id === id)
+          if (!template) return state
+          const nextProject = normalizeProject({ ...cloneProject(template.project), lastSavedAt: Date.now() })
+          return {
+            project: nextProject,
+            past: [...state.past, cloneProject(state.project)].slice(-100),
+            future: [],
+          }
+        }),
       resetProject: () =>
-        set({
+        set((state) => ({
           ...getDefaultPersistedState(),
+          projectTemplates: state.projectTemplates,
           isPlaying: false,
           playheadBeat: 0,
           selectedTrackId: null,
@@ -420,7 +457,7 @@ export const useDAWStore = create<DAWState>()(
           clipboard: null,
           past: [],
           future: [],
-        }),
+        })),
     }),
     {
       name: STORE_STORAGE_KEY,
@@ -433,6 +470,8 @@ export const useDAWStore = create<DAWState>()(
         loopLengthBeats: state.loopLengthBeats,
         metronomeEnabled: state.metronomeEnabled,
         checkpoints: state.checkpoints || [],
+        performanceMode: state.performanceMode,
+        projectTemplates: state.projectTemplates || [],
       }),
     },
   ),
