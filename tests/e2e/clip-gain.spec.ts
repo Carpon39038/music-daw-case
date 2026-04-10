@@ -31,4 +31,24 @@ test.describe('Clip Gain', () => {
     const gainInputReloaded = page.getByTestId('selected-clip-gain-input')
     await expect(gainInputReloaded).toHaveValue('50')
   })
+
+  test('should normalize unlocked clip gains to 100%', async ({ page }) => {
+    await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
+
+    const clips = page.locator('.clip')
+    await clips.nth(0).click()
+    await page.getByTestId('selected-clip-gain-input').fill('50')
+
+    await clips.nth(1).click()
+    await page.getByTestId('selected-clip-gain-input').fill('150')
+
+    await page.getByTestId('track-header-track-1').click()
+    await page.getByTestId('normalize-all-clips-btn').click()
+
+    await clips.nth(0).click()
+    await expect(page.getByTestId('selected-clip-gain-input')).toHaveValue('100')
+
+    await clips.nth(1).click()
+    await expect(page.getByTestId('selected-clip-gain-input')).toHaveValue('100')
+  })
 })

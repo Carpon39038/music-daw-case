@@ -10,7 +10,7 @@ export function Inspector(d: DAWActions) {
     setProject, applyProjectUpdate, setTrackFilterType, setTrackFilterCutoff,
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
     selectedClipRef, selectedClipRefs,
@@ -111,6 +111,15 @@ export function Inspector(d: DAWActions) {
                   className="w-full text-xs px-2 py-1 rounded bg-[#0f766e] hover:bg-[#115e59] text-white disabled:opacity-40"
                 >
                   Generate scale-locked melody (8 notes)
+                </button>
+                <button
+                  type="button"
+                  data-testid="normalize-all-clips-btn"
+                  onClick={normalizeClipGains}
+                  disabled={isPlaying}
+                  className="w-full text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                >
+                  Normalize clip volumes
                 </button>
                 <p className="text-[10px] text-gray-500">Uses current Scale Key / Scale Type to create inspiration clips.</p>
               </div>

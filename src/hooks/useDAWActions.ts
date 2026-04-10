@@ -421,6 +421,7 @@ export interface DAWActions {
   quantizeClip: (trackId: string, clipId: string, gridBeats: number) => void
   insertChordPreset: (trackId: string, preset?: 'I-V-vi-IV' | 'vi-IV-I-V' | 'I-vi-IV-V', startBeat?: number, chordLengthBeats?: number) => void
   generateMelody: (trackId: string, options?: { startBeat?: number; noteCount?: number; stepBeats?: number }) => void
+  normalizeClipGains: () => void
   handleMIDIImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
@@ -1766,6 +1767,29 @@ export function useDAWActions(): DAWActions {
     })
   }
 
+  const normalizeClipGains = () => {
+    if (isPlaying) return
+
+    applyProjectUpdate((prev) => {
+      const hasAnyUnlockedClip = prev.tracks.some((track) => !track.locked && track.clips.length > 0)
+      if (!hasAnyUnlockedClip) return prev
+
+      return {
+        ...prev,
+        tracks: prev.tracks.map((track) => {
+          if (track.locked || track.clips.length === 0) return track
+          return {
+            ...track,
+            clips: track.clips.map((clip) => ({
+              ...clip,
+              gain: 1.0,
+            })),
+          }
+        }),
+      }
+    })
+  }
+
   const handleMIDIImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -2335,6 +2359,7 @@ export function useDAWActions(): DAWActions {
     quantizeClip,
     insertChordPreset,
     generateMelody,
+    normalizeClipGains,
     handleMIDIImport,
     handleMIDIExport,
     handleAudioExport,
