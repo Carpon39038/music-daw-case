@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
-import type { Clip, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, ProjectState, Track, WaveType } from '../types'
+import type { Clip, ExportVersionEntry, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, ProjectState, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
@@ -379,6 +379,13 @@ interface ExportLoudnessReport {
   verdict: 'ready' | 'adjust' | 'clipping-risk'
   checkedAt: number
 }
+
+function sanitizeExportVersionName(name: string, fallbackIndex = 1) {
+  const trimmed = name.trim()
+  if (trimmed) return trimmed.slice(0, 48)
+  return `版本 ${fallbackIndex}`
+}
+
 
 interface PreExportChecklistItem {
   key: 'empty-track' | 'master-muted' | 'peak-clipping' | 'unnamed-project' | 'loop-export-mismatch'
@@ -1072,6 +1079,9 @@ export interface DAWActions {
   monitorSource: MonitorSource
   referenceTrack: ReferenceTrackState | null
   lastExportLoudnessReport: ExportLoudnessReport | null
+  exportVersionHistory: ExportVersionEntry[]
+  renameExportVersion: (id: string, name: string) => void
+  previewExportVersion: (id: string) => void
   lastPreExportChecklistReport: PreExportChecklistReport | null
   autoMixSuggestionItems: AutoMixSuggestionItem[]
   autoMixAvailable: boolean
@@ -1155,6 +1165,7 @@ export function useDAWActions(): DAWActions {
   const [isRecording, setIsRecording] = React.useState(false)
   const [lastExportLoudnessReport, setLastExportLoudnessReport] = React.useState<ExportLoudnessReport | null>(null)
   const [lastPreExportChecklistReport, setLastPreExportChecklistReport] = React.useState<PreExportChecklistReport | null>(null)
+  const exportVersionHistory = useMemo(() => (project.exportVersions ?? []).slice(0, 5), [project.exportVersions])
   const [monitorSource, setMonitorSource] = React.useState<MonitorSource>('project')
   const [referenceTrack, setReferenceTrack] = React.useState<ReferenceTrackState | null>(null)
   const referenceAudioRef = React.useRef<HTMLAudioElement | null>(null)
@@ -1482,6 +1493,49 @@ export function useDAWActions(): DAWActions {
     setMonitorSource('project')
   }, [referenceTrack])
 
+  const rememberExportVersion = React.useCallback((entry: Omit<ExportVersionEntry, 'id' | 'createdAt' | 'name'>) => {
+    setProject((prev) => {
+      const existing = prev.exportVersions ?? []
+      const index = existing.length + 1
+      const next: ExportVersionEntry = {
+        id: crypto.randomUUID(),
+        createdAt: Date.now(),
+        name: sanitizeExportVersionName(`${entry.format.toUpperCase()} ${index}`, index),
+        ...entry,
+      }
+      return {
+        ...prev,
+        exportVersions: [next, ...existing].slice(0, 5),
+      }
+    })
+  }, [setProject])
+
+  const renameExportVersion = React.useCallback((id: string, name: string) => {
+    const normalized = sanitizeExportVersionName(name)
+    setProject((prev) => {
+      const history = prev.exportVersions ?? []
+      const exists = history.some((item) => item.id === id)
+      if (!exists) return prev
+      return {
+        ...prev,
+        exportVersions: history.map((item) => (item.id === id ? { ...item, name: normalized } : item)),
+      }
+    })
+  }, [setProject])
+
+  const previewExportVersion = React.useCallback((id: string) => {
+    const entry = (project.exportVersions ?? []).find((item) => item.id === id)
+    if (!entry?.audioDataUrl) {
+      window.alert('该版本无可回放音频（可能来自旧版本导出记录）。')
+      return
+    }
+
+    const audio = new Audio(entry.audioDataUrl)
+    audio.play().catch(() => {
+      window.alert('浏览器阻止了自动播放，请在用户交互后重试。')
+    })
+  }, [project.exportVersions])
+
   const importReferenceTrack = React.useCallback(async (file: File) => {
     const objectUrl = URL.createObjectURL(file)
     const rawRmsDb = await estimateAudioFileRmsDb(file)
@@ -1572,6 +1626,17 @@ export function useDAWActions(): DAWActions {
       )
       const blob = new Blob([wavData], { type: 'audio/wav' })
       const url = URL.createObjectURL(blob)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        rememberExportVersion({
+          format: 'wav',
+          durationSec: totalDurationSec,
+          peakDb: loudness.peakDb,
+          rmsDb: loudness.rmsDb,
+          audioDataUrl: typeof reader.result === 'string' ? reader.result : undefined,
+        })
+      }
+      reader.readAsDataURL(blob)
 
       const a = document.createElement('a')
       a.href = url
@@ -1612,6 +1677,17 @@ export function useDAWActions(): DAWActions {
       const mp3Data = audioBufferToMp3(audioBuffer)
       const blob = new Blob([mp3Data], { type: 'audio/mp3' })
       const url = URL.createObjectURL(blob)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        rememberExportVersion({
+          format: 'mp3',
+          durationSec: totalDurationSec,
+          peakDb: loudness.peakDb,
+          rmsDb: loudness.rmsDb,
+          audioDataUrl: typeof reader.result === 'string' ? reader.result : undefined,
+        })
+      }
+      reader.readAsDataURL(blob)
 
       const a = document.createElement('a')
       a.href = url
@@ -4230,6 +4306,9 @@ export function useDAWActions(): DAWActions {
     monitorSource,
     referenceTrack,
     lastExportLoudnessReport,
+    exportVersionHistory,
+    renameExportVersion,
+    previewExportVersion,
     lastPreExportChecklistReport,
     autoMixSuggestionItems,
     autoMixAvailable,

@@ -153,6 +153,9 @@ export function Transport({
   monitorSource,
   referenceTrack,
   lastExportLoudnessReport,
+  exportVersionHistory,
+  renameExportVersion,
+  previewExportVersion,
   lastPreExportChecklistReport,
   handleSocialPublish,
   handleExportProjectCard,
@@ -285,6 +288,12 @@ export function Transport({
   const challenge16BeatDone = has16Beats(project)
 
   const challengeInitialStep = getInitialChallengeStep(project)
+
+  const handleRenameExportVersion = (id: string, currentName: string) => {
+    const nextName = window.prompt('重命名导出版本', currentName)
+    if (!nextName) return
+    renameExportVersion(id, nextName)
+  }
 
   return (
     <section className="transport h-16 bg-[#111] border-b border-gray-800 flex items-center px-4 justify-between flex-shrink-0" data-testid="transport">
@@ -485,8 +494,6 @@ export function Transport({
             >
               LOOP
             </button>
-        <ShareButton />
-
             <select
               value={loopLengthBeats}
               onChange={(e) => setLoopLengthBeats(Number(e.target.value))}
@@ -686,7 +693,7 @@ export function Transport({
 
         <ProjectGallery />
 
-        <div className="ml-2 rounded border border-gray-800 bg-[#111] px-2 py-2 min-w-[320px]" data-testid="reference-ab-panel">
+        <div className="ml-2 rounded border border-gray-800 bg-[#111] px-2 py-2 w-[300px] overflow-hidden" data-testid="reference-ab-panel">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] text-emerald-300 font-semibold">Reference A/B</span>
             <span className="text-[10px] text-gray-500" data-testid="reference-current-label">当前：{monitorSource === 'reference' ? 'Reference' : 'Project'}</span>
@@ -748,6 +755,42 @@ export function Transport({
                 ? '全部通过'
                 : `${lastPreExportChecklistReport.failedCount} 项未通过`
               : '未检查'}
+          </div>
+          <div className="mt-2 border-t border-gray-800 pt-2" data-testid="export-version-compare-panel">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-emerald-300 font-semibold">导出版本对比</span>
+              <span className="text-[10px] text-gray-500">最近 {exportVersionHistory.length}/5</span>
+            </div>
+            {exportVersionHistory.length === 0 ? (
+              <div className="mt-1 text-[10px] text-gray-500">暂无导出记录（先导出 WAV/MP3）</div>
+            ) : (
+              <ul className="mt-1 space-y-1" data-testid="export-version-compare-list">
+                {exportVersionHistory.map((item) => (
+                  <li key={item.id} className="text-[10px] rounded border border-gray-800/80 px-2 py-1 min-w-0">
+                    <button
+                      type="button"
+                      data-testid={`export-version-preview-${item.id}`}
+                      onClick={() => previewExportVersion(item.id)}
+                      className="block w-full text-left text-gray-300 hover:text-emerald-300 truncate"
+                      title="点击回放"
+                    >
+                      {item.name} · {item.format.toUpperCase()} · {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </button>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-gray-500">
+                      <span className="truncate">{Math.floor(item.durationSec / 60)}:{String(Math.round(item.durationSec) % 60).padStart(2, '0')} / 峰值 {formatLoudnessDb(item.peakDb)} / RMS {formatLoudnessDb(item.rmsDb)}</span>
+                      <button
+                        type="button"
+                        data-testid={`export-version-rename-${item.id}`}
+                        onClick={() => handleRenameExportVersion(item.id, item.name)}
+                        className="px-1 py-0.5 rounded border border-gray-700 text-gray-400 hover:text-gray-200 shrink-0"
+                      >
+                        改名
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 

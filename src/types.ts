@@ -131,6 +131,17 @@ export interface Marker {
   beat: number
 }
 
+export interface ExportVersionEntry {
+  id: string
+  name: string
+  createdAt: number
+  format: 'wav' | 'mp3'
+  durationSec: number
+  peakDb: number
+  rmsDb: number
+  audioDataUrl?: string
+}
+
 export interface ProjectState {
   id?: string
   name?: string
@@ -142,6 +153,7 @@ export interface ProjectState {
   scaleType?: string
   tracks: Track[]
   markers?: Marker[]
+  exportVersions?: ExportVersionEntry[]
 }
 
 export interface MasterEQ {

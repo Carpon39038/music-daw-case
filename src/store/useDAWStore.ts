@@ -149,6 +149,7 @@ function createInitialProject(): ProjectState {
     scaleKey: 'C',
     scaleType: 'chromatic',
     markers: [],
+    exportVersions: [],
     tracks: Array.from({ length: TRACK_COUNT }).map((_, i) => ({
       id: `track-${i + 1}`,
       name: `Track ${i + 1}`,
@@ -256,6 +257,7 @@ function normalizeProject(project: ProjectState): ProjectState {
       name: marker.name,
       beat: Math.max(0, Math.min(16, marker.beat)),
     })),
+    exportVersions: (project.exportVersions ?? []).slice(0, 5),
     tracks: project.tracks.map((track) => ({
       ...track,
       locked: track.locked ?? false,
