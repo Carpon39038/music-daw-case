@@ -146,6 +146,11 @@ export function Transport({
   handleMIDIExport,
   handleAudioExport,
   handleMp3Export,
+  importReferenceTrack,
+  clearReferenceTrack,
+  toggleReferenceAB,
+  monitorSource,
+  referenceTrack,
   lastExportLoudnessReport,
   handleSocialPublish,
   handleExportProjectCard,
@@ -267,6 +272,7 @@ export function Transport({
     : getChallengeStepLabel(challengeStep)
 
   const challengeCanExport = challengeStep >= 3 && !isPlaying && !challengeExporting
+  const referenceInputRef = useRef<HTMLInputElement | null>(null)
 
   const challengeNote = challengeCompleted
     ? `风格：${styleLabel(challengeStyle)} · 已完成 30 秒闭环`
@@ -666,6 +672,63 @@ export function Transport({
 
         <ProjectGallery />
 
+        <div className="ml-2 rounded border border-gray-800 bg-[#111] px-2 py-2 min-w-[320px]" data-testid="reference-ab-panel">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-emerald-300 font-semibold">Reference A/B</span>
+            <span className="text-[10px] text-gray-500" data-testid="reference-current-label">当前：{monitorSource === 'reference' ? 'Reference' : 'Project'}</span>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              ref={referenceInputRef}
+              type="file"
+              accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg"
+              className="hidden"
+              data-testid="reference-import-input"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (!file) return
+                void importReferenceTrack(file)
+                event.currentTarget.value = ''
+              }}
+            />
+            <button
+              type="button"
+              data-testid="reference-import-btn"
+              onClick={() => referenceInputRef.current?.click()}
+              className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded"
+            >
+              导入参考曲
+            </button>
+            <button
+              type="button"
+              data-testid="reference-ab-toggle"
+              onClick={toggleReferenceAB}
+              disabled={!referenceTrack}
+              className={`px-2 py-1 text-xs border rounded disabled:opacity-40 ${monitorSource === 'reference' ? 'bg-amber-900/40 border-amber-700 text-amber-300' : 'bg-[#1a1a1a] hover:bg-gray-800 border-gray-800 text-gray-300'}`}
+            >
+              A/B: {monitorSource === 'reference' ? 'REFERENCE' : 'PROJECT'} (R)
+            </button>
+            <button
+              type="button"
+              data-testid="reference-clear-btn"
+              onClick={clearReferenceTrack}
+              disabled={!referenceTrack}
+              className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-400 border border-gray-800 rounded disabled:opacity-40"
+            >
+              清除
+            </button>
+          </div>
+          <div className="mt-1 text-[10px] text-gray-500" data-testid="reference-match-status">
+            {referenceTrack
+              ? `${referenceTrack.fileName} · 自动匹配 ${referenceTrack.matchedGainDb >= 0 ? '+' : ''}${referenceTrack.matchedGainDb.toFixed(1)} dB · 误差 ±${referenceTrack.matchedDeltaDb.toFixed(1)} dB`
+              : '导入 1 首参考曲后可用 A/B 切听，音量将自动匹配到 ±1 dB 附近。'}
+          </div>
+          <div className="mt-2 text-[10px] text-gray-500" data-testid="export-loudness-status">
+            导出响度检查：{loudnessVerdictLabel(lastExportLoudnessReport?.verdict)}
+            {lastExportLoudnessReport ? `（峰值 ${formatLoudnessDb(lastExportLoudnessReport.peakDb)} / RMS ${formatLoudnessDb(lastExportLoudnessReport.rmsDb)}）` : ''}
+          </div>
+        </div>
+
         {challengeOpen && (
           <div
             className="ml-2 px-2 py-2 rounded border border-amber-800/60 bg-[#14120f] min-w-[280px]"
@@ -717,10 +780,6 @@ export function Transport({
               >
                 {challengeExporting ? '导出中…' : challengeCompleted ? '再次导出' : '完成并导出'}
               </button>
-            </div>
-            <div className="mt-2 text-[10px] text-gray-500" data-testid="export-loudness-status">
-              导出响度检查：{loudnessVerdictLabel(lastExportLoudnessReport?.verdict)}
-              {lastExportLoudnessReport ? `（峰值 ${formatLoudnessDb(lastExportLoudnessReport.peakDb)} / RMS ${formatLoudnessDb(lastExportLoudnessReport.rmsDb)}）` : ''}
             </div>
           </div>
         )}

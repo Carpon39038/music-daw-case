@@ -80,6 +80,10 @@ export function ShortcutPanel() {
                   <span className="bg-gray-800 text-gray-300 px-2 py-1 rounded text-sm font-mono border border-gray-700">Shift + Click</span>
                 </li>
                 <li className="flex justify-between items-center">
+                  <span className="text-gray-300">Reference A/B 切听</span>
+                  <span className="bg-gray-800 text-gray-300 px-2 py-1 rounded text-sm font-mono border border-gray-700">R</span>
+                </li>
+                <li className="flex justify-between items-center">
                   <span className="text-gray-300">打开此面板</span>
                   <span className="bg-gray-800 text-gray-300 px-2 py-1 rounded text-sm font-mono border border-gray-700">?</span>
                 </li>

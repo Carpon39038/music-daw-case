@@ -378,6 +378,16 @@ interface ExportLoudnessReport {
   checkedAt: number
 }
 
+interface ReferenceTrackState {
+  fileName: string
+  objectUrl: string
+  rawRmsDb: number | null
+  matchedGainDb: number
+  matchedDeltaDb: number
+}
+
+type MonitorSource = 'project' | 'reference'
+
 type AutoMixCategory = 'drum' | 'bass' | 'harmony'
 
 type VocalInputWarning = {
@@ -670,6 +680,81 @@ function analyzeBufferLoudness(buffer: AudioBuffer): ExportLoudnessReport {
   }
 }
 
+function dbToLinear(db: number) {
+  return 10 ** (db / 20)
+}
+
+async function estimateAudioFileRmsDb(file: File): Promise<number | null> {
+  try {
+    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!AudioContextCtor) return null
+
+    const ctx = new AudioContextCtor()
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const decoded = await ctx.decodeAudioData(arrayBuffer.slice(0))
+
+      let sumSq = 0
+      let sampleCount = 0
+      for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+        const data = decoded.getChannelData(ch)
+        sampleCount += data.length
+        for (let i = 0; i < data.length; i++) {
+          const value = data[i]
+          sumSq += value * value
+        }
+      }
+
+      if (sampleCount === 0) return null
+      const rms = Math.sqrt(sumSq / sampleCount)
+      if (!Number.isFinite(rms) || rms <= 0) return null
+      return 20 * Math.log10(rms)
+    } finally {
+      await ctx.close()
+    }
+  } catch {
+    return null
+  }
+}
+
+function estimateProjectRmsDbForReference(project: ProjectState) {
+  const clips = project.tracks.flatMap((track) => track.clips)
+  if (clips.length === 0) return -18
+
+  const energy = clips.reduce((sum, clip) => {
+    const gain = clip.gain ?? 1
+    return sum + gain * gain
+  }, 0)
+
+  const rms = Math.sqrt(energy / clips.length)
+  if (!Number.isFinite(rms) || rms <= 0) return -18
+  return 20 * Math.log10(rms)
+}
+
+function resolveReferenceMatchedGainDb(referenceRmsDb: number | null, projectRmsDb: number | null) {
+  if (referenceRmsDb == null || projectRmsDb == null || !Number.isFinite(referenceRmsDb) || !Number.isFinite(projectRmsDb)) {
+    return 0
+  }
+
+  const delta = projectRmsDb - referenceRmsDb
+  return Math.max(-12, Math.min(12, delta))
+}
+
+function toReferencePlaybackSeconds(playheadBeat: number, bpm: number) {
+  if (!Number.isFinite(playheadBeat) || playheadBeat <= 0 || bpm <= 0) return 0
+  return (playheadBeat * 60) / bpm
+}
+
+function toPlayheadBeatFromSeconds(seconds: number, bpm: number) {
+  if (!Number.isFinite(seconds) || seconds <= 0 || bpm <= 0) return 0
+  return seconds / (60 / bpm)
+}
+
+function isReferenceShortcutKey(event: KeyboardEvent) {
+  if (event.metaKey || event.ctrlKey || event.altKey) return false
+  return event.key.toLowerCase() === 'r'
+}
+
 // Window debug type
 declare global {
   interface Window {
@@ -865,6 +950,11 @@ export interface DAWActions {
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
   handleMp3Export: () => Promise<void>
+  importReferenceTrack: (file: File) => Promise<void>
+  clearReferenceTrack: () => void
+  toggleReferenceAB: () => void
+  monitorSource: MonitorSource
+  referenceTrack: ReferenceTrackState | null
   lastExportLoudnessReport: ExportLoudnessReport | null
   autoMixSuggestionItems: AutoMixSuggestionItem[]
   autoMixAvailable: boolean
@@ -947,6 +1037,9 @@ export function useDAWActions(): DAWActions {
   const redo = useDAWStore((state) => state.redo)
   const [isRecording, setIsRecording] = React.useState(false)
   const [lastExportLoudnessReport, setLastExportLoudnessReport] = React.useState<ExportLoudnessReport | null>(null)
+  const [monitorSource, setMonitorSource] = React.useState<MonitorSource>('project')
+  const [referenceTrack, setReferenceTrack] = React.useState<ReferenceTrackState | null>(null)
+  const referenceAudioRef = React.useRef<HTMLAudioElement | null>(null)
   const [autoMixBaseProject, setAutoMixBaseProject] = React.useState<ProjectState | null>(null)
   const [autoMixSuggestions, setAutoMixSuggestions] = React.useState<AutoMixSuggestion[]>([])
   const [autoMixAppliedSuggestionIds, setAutoMixAppliedSuggestionIds] = React.useState<string[]>([])
@@ -1261,6 +1354,72 @@ export function useDAWActions(): DAWActions {
     audioEngine.setMasterVolume(masterVolume)
   }, [masterVolume])
 
+  const clearReferenceTrack = React.useCallback(() => {
+    stopReferencePlayback(true)
+    if (referenceTrack?.objectUrl) {
+      URL.revokeObjectURL(referenceTrack.objectUrl)
+    }
+    referenceAudioRef.current = null
+    setReferenceTrack(null)
+    setMonitorSource('project')
+  }, [referenceTrack])
+
+  const importReferenceTrack = React.useCallback(async (file: File) => {
+    const objectUrl = URL.createObjectURL(file)
+    const rawRmsDb = await estimateAudioFileRmsDb(file)
+    const projectRmsDb = lastExportLoudnessReport?.rmsDb ?? estimateProjectRmsDbForReference(project)
+    const matchedGainDb = resolveReferenceMatchedGainDb(rawRmsDb, projectRmsDb)
+    const matchedDeltaDb = rawRmsDb == null ? 0 : Math.abs(projectRmsDb - (rawRmsDb + matchedGainDb))
+
+    if (referenceTrack?.objectUrl) {
+      URL.revokeObjectURL(referenceTrack.objectUrl)
+    }
+
+    const audio = new Audio(objectUrl)
+    audio.preload = 'auto'
+    audio.loop = loopEnabled
+    audio.volume = Math.max(0, Math.min(1, dbToLinear(matchedGainDb)))
+
+    referenceAudioRef.current = audio
+    setReferenceTrack({
+      fileName: file.name,
+      objectUrl,
+      rawRmsDb,
+      matchedGainDb,
+      matchedDeltaDb,
+    })
+    setMonitorSource('project')
+  }, [lastExportLoudnessReport?.rmsDb, loopEnabled, project, referenceTrack?.objectUrl])
+
+  const toggleReferenceAB = React.useCallback(() => {
+    if (!referenceTrack || !referenceAudioRef.current) return
+    const nextSource: MonitorSource = monitorSource === 'project' ? 'reference' : 'project'
+
+    if (nextSource === 'reference') {
+      stopPlayback()
+      setMonitorSource('reference')
+      return
+    }
+
+    stopReferencePlayback(true)
+    setMonitorSource('project')
+  }, [monitorSource, referenceTrack])
+
+  useEffect(() => {
+    const audio = referenceAudioRef.current
+    if (!audio) return
+    audio.loop = loopEnabled
+  }, [loopEnabled, referenceTrack])
+
+  useEffect(() => {
+    return () => {
+      stopReferencePlayback(true)
+      if (referenceTrack?.objectUrl) {
+        URL.revokeObjectURL(referenceTrack.objectUrl)
+      }
+    }
+  }, [referenceTrack])
+
   const handleAudioExport = async () => {
     try {
       const audioBuffer = await audioEngine.renderBuffer(
@@ -1460,11 +1619,25 @@ export function useDAWActions(): DAWActions {
     audioEngine.clearScheduledNodes()
   }
 
+  const stopReferencePlayback = (resetTime = true) => {
+    const audio = referenceAudioRef.current
+    if (!audio) return
+    audio.pause()
+    if (resetTime) {
+      try {
+        audio.currentTime = 0
+      } catch {
+        // noop
+      }
+    }
+  }
+
   const stopPlayback = () => {
     setIsPlaying(false)
     setPlayheadBeat(0)
     loopRestartCountRef.current = 0
     clearScheduledNodes()
+    stopReferencePlayback(true)
 
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current)
@@ -1475,6 +1648,7 @@ export function useDAWActions(): DAWActions {
   const pausePlayback = () => {
     setIsPlaying(false)
     clearScheduledNodes()
+    stopReferencePlayback(false)
 
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current)
@@ -1505,6 +1679,21 @@ export function useDAWActions(): DAWActions {
   }
 
   const startPlayback = async () => {
+    if (monitorSource === 'reference') {
+      const audio = referenceAudioRef.current
+      if (!audio) return
+      stopPlayback()
+      const targetSec = toReferencePlaybackSeconds(useDAWStore.getState().playheadBeat, project.bpm)
+      try {
+        audio.currentTime = Math.max(0, Math.min(targetSec, Number.isFinite(audio.duration) ? audio.duration : targetSec))
+      } catch {
+        // noop
+      }
+      await audio.play().catch(() => undefined)
+      setIsPlaying(true)
+      return
+    }
+
     await audioEngine.ensureAudio(masterVolume)
     loopRestartCountRef.current = 0
     clearScheduledNodes()
@@ -1517,6 +1706,35 @@ export function useDAWActions(): DAWActions {
     if (!isPlaying) return
 
     const update = () => {
+      if (monitorSource === 'reference') {
+        const audio = referenceAudioRef.current
+        if (!audio) {
+          stopPlayback()
+          return
+        }
+
+        const currentBeat = toPlayheadBeatFromSeconds(audio.currentTime || 0, project.bpm)
+        setPlayheadBeat(loopEnabled ? currentBeat % effectiveTimelineBeats : currentBeat)
+
+        if (audio.ended) {
+          if (loopEnabled) {
+            try {
+              audio.currentTime = 0
+            } catch {
+              // noop
+            }
+            void audio.play().catch(() => undefined)
+            animationRef.current = requestAnimationFrame(update)
+            return
+          }
+          stopPlayback()
+          return
+        }
+
+        animationRef.current = requestAnimationFrame(update)
+        return
+      }
+
       const elapsed = audioEngine.getElapsed()
       const beat = secondsToBeat(elapsed, {
         bpm: project.bpm,
@@ -1549,7 +1767,7 @@ export function useDAWActions(): DAWActions {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, totalDurationSec, project.bpm, tempoCurveType, tempoCurveTargetBpm, effectiveTimelineBeats, loopEnabled])
+  }, [isPlaying, totalDurationSec, project.bpm, tempoCurveType, tempoCurveTargetBpm, effectiveTimelineBeats, loopEnabled, monitorSource])
 
   useEffect(() => {
     const drawMeter = () => {
@@ -3569,11 +3787,17 @@ export function useDAWActions(): DAWActions {
         }
         return
       }
+
+      if (isReferenceShortcutKey(event)) {
+        if (!referenceTrack) return
+        event.preventDefault()
+        toggleReferenceAB()
+      }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [cutClip, isPlaying, project, copyClip, deleteClip, pasteClip, pausePlayback, redo, selectedClipRef, selectedTrackId, startPlayback, stopPlayback, undo])
+  }, [cutClip, isPlaying, project, copyClip, deleteClip, pasteClip, pausePlayback, redo, referenceTrack, selectedClipRef, selectedTrackId, startPlayback, stopPlayback, toggleReferenceAB, undo])
 
   return {
     project,
@@ -3689,6 +3913,11 @@ export function useDAWActions(): DAWActions {
     handleMIDIExport,
     handleAudioExport,
     handleMp3Export,
+    importReferenceTrack,
+    clearReferenceTrack,
+    toggleReferenceAB,
+    monitorSource,
+    referenceTrack,
     lastExportLoudnessReport,
     autoMixSuggestionItems,
     autoMixAvailable,
