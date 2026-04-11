@@ -15,6 +15,8 @@ export function Inspector(d: DAWActions) {
     updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, continueTrackIdea,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
+    favoriteClips, favoriteClipSearchQuery, setFavoriteClipSearchQuery,
+    saveFavoriteClipFromSelection, pasteFavoriteClipToTrack, deleteFavoriteClip,
     selectedClipRef, selectedClipRefs, chordSuggestions,
   } = d
 
@@ -726,6 +728,63 @@ export function Inspector(d: DAWActions) {
               </div>
 
               <div className="inspector-meta text-xs text-gray-600 font-mono" data-testid="selected-clip-duplicate-target-beat">Duplicate target beat: {selectedClipData.duplicateStartBeat}</div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="favorite-clips-panel">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs text-gray-500">Favorite Clips</label>
+                  <button
+                    type="button"
+                    data-testid="favorite-clip-save-btn"
+                    onClick={() => saveFavoriteClipFromSelection()}
+                    disabled={isPlaying || selectedClipData.track.locked}
+                    className="px-2 py-0.5 text-[10px] bg-[#1a1a1a] hover:bg-gray-800 border border-gray-800 rounded text-gray-300 disabled:opacity-40"
+                  >
+                    收藏当前 Clip
+                  </button>
+                </div>
+                <input
+                  data-testid="favorite-clip-search-input"
+                  type="text"
+                  value={favoriteClipSearchQuery}
+                  onChange={(e) => setFavoriteClipSearchQuery(e.target.value)}
+                  placeholder="搜索收藏（名称/调式/音高）"
+                  className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-xs focus:outline-none focus:border-emerald-500 text-gray-200"
+                />
+                <div className="max-h-32 overflow-auto space-y-1" data-testid="favorite-clip-list">
+                  {favoriteClips
+                    .filter((item) => {
+                      const q = favoriteClipSearchQuery.trim().toLowerCase()
+                      if (!q) return true
+                      return (`${item.name} ${item.scaleKey} ${item.scaleType} ${item.noteLabel}`).toLowerCase().includes(q)
+                    })
+                    .map((item) => (
+                      <div key={item.id} className="rounded border border-gray-800 bg-[#111] px-2 py-1" data-testid={`favorite-clip-item-${item.id}`}>
+                        <div className="text-[11px] text-gray-200 truncate">{item.name}</div>
+                        <div className="text-[10px] text-gray-500">{item.durationBeats} beats · {item.scaleKey} {item.scaleType} · {item.noteLabel}</div>
+                        <div className="mt-1 flex items-center gap-1">
+                          <button
+                            type="button"
+                            data-testid={`favorite-clip-paste-${item.id}`}
+                            onClick={() => selectedTrackId && pasteFavoriteClipToTrack(item.id, selectedTrackId)}
+                            disabled={!selectedTrackId || isPlaying}
+                            className="px-1.5 py-0.5 text-[10px] bg-[#1a1a1a] hover:bg-gray-800 border border-gray-800 rounded text-gray-300 disabled:opacity-40"
+                          >
+                            粘贴到当前轨道
+                          </button>
+                          <button
+                            type="button"
+                            data-testid={`favorite-clip-delete-${item.id}`}
+                            onClick={() => deleteFavoriteClip(item.id)}
+                            className="px-1.5 py-0.5 text-[10px] bg-red-900/30 hover:bg-red-900/50 border border-red-900/50 rounded text-red-300"
+                          >
+                            删除
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  {favoriteClips.length === 0 && <div className="text-[10px] text-gray-500">暂无收藏 Clip</div>}
+                </div>
+              </div>
 
               <div className="clip-actions-group grid grid-cols-2 gap-2 pt-4 border-t border-gray-800">
                 <button data-testid="selected-clip-mute-btn" onClick={() => toggleClipMute(selectedClipData.track.id, selectedClipData.clip.id)} disabled={isPlaying || selectedClipData.track.locked} className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 border border-gray-800 rounded text-gray-300" aria-pressed={selectedClipData.clip.muted}>{selectedClipData.clip.muted ? 'Unmute Clip' : 'Mute Clip'}</button>

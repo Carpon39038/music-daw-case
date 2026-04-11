@@ -151,3 +151,14 @@ export interface ClipboardState {
   clip: Clip
   sourceTrackId: string
 }
+
+export interface FavoriteClip {
+  id: string
+  name: string
+  durationBeats: number
+  noteLabel: string
+  scaleKey: string
+  scaleType: string
+  savedAt: number
+  clip: Clip
+}

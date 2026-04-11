@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
-import type { Clip, FrozenTrackSnapshot, MasterEQ, MasterPreset, ProjectState, Track, WaveType } from '../types'
+import type { Clip, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, ProjectState, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
 import { getTimelineDurationSec, secondsToBeat } from '../utils/tempoCurve'
 import { buildSocialExportBaseName, createSocialCardBlob, createSocialPackageZipBlob, triggerDownload } from '../utils/socialPublish'
 import { analyzeChordSuggestions } from '../utils/chordSuggestion'
+import { hzToClosestNoteLabel } from '../utils/notes'
 
 export const TIMELINE_BEATS = 16
 
@@ -500,6 +501,8 @@ export interface DAWActions {
   selectedClipRef: { trackId: string; clipId: string } | null
   selectedClipRefs: { trackId: string; clipId: string }[]
   clipboard: { clip: Clip; sourceTrackId: string } | null
+  favoriteClips: FavoriteClip[]
+  favoriteClipSearchQuery: string
   undoDepth: number
   redoDepth: number
   beatDuration: number
@@ -546,6 +549,10 @@ export interface DAWActions {
   addSelectedClipRef: (value: { trackId: string; clipId: string }) => void
   removeSelectedClipRef: (value: { trackId: string; clipId: string }) => void
   setClipboard: (value: { clip: Clip; sourceTrackId: string } | null) => void
+  setFavoriteClipSearchQuery: (value: string) => void
+  saveFavoriteClipFromSelection: () => void
+  pasteFavoriteClipToTrack: (favoriteClipId: string, trackId: string) => void
+  deleteFavoriteClip: (favoriteClipId: string) => void
   // Actions
   applyProjectUpdate: (updater: (prev: ProjectState) => ProjectState) => void
   addMarker: (beat?: number, name?: string) => void
@@ -653,6 +660,8 @@ export function useDAWActions(): DAWActions {
   const selectedClipRef = useDAWStore((state) => state.selectedClipRef)
   const selectedClipRefs = useDAWStore((state) => state.selectedClipRefs)
   const clipboard = useDAWStore((state) => state.clipboard)
+  const favoriteClips = useDAWStore((state) => state.favoriteClips || [])
+  const favoriteClipSearchQuery = useDAWStore((state) => state.favoriteClipSearchQuery || '')
   const past = useDAWStore((state) => state.past)
   const future = useDAWStore((state) => state.future)
   const storeSetProject = useDAWStore((state) => state.setProject)
@@ -672,6 +681,9 @@ export function useDAWActions(): DAWActions {
   const storeAddSelectedClipRef = useDAWStore((state) => state.addSelectedClipRef)
   const storeRemoveSelectedClipRef = useDAWStore((state) => state.removeSelectedClipRef)
   const storeSetClipboard = useDAWStore((state) => state.setClipboard)
+  const storeSetFavoriteClipSearchQuery = useDAWStore((state) => state.setFavoriteClipSearchQuery)
+  const storeSaveFavoriteClip = useDAWStore((state) => state.saveFavoriteClip)
+  const storeDeleteFavoriteClip = useDAWStore((state) => state.deleteFavoriteClip)
   const pushHistory = useDAWStore((state) => state.pushHistory)
   const clearHistory = useDAWStore((state) => state.clearHistory)
   const undo = useDAWStore((state) => state.undo)
@@ -763,6 +775,67 @@ export function useDAWActions(): DAWActions {
   const setClipboard = (value: { clip: Clip; sourceTrackId: string } | null) => {
     storeSetClipboard(value)
   }
+
+  const setFavoriteClipSearchQuery = (value: string) => {
+    storeSetFavoriteClipSearchQuery(value)
+  }
+
+  const saveFavoriteClipFromSelection = () => {
+    if (!selectedClipRef) return
+    const track = project.tracks.find((t) => t.id === selectedClipRef.trackId)
+    const clip = track?.clips.find((c) => c.id === selectedClipRef.clipId)
+    if (!track || !clip) return
+
+    const favoriteClip: FavoriteClip = {
+      id: crypto.randomUUID(),
+      name: clip.name?.trim() || `${track.name} · ${clip.wave}`,
+      durationBeats: clip.lengthBeats,
+      noteLabel: hzToClosestNoteLabel(clip.noteHz),
+      scaleKey: project.scaleKey ?? 'C',
+      scaleType: project.scaleType ?? 'chromatic',
+      savedAt: Date.now(),
+      clip: { ...clip },
+    }
+
+    storeSaveFavoriteClip(favoriteClip)
+  }
+
+  const pasteFavoriteClipToTrack = (favoriteClipId: string, trackId: string) => {
+    const favorite = favoriteClips.find((item) => item.id === favoriteClipId)
+    if (!favorite) return
+
+    const targetTrack = project.tracks.find((t) => t.id === trackId)
+    if (!targetTrack || targetTrack.locked) return
+
+    applyProjectUpdate((prev) => {
+      const track = prev.tracks.find((t) => t.id === trackId)
+      if (!track || track.locked) return prev
+
+      const sourceClip = favorite.clip
+      const newClip: Clip = {
+        ...sourceClip,
+        id: `${trackId}-favorite-${Date.now()}`,
+        startBeat: resolveNonOverlappingStart(track.clips, sourceClip.lengthBeats, sourceClip.startBeat),
+      }
+
+      const stillConflicts = track.clips.some((c) =>
+        rangesOverlap(newClip.startBeat, newClip.lengthBeats, c.startBeat, c.lengthBeats),
+      )
+      if (stillConflicts) return prev
+
+      return {
+        ...prev,
+        tracks: prev.tracks.map((t) =>
+          t.id === trackId ? { ...t, clips: [...t.clips, newClip] } : t,
+        ),
+      }
+    })
+  }
+
+  const deleteFavoriteClip = (favoriteClipId: string) => {
+    storeDeleteFavoriteClip(favoriteClipId)
+  }
+
   const dragStateRef = useRef<{
     trackId: string
     clipId: string
@@ -3181,6 +3254,8 @@ export function useDAWActions(): DAWActions {
     selectedClipRef,
     selectedClipRefs,
     clipboard,
+    favoriteClips,
+    favoriteClipSearchQuery,
     undoDepth,
     redoDepth,
     beatDuration,
@@ -3218,6 +3293,10 @@ export function useDAWActions(): DAWActions {
     addSelectedClipRef,
     removeSelectedClipRef,
     setClipboard,
+    setFavoriteClipSearchQuery,
+    saveFavoriteClipFromSelection,
+    pasteFavoriteClipToTrack,
+    deleteFavoriteClip,
     applyProjectUpdate,
     addMarker,
     renameMarker,

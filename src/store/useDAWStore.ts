@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { ClipboardState, MasterEQ, MasterPreset, MasterSnapshot, ProjectState, SelectedClipRef, WaveType } from '../types'
+import type { ClipboardState, FavoriteClip, MasterEQ, MasterPreset, MasterSnapshot, ProjectState, SelectedClipRef, WaveType } from '../types'
 
 export interface PlayheadDragState {
   isDragging: boolean
@@ -80,6 +80,7 @@ interface PersistedDAWState {
   performanceMode: 'auto' | 'on' | 'off'
   projectTemplates: ProjectTemplate[]
   galleryProjects: GalleryProject[]
+  favoriteClips: FavoriteClip[]
   achievements: AchievementsState
   masterPreset: MasterPreset
   masterPresetBaseline: MasterSnapshot | null
@@ -92,6 +93,7 @@ interface DAWState extends PersistedDAWState {
   selectedClipRef: SelectedClipRef | null
   selectedClipRefs: SelectedClipRef[]
   clipboard: ClipboardState | null
+  favoriteClipSearchQuery: string
   past: ProjectState[]
   future: ProjectState[]
   playheadDrag: PlayheadDragState | null
@@ -113,6 +115,9 @@ interface DAWState extends PersistedDAWState {
   addSelectedClipRef: (value: SelectedClipRef) => void
   removeSelectedClipRef: (value: SelectedClipRef) => void
   setClipboard: (value: ClipboardState | null) => void
+  setFavoriteClipSearchQuery: (value: string) => void
+  saveFavoriteClip: (clip: FavoriteClip) => void
+  deleteFavoriteClip: (id: string) => void
   setPlayheadDrag: (value: PlayheadDragState | null) => void
   pushHistory: (snapshot?: ProjectState) => void
   clearHistory: () => void
@@ -296,6 +301,7 @@ function getDefaultPersistedState(): PersistedDAWState {
     performanceMode: 'auto',
     projectTemplates: [],
     galleryProjects: [],
+    favoriteClips: [],
     achievements: createInitialAchievements(),
   }
 }
@@ -370,6 +376,7 @@ export const useDAWStore = create<DAWState>()(
       selectedClipRef: null,
       selectedClipRefs: [],
       clipboard: null,
+      favoriteClipSearchQuery: '',
       past: [],
       future: [],
       playheadDrag: null,
@@ -498,6 +505,18 @@ export const useDAWStore = create<DAWState>()(
         selectedClipRefs: state.selectedClipRefs.filter(r => !(r.trackId === value.trackId && r.clipId === value.clipId))
       })),
       setClipboard: (value) => set({ clipboard: value }),
+      setFavoriteClipSearchQuery: (value) => set({ favoriteClipSearchQuery: value }),
+      saveFavoriteClip: (clip) =>
+        set((state) => {
+          const deduped = state.favoriteClips.filter((item) => item.id !== clip.id)
+          return {
+            favoriteClips: [clip, ...deduped].slice(0, 200),
+          }
+        }),
+      deleteFavoriteClip: (id) =>
+        set((state) => ({
+          favoriteClips: state.favoriteClips.filter((item) => item.id !== id),
+        })),
       setPlayheadDrag: (value) => set({ playheadDrag: value }),
       setClipDrag: (value) => set({ clipDrag: value }),
       pushHistory: (snapshot) =>
@@ -618,6 +637,7 @@ export const useDAWStore = create<DAWState>()(
           ...getDefaultPersistedState(),
           projectTemplates: state.projectTemplates,
           galleryProjects: state.galleryProjects,
+          favoriteClips: state.favoriteClips,
           achievements: state.achievements,
           isPlaying: false,
           playheadBeat: 0,
@@ -644,6 +664,7 @@ export const useDAWStore = create<DAWState>()(
         performanceMode: state.performanceMode,
         projectTemplates: state.projectTemplates || [],
         galleryProjects: state.galleryProjects || [],
+        favoriteClips: state.favoriteClips || [],
         achievements: state.achievements || createInitialAchievements(),
       }),
     },
