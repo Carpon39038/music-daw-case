@@ -11,6 +11,7 @@ export function Inspector(d: DAWActions) {
     setProject, applyProjectUpdate, setTrackFilterType, setTrackFilterCutoff,
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
+    updateClipEnvelopePoint, resetClipEnvelope,
     updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, continueTrackIdea,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
@@ -651,6 +652,61 @@ export function Inspector(d: DAWActions) {
                 <div><label className="text-xs text-gray-500 block mb-1">Timbre (音色)</label><div className="grid grid-cols-2 gap-1" data-testid="selected-clip-wave-group">{[{val:'sine',label:'柔和'},{val:'square',label:'电子'},{val:'sawtooth',label:'锐利'},{val:'triangle',label:'温暖'},{val:'organ',label:'风琴'},{val:'brass',label:'铜管'}].map(w => <button key={w.val} data-testid={`wave-btn-${w.val}`} disabled={isPlaying || selectedClipData.track.locked} onClick={() => setSelectedClipWave(selectedClipData.track.id, selectedClipData.clip.id, w.val as WaveType)} onMouseEnter={() => { if (!isPlaying && !selectedClipData.track.locked) previewClip({ ...selectedClipData.clip, wave: w.val as WaveType }, selectedClipData.track) }} className={`px-1 py-1 text-[10px] rounded border ${selectedClipData.clip.wave === w.val ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-[#1a1a1a] border-gray-800 text-gray-400 hover:border-gray-600'} transition-colors truncate`}>{w.label}</button>)}</div></div>
               </div>
               <div><label className="text-xs text-gray-500 flex justify-between mb-1"><span>Volume</span><span>{Math.round((selectedClipData.clip.gain ?? 1.0) * 100)}%</span></label><input data-testid="selected-clip-gain-input" type="range" min={0} max={200} step={1} value={Math.round((selectedClipData.clip.gain ?? 1.0) * 100)} onChange={(e) => updateClipGain(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value) / 100)} disabled={isPlaying || selectedClipData.track.locked} className="w-full h-1 accent-emerald-500" /></div>
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="clip-envelope-editor">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-gray-500">Clip Envelope (Gain x)</label>
+                  <button
+                    data-testid="clip-envelope-reset-btn"
+                    onClick={() => resetClipEnvelope(selectedClipData.track.id, selectedClipData.clip.id)}
+                    disabled={isPlaying || selectedClipData.track.locked}
+                    className="px-2 py-0.5 text-[10px] bg-[#1a1a1a] hover:bg-gray-800 border border-gray-800 rounded text-gray-300"
+                  >
+                    Reset Line
+                  </button>
+                </div>
+                {(selectedClipData.clip.envelope && selectedClipData.clip.envelope.length >= 3
+                  ? selectedClipData.clip.envelope
+                  : [
+                      { beat: 0, gain: 1 },
+                      { beat: selectedClipData.clip.lengthBeats / 2, gain: 1 },
+                      { beat: selectedClipData.clip.lengthBeats, gain: 1 },
+                    ]
+                ).slice(0, 3).map((point, idx) => {
+                  const pointName = idx === 0 ? 'Start' : idx === 1 ? 'Mid' : 'End'
+                  return (
+                    <div key={idx} className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-gray-500 block mb-1">{pointName} Beat</label>
+                        <input
+                          data-testid={`clip-envelope-point-${idx}-beat`}
+                          type="number"
+                          min={0}
+                          max={selectedClipData.clip.lengthBeats}
+                          step={0.1}
+                          value={Number(point.beat.toFixed(2))}
+                          onChange={(e) => updateClipEnvelopePoint(selectedClipData.track.id, selectedClipData.clip.id, idx, { beat: Number(e.target.value) })}
+                          disabled={isPlaying || selectedClipData.track.locked}
+                          className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-xs focus:outline-none focus:border-emerald-500 text-gray-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500 block mb-1">{pointName} Gain</label>
+                        <input
+                          data-testid={`clip-envelope-point-${idx}-gain`}
+                          type="number"
+                          min={0}
+                          max={2}
+                          step={0.05}
+                          value={Number(point.gain.toFixed(2))}
+                          onChange={(e) => updateClipEnvelopePoint(selectedClipData.track.id, selectedClipData.clip.id, idx, { gain: Number(e.target.value) })}
+                          disabled={isPlaying || selectedClipData.track.locked}
+                          className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-xs focus:outline-none focus:border-emerald-500 text-gray-200"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
               <div><label className="text-xs text-gray-500 flex justify-between mb-1"><span>Transpose (st)</span><span>{selectedClipData.clip.transposeSemitones ?? 0}</span></label><input data-testid="selected-clip-transpose-input" type="number" min={-24} max={24} step={1} value={selectedClipData.clip.transposeSemitones ?? 0} onChange={(e) => updateClipTranspose(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value))} disabled={isPlaying || selectedClipData.track.locked} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200" /></div>
               <div><label className="text-xs text-gray-500 block mb-1">Note</label><select data-testid="selected-clip-note-select" value={hzToClosestNoteLabel(selectedClipData.clip.noteHz)} onChange={(e) => { const note = SELECTABLE_NOTES.find(n => n.label === e.target.value); if (note) setSelectedClipNote(selectedClipData.track.id, selectedClipData.clip.id, note.hz); }} disabled={isPlaying || selectedClipData.track.locked} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200">{availableNotes.map(n => <option key={n.label} value={n.label}>{n.label}</option>)}</select></div>
               <div className="inspector-meta text-xs text-gray-600 font-mono" data-testid="selected-clip-scheduled-frequency">Scheduled: {selectedClipData.scheduledFrequencyHz.toFixed(2)} Hz</div>

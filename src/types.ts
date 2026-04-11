@@ -1,5 +1,10 @@
 export type WaveType = 'sine' | 'square' | 'sawtooth' | 'triangle' | 'organ' | 'brass'
 
+export interface ClipEnvelopePoint {
+  beat: number
+  gain: number
+}
+
 export interface Clip {
   name?: string
   id: string
@@ -14,6 +19,7 @@ export interface Clip {
   fadeIn?: number
   fadeOut?: number
   audioData?: string
+  envelope?: ClipEnvelopePoint[]
 }
 
 export interface Track {

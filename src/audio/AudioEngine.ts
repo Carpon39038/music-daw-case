@@ -1,4 +1,4 @@
-import type { Clip, MasterEQ, Track } from '../types'
+import type { Clip, ClipEnvelopePoint, MasterEQ, Track } from '../types'
 import { beatToSeconds, getTimelineDurationSec, type TempoCurveType } from '../utils/tempoCurve'
 
 function applyWaveType(ctx: BaseAudioContext, osc: OscillatorNode, waveType: string) {
@@ -46,6 +46,35 @@ function makeDistortionCurve(amount = 50) {
     curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x))
   }
   return curve
+}
+
+function normalizeEnvelope(envelope: ClipEnvelopePoint[] | undefined, clipLengthBeats: number): ClipEnvelopePoint[] {
+  const fallback: ClipEnvelopePoint[] = [
+    { beat: 0, gain: 1 },
+    { beat: clipLengthBeats / 2, gain: 1 },
+    { beat: clipLengthBeats, gain: 1 },
+  ]
+  const source = envelope && envelope.length >= 3 ? envelope : fallback
+  return source
+    .map((p) => ({
+      beat: Math.max(0, Math.min(clipLengthBeats, p.beat)),
+      gain: Math.max(0, Math.min(2, p.gain)),
+    }))
+    .sort((a, b) => a.beat - b.beat)
+}
+
+function getEnvelopeGainAtBeat(envelope: ClipEnvelopePoint[], beat: number): number {
+  if (beat <= envelope[0].beat) return envelope[0].gain
+  for (let i = 0; i < envelope.length - 1; i++) {
+    const a = envelope[i]
+    const b = envelope[i + 1]
+    if (beat <= b.beat) {
+      const span = Math.max(1e-6, b.beat - a.beat)
+      const t = (beat - a.beat) / span
+      return a.gain + (b.gain - a.gain) * t
+    }
+  }
+  return envelope[envelope.length - 1].gain
 }
 
 export class AudioEngine {
@@ -418,7 +447,6 @@ export class AudioEngine {
           osc = synthOsc
         }
 
-        gain.gain.setValueAtTime(0.0001, clipStart)
         const isTrackAudible = !track.muted && (!soloActive || track.solo)
         const clipGain = clip.gain ?? 1.0
         const effectiveTrackVolume = isTrackAudible ? (track.volume * clipGain) : 0
@@ -433,8 +461,27 @@ export class AudioEngine {
         const actualFadeIn = fadeInSec > 0 ? fadeInSec : 0.01
         const actualFadeOut = fadeOutSec > 0 ? fadeOutSec : 0.02
 
-        gain.gain.linearRampToValueAtTime(effectiveTrackVolume * 0.15, Math.min(clipStart + actualFadeIn, clipEnd))
-        gain.gain.setValueAtTime(effectiveTrackVolume * 0.15, Math.max(clipStart + actualFadeIn, clipEnd - actualFadeOut))
+        const envelope = normalizeEnvelope(clip.envelope, clip.lengthBeats)
+        const eventBeats = Array.from(new Set([0, ...envelope.map((p) => p.beat), clip.lengthBeats])).sort((a, b) => a - b)
+        gain.gain.setValueAtTime(0.0001, clipStart)
+        for (let i = 0; i < eventBeats.length; i++) {
+          const beatOffset = eventBeats[i]
+          const eventTime = clipStart + beatToSeconds(clip.startBeat + beatOffset, tempoSettings, loopBeats) - beatToSeconds(clip.startBeat, tempoSettings, loopBeats)
+          const envelopeGain = getEnvelopeGainAtBeat(envelope, beatOffset)
+          const target = Math.max(0.0001, effectiveTrackVolume * envelopeGain)
+          if (i === 0) {
+            gain.gain.setValueAtTime(target, eventTime)
+          } else {
+            gain.gain.linearRampToValueAtTime(target, eventTime)
+          }
+        }
+
+        const fadeInEnd = Math.min(clipStart + actualFadeIn, clipEnd)
+        const fadeOutStart = Math.max(clipStart, clipEnd - actualFadeOut)
+        const fadeInEnvelope = Math.max(0.0001, effectiveTrackVolume * getEnvelopeGainAtBeat(envelope, Math.min(clip.lengthBeats, clip.fadeIn || 0)))
+        const fadeOutEnvelope = Math.max(0.0001, effectiveTrackVolume * getEnvelopeGainAtBeat(envelope, Math.max(0, clip.lengthBeats - (clip.fadeOut || 0))))
+        gain.gain.linearRampToValueAtTime(Math.max(0.0001, fadeInEnvelope), fadeInEnd)
+        gain.gain.setValueAtTime(Math.max(0.0001, fadeOutEnvelope), fadeOutStart)
         gain.gain.linearRampToValueAtTime(0.0001, clipEnd)
         panner.pan.value = Math.max(-1, Math.min(1, track.pan))
 

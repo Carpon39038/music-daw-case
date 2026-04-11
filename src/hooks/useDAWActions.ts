@@ -575,6 +575,8 @@ export interface DAWActions {
   setClipColor: (trackId: string, clipId: string, color: string) => void
   setClipName: (trackId: string, clipId: string, name: string) => void
   updateClipGain: (trackId: string, clipId: string, gain: number) => void
+  updateClipEnvelopePoint: (trackId: string, clipId: string, pointIndex: number, value: { beat?: number; gain?: number }) => void
+  resetClipEnvelope: (trackId: string, clipId: string) => void
   updateClipFades: (trackId: string, clipId: string, fadeIn: number, fadeOut: number) => void
   updateClipTranspose: (trackId: string, clipId: string, transposeSemitones: number) => void
   updateClipLengthBeats: (trackId: string, clipId: string, lengthBeats: number) => void
@@ -1865,6 +1867,68 @@ export function useDAWActions(): DAWActions {
     }))
   }
 
+  const resetClipEnvelope = (trackId: string, clipId: string) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) => {
+            if (c.id !== clipId) return c
+            const length = Math.max(1, c.lengthBeats)
+            return {
+              ...c,
+              envelope: [
+                { beat: 0, gain: 1 },
+                { beat: length / 2, gain: 1 },
+                { beat: length, gain: 1 },
+              ],
+            }
+          }),
+        }
+      }),
+    }))
+  }
+
+  const updateClipEnvelopePoint = (trackId: string, clipId: string, pointIndex: number, value: { beat?: number; gain?: number }) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) => {
+            if (c.id !== clipId) return c
+            const length = Math.max(1, c.lengthBeats)
+            const base = (c.envelope && c.envelope.length >= 3
+              ? c.envelope
+              : [
+                { beat: 0, gain: 1 },
+                { beat: length / 2, gain: 1 },
+                { beat: length, gain: 1 },
+              ]).map((p) => ({ ...p }))
+            if (pointIndex < 0 || pointIndex >= base.length) return c
+
+            const prevBeat = pointIndex > 0 ? base[pointIndex - 1].beat : 0
+            const nextBeat = pointIndex < base.length - 1 ? base[pointIndex + 1].beat : length
+            const target = base[pointIndex]
+            const epsilon = 0.01
+            const nextBeatValue = value.beat == null
+              ? target.beat
+              : Math.max(
+                  pointIndex === 0 ? 0 : prevBeat + epsilon,
+                  Math.min(pointIndex === base.length - 1 ? length : nextBeat - epsilon, value.beat),
+                )
+            const nextGainValue = value.gain == null ? target.gain : Math.max(0, Math.min(2, value.gain))
+            base[pointIndex] = { beat: nextBeatValue, gain: nextGainValue }
+            return { ...c, envelope: base }
+          }),
+        }
+      }),
+    }))
+  }
+
     const updateClipFades = (trackId: string, clipId: string, fadeIn: number, fadeOut: number) => {
     applyProjectUpdate((prev) => ({
       ...prev,
@@ -2958,6 +3022,8 @@ export function useDAWActions(): DAWActions {
     setClipColor,
     setClipName,
     updateClipGain,
+    updateClipEnvelopePoint,
+    resetClipEnvelope,
     updateClipFades,
     updateClipTranspose,
     updateClipLengthBeats,
