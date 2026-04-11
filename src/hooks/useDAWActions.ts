@@ -378,6 +378,117 @@ interface ExportLoudnessReport {
   checkedAt: number
 }
 
+interface PreExportChecklistItem {
+  key: 'empty-track' | 'master-muted' | 'peak-clipping' | 'unnamed-project' | 'loop-export-mismatch'
+  label: string
+  passed: boolean
+  detail: string
+}
+
+interface PreExportChecklistReport {
+  checkedAt: number
+  failedCount: number
+  items: PreExportChecklistItem[]
+}
+
+interface PreExportChecklistInput {
+  project: ProjectState
+  masterVolume: number
+  loopEnabled: boolean
+  effectiveTimelineBeats: number
+  loudness: ExportLoudnessReport
+}
+
+interface PreExportChecklistResult {
+  report: PreExportChecklistReport
+  failedItems: PreExportChecklistItem[]
+}
+
+function buildPreExportChecklist(input: PreExportChecklistInput): PreExportChecklistResult {
+  const { project, masterVolume, loopEnabled, effectiveTimelineBeats, loudness } = input
+  const hasAnyEmptyTrack = project.tracks.some((track) => track.clips.length === 0)
+  const isMasterMuted = masterVolume <= 0.001
+  const normalizedProjectName = (project.name || '').trim().toLowerCase()
+  const isUnnamedProject = normalizedProjectName.length === 0 || normalizedProjectName === 'untitled project'
+  const loopMismatch = loopEnabled && effectiveTimelineBeats !== TIMELINE_BEATS
+  const hasPeakClippingRisk = loudness.verdict === 'clipping-risk'
+
+  const items: PreExportChecklistItem[] = [
+    {
+      key: 'empty-track',
+      label: '空轨道',
+      passed: !hasAnyEmptyTrack,
+      detail: hasAnyEmptyTrack ? '存在无片段轨道' : '所有轨道均有片段',
+    },
+    {
+      key: 'master-muted',
+      label: '静音主总线',
+      passed: !isMasterMuted,
+      detail: isMasterMuted ? 'Master 音量为 0%' : `Master 音量 ${(masterVolume * 100).toFixed(0)}%`,
+    },
+    {
+      key: 'peak-clipping',
+      label: '峰值削波',
+      passed: !hasPeakClippingRisk,
+      detail: `峰值 ${formatDbLabel(loudness.peakDb)}`,
+    },
+    {
+      key: 'unnamed-project',
+      label: '未命名项目',
+      passed: !isUnnamedProject,
+      detail: isUnnamedProject ? '项目名仍为默认值' : `项目名：${project.name?.trim()}`,
+    },
+    {
+      key: 'loop-export-mismatch',
+      label: '循环区与导出区不一致',
+      passed: !loopMismatch,
+      detail: loopMismatch ? `当前导出 ${effectiveTimelineBeats} 小节（Loop 模式）` : '导出区与全曲一致',
+    },
+  ]
+
+  const failedItems = items.filter((item) => !item.passed)
+  return {
+    report: {
+      checkedAt: Date.now(),
+      failedCount: failedItems.length,
+      items,
+    },
+    failedItems,
+  }
+}
+
+function confirmIgnoreChecklistFailures(failedItems: PreExportChecklistItem[], allItems: PreExportChecklistItem[], exportTargetLabel: string) {
+  if (failedItems.length === 0) return true
+  const checklistText = allItems
+    .map((item) => `${item.passed ? '✅ 通过' : '❌ 未通过'} · ${item.label}（${item.detail}）`)
+    .join('\n')
+  return window.confirm(
+    `导出清单校验：${failedItems.length} 项未通过\n\n${checklistText}\n\n默认已阻止一键导出。是否忽略未通过项并继续导出 ${exportTargetLabel}？`
+  )
+}
+
+function confirmLoudnessAdjust(loudness: ExportLoudnessReport, exportTargetLabel: string) {
+  if (loudness.verdict !== 'adjust') return true
+  return window.confirm(`导出前响度检查：\n峰值：${formatDbLabel(loudness.peakDb)}\n整体响度（RMS）：${formatDbLabel(loudness.rmsDb)}\n结论：建议调整后再发布。\n\n是否仍继续导出 ${exportTargetLabel}？`)
+}
+
+function runPreExportChecks(options: {
+  project: ProjectState
+  masterVolume: number
+  loopEnabled: boolean
+  effectiveTimelineBeats: number
+  loudness: ExportLoudnessReport
+  exportTargetLabel: string
+  setLastPreExportChecklistReport: (report: PreExportChecklistReport) => void
+}) {
+  const { report, failedItems } = buildPreExportChecklist(options)
+  options.setLastPreExportChecklistReport(report)
+  if (!confirmIgnoreChecklistFailures(failedItems, report.items, options.exportTargetLabel)) {
+    return false
+  }
+  return confirmLoudnessAdjust(options.loudness, options.exportTargetLabel)
+}
+
 interface ReferenceTrackState {
   fileName: string
   objectUrl: string
@@ -956,6 +1067,7 @@ export interface DAWActions {
   monitorSource: MonitorSource
   referenceTrack: ReferenceTrackState | null
   lastExportLoudnessReport: ExportLoudnessReport | null
+  lastPreExportChecklistReport: PreExportChecklistReport | null
   autoMixSuggestionItems: AutoMixSuggestionItem[]
   autoMixAvailable: boolean
   autoMixPreviewMode: 'before' | 'after' | null
@@ -1037,6 +1149,7 @@ export function useDAWActions(): DAWActions {
   const redo = useDAWStore((state) => state.redo)
   const [isRecording, setIsRecording] = React.useState(false)
   const [lastExportLoudnessReport, setLastExportLoudnessReport] = React.useState<ExportLoudnessReport | null>(null)
+  const [lastPreExportChecklistReport, setLastPreExportChecklistReport] = React.useState<PreExportChecklistReport | null>(null)
   const [monitorSource, setMonitorSource] = React.useState<MonitorSource>('project')
   const [referenceTrack, setReferenceTrack] = React.useState<ReferenceTrackState | null>(null)
   const referenceAudioRef = React.useRef<HTMLAudioElement | null>(null)
@@ -1433,15 +1546,16 @@ export function useDAWActions(): DAWActions {
       const loudness = analyzeBufferLoudness(audioBuffer)
       setLastExportLoudnessReport(loudness)
 
-      if (loudness.verdict === 'clipping-risk') {
-        window.alert(`导出已阻止：检测到削波风险\n峰值：${formatDbLabel(loudness.peakDb)}\n整体响度（RMS）：${formatDbLabel(loudness.rmsDb)}\n\n建议先降低主音量、使用 Normalize 或 Magic Polish 后再导出。`)
-        return
-      }
-
-      if (loudness.verdict === 'adjust') {
-        const proceed = window.confirm(`导出前响度检查：\n峰值：${formatDbLabel(loudness.peakDb)}\n整体响度（RMS）：${formatDbLabel(loudness.rmsDb)}\n结论：建议调整后再发布。\n\n是否仍继续导出 WAV？`)
-        if (!proceed) return
-      }
+      const canContinue = runPreExportChecks({
+        project,
+        masterVolume,
+        loopEnabled,
+        effectiveTimelineBeats,
+        loudness,
+        exportTargetLabel: 'WAV',
+        setLastPreExportChecklistReport,
+      })
+      if (!canContinue) return
 
       const wavData = await audioEngine.exportWav(
         project.tracks,
@@ -1479,15 +1593,16 @@ export function useDAWActions(): DAWActions {
       const loudness = analyzeBufferLoudness(audioBuffer)
       setLastExportLoudnessReport(loudness)
 
-      if (loudness.verdict === 'clipping-risk') {
-        window.alert(`导出已阻止：检测到削波风险\n峰值：${formatDbLabel(loudness.peakDb)}\n整体响度（RMS）：${formatDbLabel(loudness.rmsDb)}\n\n建议先降低主音量、使用 Normalize 或 Magic Polish 后再导出。`)
-        return
-      }
-
-      if (loudness.verdict === 'adjust') {
-        const proceed = window.confirm(`导出前响度检查：\n峰值：${formatDbLabel(loudness.peakDb)}\n整体响度（RMS）：${formatDbLabel(loudness.rmsDb)}\n结论：建议调整后再发布。\n\n是否仍继续导出 MP3？`)
-        if (!proceed) return
-      }
+      const canContinue = runPreExportChecks({
+        project,
+        masterVolume,
+        loopEnabled,
+        effectiveTimelineBeats,
+        loudness,
+        exportTargetLabel: 'MP3',
+        setLastPreExportChecklistReport,
+      })
+      if (!canContinue) return
 
       const mp3Data = audioBufferToMp3(audioBuffer)
       const blob = new Blob([mp3Data], { type: 'audio/mp3' })
@@ -1515,6 +1630,20 @@ export function useDAWActions(): DAWActions {
         tempoCurveTargetBpm,
         masterEQ,
       )
+      const loudness = analyzeBufferLoudness(audioBuffer)
+      setLastExportLoudnessReport(loudness)
+
+      const canContinue = runPreExportChecks({
+        project,
+        masterVolume,
+        loopEnabled,
+        effectiveTimelineBeats,
+        loudness,
+        exportTargetLabel: '发布包',
+        setLastPreExportChecklistReport,
+      })
+      if (!canContinue) return
+
       const mp3Data = audioBufferToMp3(audioBuffer)
       const mp3Blob = new Blob([mp3Data], { type: 'audio/mp3' })
       const cardBlob = await createSocialCardBlob(project, totalDurationSec)
@@ -3919,6 +4048,7 @@ export function useDAWActions(): DAWActions {
     monitorSource,
     referenceTrack,
     lastExportLoudnessReport,
+    lastPreExportChecklistReport,
     autoMixSuggestionItems,
     autoMixAvailable,
     autoMixPreviewMode,

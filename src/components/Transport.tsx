@@ -152,6 +152,7 @@ export function Transport({
   monitorSource,
   referenceTrack,
   lastExportLoudnessReport,
+  lastPreExportChecklistReport,
   handleSocialPublish,
   handleExportProjectCard,
   generateStyleStarter,
@@ -726,6 +727,14 @@ export function Transport({
           <div className="mt-2 text-[10px] text-gray-500" data-testid="export-loudness-status">
             导出响度检查：{loudnessVerdictLabel(lastExportLoudnessReport?.verdict)}
             {lastExportLoudnessReport ? `（峰值 ${formatLoudnessDb(lastExportLoudnessReport.peakDb)} / RMS ${formatLoudnessDb(lastExportLoudnessReport.rmsDb)}）` : ''}
+          </div>
+          <div className="mt-1 text-[10px] text-gray-500" data-testid="pre-export-checklist-status">
+            导出清单：
+            {lastPreExportChecklistReport
+              ? lastPreExportChecklistReport.failedCount === 0
+                ? '全部通过'
+                : `${lastPreExportChecklistReport.failedCount} 项未通过`
+              : '未检查'}
           </div>
         </div>
 
