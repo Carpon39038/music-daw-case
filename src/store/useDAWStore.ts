@@ -186,6 +186,21 @@ function isValidProjectState(value: unknown): value is ProjectState {
   if (p.markers !== undefined && !Array.isArray(p.markers)) return false
   if (p.name !== undefined && typeof p.name !== 'string') return false
   if (p.lastSavedAt !== undefined && typeof p.lastSavedAt !== 'number') return false
+  if (p.releaseMetadata !== undefined && p.releaseMetadata !== null) {
+    if (typeof p.releaseMetadata !== 'object') return false
+    const m = p.releaseMetadata as {
+      title?: unknown
+      author?: unknown
+      cover?: unknown
+      tags?: unknown
+      updatedAt?: unknown
+    }
+    if (typeof m.title !== 'string') return false
+    if (typeof m.author !== 'string') return false
+    if (typeof m.cover !== 'string') return false
+    if (!Array.isArray(m.tags) || !m.tags.every((tag) => typeof tag === 'string')) return false
+    if (typeof m.updatedAt !== 'number') return false
+  }
   if (p.markers !== undefined) {
     const validMarkers = p.markers.every((m) => m && typeof m.id === 'string' && typeof m.name === 'string' && typeof m.beat === 'number')
     if (!validMarkers) return false
@@ -258,6 +273,17 @@ function normalizeProject(project: ProjectState): ProjectState {
       beat: Math.max(0, Math.min(16, marker.beat)),
     })),
     exportVersions: (project.exportVersions ?? []).slice(0, 5),
+    releaseMetadata: project.releaseMetadata
+      ? {
+          title: project.releaseMetadata.title,
+          author: project.releaseMetadata.author,
+          cover: project.releaseMetadata.cover,
+          tags: Array.isArray(project.releaseMetadata.tags)
+            ? project.releaseMetadata.tags.map((tag) => String(tag)).filter(Boolean).slice(0, 8)
+            : [],
+          updatedAt: project.releaseMetadata.updatedAt,
+        }
+      : undefined,
     tracks: project.tracks.map((track) => ({
       ...track,
       locked: track.locked ?? false,

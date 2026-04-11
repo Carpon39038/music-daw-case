@@ -142,6 +142,14 @@ export interface ExportVersionEntry {
   audioDataUrl?: string
 }
 
+export interface ReleaseMetadata {
+  title: string
+  author: string
+  cover: string
+  tags: string[]
+  updatedAt: number
+}
+
 export interface ProjectState {
   id?: string
   name?: string
@@ -154,6 +162,7 @@ export interface ProjectState {
   tracks: Track[]
   markers?: Marker[]
   exportVersions?: ExportVersionEntry[]
+  releaseMetadata?: ReleaseMetadata
 }
 
 export interface MasterEQ {

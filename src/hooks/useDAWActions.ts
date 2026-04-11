@@ -5,7 +5,7 @@ import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
 import { audioBufferToWav } from '../utils/audioBufferToWav'
 import { getTimelineDurationSec, secondsToBeat } from '../utils/tempoCurve'
-import { buildSocialExportBaseName, createSocialCardBlob, createSocialPackageZipBlob, triggerDownload } from '../utils/socialPublish'
+import { buildSocialExportBaseName, createSocialCardBlob, createSocialPackageZipBlob, isReleaseMetadataReady, normalizeReleaseMetadata, parseReleaseTags, releaseTagsToText, triggerDownload } from '../utils/socialPublish'
 import { zipSync, strToU8 } from 'fflate'
 import { analyzeChordSuggestions } from '../utils/chordSuggestion'
 import { hzToClosestNoteLabel } from '../utils/notes'
@@ -1592,6 +1592,53 @@ export function useDAWActions(): DAWActions {
     }
   }, [referenceTrack])
 
+  const ensureReleaseMetadata = React.useCallback(() => {
+    const base = normalizeReleaseMetadata(project.releaseMetadata, project.name)
+
+    if (isReleaseMetadataReady(base)) return base
+
+    const titleInput = window.prompt('发布元信息（必填 1/4）：作品标题', base.title)
+    if (!titleInput || !titleInput.trim()) {
+      window.alert('未填写作品标题，已阻止进入分享卡片导出。')
+      return null
+    }
+
+    const authorInput = window.prompt('发布元信息（必填 2/4）：作者名', base.author)
+    if (!authorInput || !authorInput.trim()) {
+      window.alert('未填写作者名，已阻止进入分享卡片导出。')
+      return null
+    }
+
+    const coverInput = window.prompt('发布元信息（必填 3/4）：封面描述或路径', base.cover)
+    if (!coverInput || !coverInput.trim()) {
+      window.alert('未填写封面信息，已阻止进入分享卡片导出。')
+      return null
+    }
+
+    const tagsInput = window.prompt('发布元信息（必填 4/4）：风格标签（逗号分隔）', releaseTagsToText(base.tags))
+    const parsedTags = parseReleaseTags(tagsInput || '')
+    if (parsedTags.length === 0) {
+      window.alert('未填写风格标签，已阻止进入分享卡片导出。')
+      return null
+    }
+
+    const nextMetadata = normalizeReleaseMetadata({
+      title: titleInput,
+      author: authorInput,
+      cover: coverInput,
+      tags: parsedTags,
+      updatedAt: Date.now(),
+    }, project.name)
+
+    setProject((prev) => ({
+      ...prev,
+      releaseMetadata: nextMetadata,
+      name: prev.name || nextMetadata.title,
+    }), { saveHistory: true })
+
+    return nextMetadata
+  }, [project.name, project.releaseMetadata, setProject])
+
   const handleAudioExport = async () => {
     try {
       const audioBuffer = await audioEngine.renderBuffer(
@@ -1769,6 +1816,9 @@ export function useDAWActions(): DAWActions {
   }
 
   const handleSocialPublish = async () => {
+    const releaseMetadata = ensureReleaseMetadata()
+    if (!releaseMetadata) return
+
     try {
       const audioBuffer = await audioEngine.renderBuffer(
         project.tracks,
@@ -1794,7 +1844,7 @@ export function useDAWActions(): DAWActions {
 
       const mp3Data = audioBufferToMp3(audioBuffer)
       const mp3Blob = new Blob([mp3Data], { type: 'audio/mp3' })
-      const cardBlob = await createSocialCardBlob(project, totalDurationSec)
+      const cardBlob = await createSocialCardBlob(project, totalDurationSec, releaseMetadata)
       const baseName = buildSocialExportBaseName(project.name)
       const zipBlob = await createSocialPackageZipBlob(baseName, mp3Blob, cardBlob)
 
@@ -1805,8 +1855,11 @@ export function useDAWActions(): DAWActions {
   }
 
   const handleExportProjectCard = async () => {
+    const releaseMetadata = ensureReleaseMetadata()
+    if (!releaseMetadata) return
+
     try {
-      const cardBlob = await createSocialCardBlob(project, totalDurationSec)
+      const cardBlob = await createSocialCardBlob(project, totalDurationSec, releaseMetadata)
       const baseName = buildSocialExportBaseName(project.name)
       triggerDownload(cardBlob, `${baseName}-project-card.png`)
     } catch (error) {
