@@ -378,6 +378,225 @@ interface ExportLoudnessReport {
   checkedAt: number
 }
 
+type AutoMixCategory = 'drum' | 'bass' | 'harmony'
+type AutoMixSuggestionKind = 'volume' | 'pan' | 'lowcut'
+
+interface AutoMixSuggestion {
+  id: string
+  trackId: string
+  trackName: string
+  category: AutoMixCategory
+  kind: AutoMixSuggestionKind
+  from: number
+  to: number
+  label: string
+}
+
+interface AutoMixSuggestionItem extends AutoMixSuggestion {
+  applied: boolean
+}
+
+function averageClipNoteHz(track: Track) {
+  if (!track.clips.length) return 440
+  const total = track.clips.reduce((sum, clip) => sum + clip.noteHz, 0)
+  return total / track.clips.length
+}
+
+function chooseCategoryTracks(project: ProjectState) {
+  const tracks = project.tracks
+  const nonDrumTracks = tracks.filter((track) => !track.isDrumTrack)
+
+  const drumTrack = tracks.find((track) => track.isDrumTrack)
+    ?? tracks.find((track) => /drum|perc|kick|snare|hihat/i.test(track.name))
+    ?? tracks[0]
+
+  const bassCandidates = nonDrumTracks.length > 0 ? nonDrumTracks : tracks
+  const bassTrack = [...bassCandidates].sort((a, b) => {
+    const aNameScore = /bass|808|sub/i.test(a.name) ? -1000 : 0
+    const bNameScore = /bass|808|sub/i.test(b.name) ? -1000 : 0
+    return (averageClipNoteHz(a) + aNameScore) - (averageClipNoteHz(b) + bNameScore)
+  })[0] ?? tracks[0]
+
+  const harmonyCandidates = nonDrumTracks.filter((track) => track.id !== bassTrack?.id)
+  const harmonyTrack = harmonyCandidates.find((track) => track.clips.length > 0)
+    ?? harmonyCandidates[0]
+    ?? nonDrumTracks[0]
+    ?? tracks.find((track) => track.id !== bassTrack?.id)
+    ?? tracks[0]
+
+  return {
+    drumTrack,
+    bassTrack,
+    harmonyTrack,
+  }
+}
+
+function buildAutoMixSuggestions(project: ProjectState): AutoMixSuggestion[] {
+  if (project.tracks.length === 0) return []
+
+  const { drumTrack, bassTrack, harmonyTrack } = chooseCategoryTracks(project)
+  const suggestions: AutoMixSuggestion[] = []
+
+  if (drumTrack) {
+    suggestions.push({
+      id: `auto-mix-${drumTrack.id}-volume`,
+      trackId: drumTrack.id,
+      trackName: drumTrack.name,
+      category: 'drum',
+      kind: 'volume',
+      from: drumTrack.volume,
+      to: 0.72,
+      label: `鼓组音量归一到 72%（当前 ${Math.round(drumTrack.volume * 100)}%）`,
+    })
+  }
+
+  if (bassTrack) {
+    suggestions.push({
+      id: `auto-mix-${bassTrack.id}-pan`,
+      trackId: bassTrack.id,
+      trackName: bassTrack.name,
+      category: 'bass',
+      kind: 'pan',
+      from: bassTrack.pan,
+      to: 0,
+      label: `贝斯居中，稳定低频重心（当前 ${bassTrack.pan.toFixed(2)}）`,
+    })
+    suggestions.push({
+      id: `auto-mix-${bassTrack.id}-volume`,
+      trackId: bassTrack.id,
+      trackName: bassTrack.name,
+      category: 'bass',
+      kind: 'volume',
+      from: bassTrack.volume,
+      to: 0.68,
+      label: `贝斯音量对齐到 68%（当前 ${Math.round(bassTrack.volume * 100)}%）`,
+    })
+  }
+
+  if (harmonyTrack) {
+    const targetPan = harmonyTrack.id === bassTrack?.id ? -0.2 : (harmonyTrack.pan >= 0 ? 0.2 : -0.2)
+    suggestions.push({
+      id: `auto-mix-${harmonyTrack.id}-lowcut`,
+      trackId: harmonyTrack.id,
+      trackName: harmonyTrack.name,
+      category: 'harmony',
+      kind: 'lowcut',
+      from: harmonyTrack.filterType === 'highpass' ? harmonyTrack.filterCutoff : 0,
+      to: 140,
+      label: `和声高通到 140Hz，规避与低频冲突`,
+    })
+    suggestions.push({
+      id: `auto-mix-${harmonyTrack.id}-pan`,
+      trackId: harmonyTrack.id,
+      trackName: harmonyTrack.name,
+      category: 'harmony',
+      kind: 'pan',
+      from: harmonyTrack.pan,
+      to: targetPan,
+      label: `和声音像轻微偏移到 ${targetPan > 0 ? `R${Math.round(targetPan * 100)}` : `L${Math.round(Math.abs(targetPan) * 100)}`}`,
+    })
+  }
+
+  return suggestions
+}
+
+function applyAutoMixSuggestions(baseProject: ProjectState, suggestions: AutoMixSuggestion[], appliedIds: string[]): ProjectState {
+  const nextProject = structuredClone(baseProject)
+  const activeSuggestionIds = new Set(appliedIds)
+
+  suggestions.forEach((suggestion) => {
+    if (!activeSuggestionIds.has(suggestion.id)) return
+    const track = nextProject.tracks.find((item) => item.id === suggestion.trackId)
+    if (!track) return
+
+    if (suggestion.kind === 'volume') {
+      track.volume = suggestion.to
+      return
+    }
+    if (suggestion.kind === 'pan') {
+      track.pan = suggestion.to
+      return
+    }
+    if (suggestion.kind === 'lowcut') {
+      track.filterType = 'highpass'
+      track.filterCutoff = suggestion.to
+    }
+  })
+
+  return nextProject
+}
+
+function toAutoMixSuggestionItems(suggestions: AutoMixSuggestion[], appliedIds: string[]): AutoMixSuggestionItem[] {
+  const activeSuggestionIds = new Set(appliedIds)
+  return suggestions.map((item) => ({
+    ...item,
+    applied: activeSuggestionIds.has(item.id),
+  }))
+}
+
+function collectAutoMixCategories(items: AutoMixSuggestionItem[]) {
+  const set = new Set<AutoMixCategory>()
+  items.forEach((item) => set.add(item.category))
+  return [...set]
+}
+
+function hasAllAutoMixCategories(items: AutoMixSuggestionItem[]) {
+  const categories = collectAutoMixCategories(items)
+  return categories.includes('drum') && categories.includes('bass') && categories.includes('harmony')
+}
+
+function ensureAutoMixCoverage(project: ProjectState, suggestions: AutoMixSuggestion[]) {
+  const items = toAutoMixSuggestionItems(suggestions, suggestions.map((item) => item.id))
+  if (hasAllAutoMixCategories(items)) return suggestions
+
+  const fallbackTrack = project.tracks[0]
+  if (!fallbackTrack) return suggestions
+
+  const categories = collectAutoMixCategories(items)
+  const extra: AutoMixSuggestion[] = []
+
+  if (!categories.includes('drum')) {
+    extra.push({
+      id: `auto-mix-${fallbackTrack.id}-fallback-drum`,
+      trackId: fallbackTrack.id,
+      trackName: fallbackTrack.name,
+      category: 'drum',
+      kind: 'volume',
+      from: fallbackTrack.volume,
+      to: 0.72,
+      label: '鼓组兜底：补齐节奏轨道基础音量目标',
+    })
+  }
+
+  if (!categories.includes('bass')) {
+    extra.push({
+      id: `auto-mix-${fallbackTrack.id}-fallback-bass`,
+      trackId: fallbackTrack.id,
+      trackName: fallbackTrack.name,
+      category: 'bass',
+      kind: 'pan',
+      from: fallbackTrack.pan,
+      to: 0,
+      label: '贝斯兜底：补齐低频居中建议',
+    })
+  }
+
+  if (!categories.includes('harmony')) {
+    extra.push({
+      id: `auto-mix-${fallbackTrack.id}-fallback-harmony`,
+      trackId: fallbackTrack.id,
+      trackName: fallbackTrack.name,
+      category: 'harmony',
+      kind: 'lowcut',
+      from: fallbackTrack.filterType === 'highpass' ? fallbackTrack.filterCutoff : 0,
+      to: 140,
+      label: '和声兜底：补齐高通避让低频建议',
+    })
+  }
+
+  return [...suggestions, ...extra]
+}
+
 function formatDbLabel(value: number) {
   if (!Number.isFinite(value)) return '-∞ dB'
   return `${value.toFixed(1)} dB`
@@ -617,6 +836,13 @@ export interface DAWActions {
   handleAudioExport: () => Promise<void>
   handleMp3Export: () => Promise<void>
   lastExportLoudnessReport: ExportLoudnessReport | null
+  autoMixSuggestionItems: AutoMixSuggestionItem[]
+  autoMixAvailable: boolean
+  autoMixPreviewMode: 'before' | 'after' | null
+  autoMixCoverageReady: boolean
+  runAutoMixAssistant: () => void
+  toggleAutoMixSuggestion: (suggestionId: string) => void
+  previewAutoMixVersion: (mode: 'before' | 'after') => void
   handleSocialPublish: () => Promise<void>
   handleExportProjectCard: () => Promise<void>
   handleTapTempo: () => void
@@ -690,6 +916,10 @@ export function useDAWActions(): DAWActions {
   const redo = useDAWStore((state) => state.redo)
   const [isRecording, setIsRecording] = React.useState(false)
   const [lastExportLoudnessReport, setLastExportLoudnessReport] = React.useState<ExportLoudnessReport | null>(null)
+  const [autoMixBaseProject, setAutoMixBaseProject] = React.useState<ProjectState | null>(null)
+  const [autoMixSuggestions, setAutoMixSuggestions] = React.useState<AutoMixSuggestion[]>([])
+  const [autoMixAppliedSuggestionIds, setAutoMixAppliedSuggestionIds] = React.useState<string[]>([])
+  const [autoMixPreviewMode, setAutoMixPreviewMode] = React.useState<'before' | 'after' | null>(null)
   const resetProjectState = useDAWStore((state) => state.resetProject)
   const tapTempoRef = useRef<number[]>([])
   useEffect(() => {
@@ -922,6 +1152,58 @@ export function useDAWActions(): DAWActions {
   }, [project.tracks, selectedClipRef, isPlaying])
 
   const chordSuggestions = useMemo(() => analyzeChordSuggestions(project), [project])
+
+  const autoMixSuggestionItems = useMemo(
+    () => toAutoMixSuggestionItems(autoMixSuggestions, autoMixAppliedSuggestionIds),
+    [autoMixSuggestions, autoMixAppliedSuggestionIds],
+  )
+
+  const autoMixAvailable = autoMixSuggestions.length > 0
+  const autoMixCoverageReady = useMemo(() => hasAllAutoMixCategories(autoMixSuggestionItems), [autoMixSuggestionItems])
+
+  const runAutoMixAssistant = () => {
+    if (isPlaying) return
+
+    const baseProject = structuredClone(project)
+    const generatedSuggestions = ensureAutoMixCoverage(baseProject, buildAutoMixSuggestions(baseProject))
+    if (generatedSuggestions.length === 0) return
+
+    const appliedIds = generatedSuggestions.map((item) => item.id)
+    const mixedProject = applyAutoMixSuggestions(baseProject, generatedSuggestions, appliedIds)
+
+    setAutoMixBaseProject(baseProject)
+    setAutoMixSuggestions(generatedSuggestions)
+    setAutoMixAppliedSuggestionIds(appliedIds)
+    setAutoMixPreviewMode('after')
+    setProject(mixedProject, { saveHistory: true })
+  }
+
+  const toggleAutoMixSuggestion = (suggestionId: string) => {
+    if (!autoMixBaseProject || autoMixSuggestions.length === 0) return
+
+    const nextAppliedIds = autoMixAppliedSuggestionIds.includes(suggestionId)
+      ? autoMixAppliedSuggestionIds.filter((item) => item !== suggestionId)
+      : [...autoMixAppliedSuggestionIds, suggestionId]
+
+    const nextProject = applyAutoMixSuggestions(autoMixBaseProject, autoMixSuggestions, nextAppliedIds)
+    setAutoMixAppliedSuggestionIds(nextAppliedIds)
+    setAutoMixPreviewMode('after')
+    setProject(nextProject, { saveHistory: true })
+  }
+
+  const previewAutoMixVersion = (mode: 'before' | 'after') => {
+    if (!autoMixBaseProject || autoMixSuggestions.length === 0) return
+
+    if (mode === 'before') {
+      setAutoMixPreviewMode('before')
+      setProject(structuredClone(autoMixBaseProject), { saveHistory: true })
+      return
+    }
+
+    const nextProject = applyAutoMixSuggestions(autoMixBaseProject, autoMixSuggestions, autoMixAppliedSuggestionIds)
+    setAutoMixPreviewMode('after')
+    setProject(nextProject, { saveHistory: true })
+  }
 
   useEffect(() => {
     audioEngine.setMasterVolume(masterVolume)
@@ -3356,6 +3638,13 @@ export function useDAWActions(): DAWActions {
     handleAudioExport,
     handleMp3Export,
     lastExportLoudnessReport,
+    autoMixSuggestionItems,
+    autoMixAvailable,
+    autoMixPreviewMode,
+    autoMixCoverageReady,
+    runAutoMixAssistant,
+    toggleAutoMixSuggestion,
+    previewAutoMixVersion,
     handleSocialPublish,
     handleExportProjectCard,
     handleTapTempo,

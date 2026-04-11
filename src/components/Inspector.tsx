@@ -15,6 +15,8 @@ export function Inspector(d: DAWActions) {
     updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, continueTrackIdea,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
+    autoMixSuggestionItems, autoMixAvailable, autoMixPreviewMode, autoMixCoverageReady,
+    runAutoMixAssistant, toggleAutoMixSuggestion, previewAutoMixVersion,
     favoriteClips, favoriteClipSearchQuery, setFavoriteClipSearchQuery,
     saveFavoriteClipFromSelection, pasteFavoriteClipToTrack, deleteFavoriteClip,
     selectedClipRef, selectedClipRefs, chordSuggestions,
@@ -38,6 +40,9 @@ export function Inspector(d: DAWActions) {
   if (selectedClipRef && !allSelectedClipRefs.some(r => r.clipId === selectedClipRef.clipId)) {
     allSelectedClipRefs.unshift(selectedClipRef)
   }
+
+  const autoMixAppliedCount = autoMixSuggestionItems.filter((item) => item.applied).length
+  const autoMixCoverageLabel = `${autoMixSuggestionItems.some((item) => item.applied && item.category === 'drum') ? '鼓组✓' : '鼓组—'} / ${autoMixSuggestionItems.some((item) => item.applied && item.category === 'bass') ? '贝斯✓' : '贝斯—'} / ${autoMixSuggestionItems.some((item) => item.applied && item.category === 'harmony') ? '和声✓' : '和声—'}`
 
   return (
     <section className="inspector w-80 bg-[#111] border-l border-gray-800 flex flex-col overflow-y-auto flex-shrink-0" data-testid="inspector-panel">
@@ -279,6 +284,80 @@ export function Inspector(d: DAWActions) {
                   Magic Polish (Beginner Mix)
                 </button>
                 <p className="text-[10px] text-gray-500">Uses current Scale Key / Scale Type to create inspiration clips.</p>
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="auto-mix-assistant-panel">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs text-gray-500 block">Auto Mix Assistant</label>
+                  {autoMixAvailable && (
+                    <span className={`text-[10px] ${autoMixCoverageReady ? 'text-emerald-400' : 'text-amber-300'}`} data-testid="auto-mix-coverage-status">
+                      {autoMixCoverageReady ? '覆盖鼓/贝斯/和声 ✓' : '覆盖不足'}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  data-testid="run-auto-mix-btn"
+                  onClick={runAutoMixAssistant}
+                  disabled={isPlaying || project.tracks.length === 0}
+                  className="w-full text-xs px-2 py-1 rounded bg-indigo-700 hover:bg-indigo-600 text-white disabled:opacity-40"
+                >
+                  一键自动混音（音量/声像/低频避让）
+                </button>
+
+                {autoMixAvailable ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-1" data-testid="auto-mix-ab-toggle">
+                      <button
+                        type="button"
+                        data-testid="auto-mix-preview-before-btn"
+                        onClick={() => previewAutoMixVersion('before')}
+                        disabled={isPlaying}
+                        className={`text-[10px] px-2 py-1 rounded border ${autoMixPreviewMode === 'before' ? 'bg-amber-900/40 border-amber-700 text-amber-200' : 'bg-[#1f2937] border-gray-700 text-gray-200 hover:bg-[#374151]'}`}
+                      >
+                        A：应用前
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="auto-mix-preview-after-btn"
+                        onClick={() => previewAutoMixVersion('after')}
+                        disabled={isPlaying}
+                        className={`text-[10px] px-2 py-1 rounded border ${autoMixPreviewMode === 'after' ? 'bg-emerald-900/40 border-emerald-700 text-emerald-200' : 'bg-[#1f2937] border-gray-700 text-gray-200 hover:bg-[#374151]'}`}
+                      >
+                        B：应用后
+                      </button>
+                    </div>
+
+                    <p className="text-[10px] text-gray-500" data-testid="auto-mix-summary">
+                      {autoMixAppliedCount}/{autoMixSuggestionItems.length} 条建议已应用 · {autoMixCoverageLabel}
+                    </p>
+
+                    <div className="space-y-1" data-testid="auto-mix-suggestion-list">
+                      {autoMixSuggestionItems.map((suggestion) => (
+                        <label
+                          key={suggestion.id}
+                          className="flex items-start gap-2 rounded border border-gray-700 bg-[#111] p-2 text-[10px] text-gray-300"
+                          data-testid={`auto-mix-suggestion-${suggestion.id}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={suggestion.applied}
+                            onChange={() => toggleAutoMixSuggestion(suggestion.id)}
+                            disabled={isPlaying}
+                            className="mt-0.5 accent-emerald-500"
+                            data-testid={`auto-mix-toggle-${suggestion.id}`}
+                          />
+                          <span>
+                            <strong>{suggestion.trackName}</strong> · {suggestion.label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[10px] text-gray-500">点击按钮后将生成鼓/贝斯/和声三类建议，并支持单条撤销。</p>
+                )}
               </div>
 
               <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-chord-suggestions">
