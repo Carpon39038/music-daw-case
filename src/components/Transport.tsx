@@ -113,6 +113,18 @@ function getCurrentChallengeStep(project: DAWActions['project'], baselineSignatu
   return computeStep(project, baselineSignature, style, completed)
 }
 
+function formatLoudnessDb(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return '-∞ dB'
+  return `${value.toFixed(1)} dB`
+}
+
+function loudnessVerdictLabel(verdict: 'ready' | 'adjust' | 'clipping-risk' | null | undefined) {
+  if (verdict === 'ready') return '通过'
+  if (verdict === 'adjust') return '建议调整'
+  if (verdict === 'clipping-risk') return '削波风险（已阻止导出）'
+  return '未检查'
+}
+
 export function Transport({
   isPlaying,
   project,
@@ -134,6 +146,7 @@ export function Transport({
   handleMIDIExport,
   handleAudioExport,
   handleMp3Export,
+  lastExportLoudnessReport,
   handleSocialPublish,
   handleExportProjectCard,
   generateStyleStarter,
@@ -704,6 +717,10 @@ export function Transport({
               >
                 {challengeExporting ? '导出中…' : challengeCompleted ? '再次导出' : '完成并导出'}
               </button>
+            </div>
+            <div className="mt-2 text-[10px] text-gray-500" data-testid="export-loudness-status">
+              导出响度检查：{loudnessVerdictLabel(lastExportLoudnessReport?.verdict)}
+              {lastExportLoudnessReport ? `（峰值 ${formatLoudnessDb(lastExportLoudnessReport.peakDb)} / RMS ${formatLoudnessDb(lastExportLoudnessReport.rmsDb)}）` : ''}
             </div>
           </div>
         )}

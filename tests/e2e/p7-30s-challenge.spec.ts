@@ -6,6 +6,13 @@ test.describe('P7 30s challenge mode', () => {
   })
 
   test('supports 3-step flow: select style -> edit -> export', async ({ page }) => {
+    await page.goto('/')
+    await page.addInitScript(() => {
+      window.alert = () => {}
+      window.confirm = () => true
+    })
+    await page.reload()
+
     await page.getByTestId('challenge-mode-toggle').click()
     await expect(page.getByTestId('challenge-mode-panel')).toBeVisible()
 
@@ -22,5 +29,6 @@ test.describe('P7 30s challenge mode', () => {
 
     await page.getByTestId('challenge-export-btn').click()
     await expect(page.getByTestId('challenge-status-label')).toContainText('挑战完成')
+    await expect(page.getByTestId('export-loudness-status')).toContainText('导出响度检查：')
   })
 })

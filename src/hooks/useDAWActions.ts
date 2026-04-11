@@ -361,6 +361,58 @@ function buildMIDIFromProject(tracks: Track[], bpm: number): ArrayBuffer {
   return result.buffer
 }
 
+interface ExportLoudnessReport {
+  peakLinear: number
+  peakDb: number
+  rmsLinear: number
+  rmsDb: number
+  verdict: 'ready' | 'adjust' | 'clipping-risk'
+  checkedAt: number
+}
+
+function formatDbLabel(value: number) {
+  if (!Number.isFinite(value)) return '-∞ dB'
+  return `${value.toFixed(1)} dB`
+}
+
+function analyzeBufferLoudness(buffer: AudioBuffer): ExportLoudnessReport {
+  const channelCount = Math.max(1, buffer.numberOfChannels)
+  const sampleLength = buffer.length
+  let peak = 0
+  let sumSquares = 0
+
+  for (let ch = 0; ch < channelCount; ch++) {
+    const data = buffer.getChannelData(ch)
+    for (let i = 0; i < sampleLength; i++) {
+      const sample = data[i]
+      const abs = Math.abs(sample)
+      if (abs > peak) peak = abs
+      sumSquares += sample * sample
+    }
+  }
+
+  const totalSamples = Math.max(1, sampleLength * channelCount)
+  const rms = Math.sqrt(sumSquares / totalSamples)
+  const peakDb = peak > 0 ? 20 * Math.log10(peak) : -Infinity
+  const rmsDb = rms > 0 ? 20 * Math.log10(rms) : -Infinity
+
+  let verdict: ExportLoudnessReport['verdict'] = 'ready'
+  if (peak >= 0.995 || peakDb > -0.1) {
+    verdict = 'clipping-risk'
+  } else if (peakDb > -1 || rmsDb < -24 || rmsDb > -10) {
+    verdict = 'adjust'
+  }
+
+  return {
+    peakLinear: peak,
+    peakDb,
+    rmsLinear: rms,
+    rmsDb,
+    verdict,
+    checkedAt: Date.now(),
+  }
+}
+
 // Window debug type
 declare global {
   interface Window {
@@ -381,6 +433,9 @@ declare global {
       masterLevel: number
       masterVolume: number
       masterEQ: { low: number; mid: number; high: number }
+      lastExportPeakDb: number | null
+      lastExportRmsDb: number | null
+      lastExportLoudnessVerdict: 'ready' | 'adjust' | 'clipping-risk' | null
       audioContextState: AudioContextState | 'uninitialized'
       beatDurationSec: number
       timelineDurationSec: number
@@ -539,6 +594,7 @@ export interface DAWActions {
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
   handleMp3Export: () => Promise<void>
+  lastExportLoudnessReport: ExportLoudnessReport | null
   handleSocialPublish: () => Promise<void>
   handleExportProjectCard: () => Promise<void>
   handleTapTempo: () => void
@@ -606,6 +662,7 @@ export function useDAWActions(): DAWActions {
   const undo = useDAWStore((state) => state.undo)
   const redo = useDAWStore((state) => state.redo)
   const [isRecording, setIsRecording] = React.useState(false)
+  const [lastExportLoudnessReport, setLastExportLoudnessReport] = React.useState<ExportLoudnessReport | null>(null)
   const resetProjectState = useDAWStore((state) => state.resetProject)
   const tapTempoRef = useRef<number[]>([])
   useEffect(() => {
@@ -784,6 +841,27 @@ export function useDAWActions(): DAWActions {
 
   const handleAudioExport = async () => {
     try {
+      const audioBuffer = await audioEngine.renderBuffer(
+        project.tracks,
+        project.bpm,
+        effectiveTimelineBeats,
+        tempoCurveType,
+        tempoCurveTargetBpm,
+        masterEQ,
+      )
+      const loudness = analyzeBufferLoudness(audioBuffer)
+      setLastExportLoudnessReport(loudness)
+
+      if (loudness.verdict === 'clipping-risk') {
+        window.alert(`导出已阻止：检测到削波风险\n峰值：${formatDbLabel(loudness.peakDb)}\n整体响度（RMS）：${formatDbLabel(loudness.rmsDb)}\n\n建议先降低主音量、使用 Normalize 或 Magic Polish 后再导出。`)
+        return
+      }
+
+      if (loudness.verdict === 'adjust') {
+        const proceed = window.confirm(`导出前响度检查：\n峰值：${formatDbLabel(loudness.peakDb)}\n整体响度（RMS）：${formatDbLabel(loudness.rmsDb)}\n结论：建议调整后再发布。\n\n是否仍继续导出 WAV？`)
+        if (!proceed) return
+      }
+
       const wavData = await audioEngine.exportWav(
         project.tracks,
         project.bpm,
@@ -794,7 +872,7 @@ export function useDAWActions(): DAWActions {
       )
       const blob = new Blob([wavData], { type: 'audio/wav' })
       const url = URL.createObjectURL(blob)
-      
+
       const a = document.createElement('a')
       a.href = url
       a.download = `project-${Date.now()}.wav`
@@ -817,10 +895,23 @@ export function useDAWActions(): DAWActions {
         tempoCurveTargetBpm,
         masterEQ,
       )
+      const loudness = analyzeBufferLoudness(audioBuffer)
+      setLastExportLoudnessReport(loudness)
+
+      if (loudness.verdict === 'clipping-risk') {
+        window.alert(`导出已阻止：检测到削波风险\n峰值：${formatDbLabel(loudness.peakDb)}\n整体响度（RMS）：${formatDbLabel(loudness.rmsDb)}\n\n建议先降低主音量、使用 Normalize 或 Magic Polish 后再导出。`)
+        return
+      }
+
+      if (loudness.verdict === 'adjust') {
+        const proceed = window.confirm(`导出前响度检查：\n峰值：${formatDbLabel(loudness.peakDb)}\n整体响度（RMS）：${formatDbLabel(loudness.rmsDb)}\n结论：建议调整后再发布。\n\n是否仍继续导出 MP3？`)
+        if (!proceed) return
+      }
+
       const mp3Data = audioBufferToMp3(audioBuffer)
       const blob = new Blob([mp3Data], { type: 'audio/mp3' })
       const url = URL.createObjectURL(blob)
-      
+
       const a = document.createElement('a')
       a.href = url
       a.download = `project-${Date.now()}.mp3`
@@ -1110,7 +1201,10 @@ export function useDAWActions(): DAWActions {
       clipboardSourceTrackId: clipboard?.sourceTrackId ?? null,
       masterLevel: masterLevelRef.current,
       masterVolume,
-    masterEQ,
+      masterEQ,
+      lastExportPeakDb: lastExportLoudnessReport?.peakDb ?? null,
+      lastExportRmsDb: lastExportLoudnessReport?.rmsDb ?? null,
+      lastExportLoudnessVerdict: lastExportLoudnessReport?.verdict ?? null,
       audioContextState: audioEngine.ctx?.state ?? 'uninitialized',
       beatDurationSec: beatDuration,
       timelineDurationSec: totalDurationSec,
@@ -1193,6 +1287,7 @@ export function useDAWActions(): DAWActions {
     filteredTrackCount,
     metronomeEnabled,
     mutedClipCount,
+    lastExportLoudnessReport,
   ])
 
   useEffect(() => {
@@ -2878,6 +2973,7 @@ export function useDAWActions(): DAWActions {
     handleMIDIExport,
     handleAudioExport,
     handleMp3Export,
+    lastExportLoudnessReport,
     handleSocialPublish,
     handleExportProjectCard,
     handleTapTempo,
