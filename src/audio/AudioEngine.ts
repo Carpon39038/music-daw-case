@@ -1,4 +1,4 @@
-import type { Clip, Track } from '../types'
+import type { Clip, MasterEQ, Track } from '../types'
 import { beatToSeconds, getTimelineDurationSec, type TempoCurveType } from '../utils/tempoCurve'
 
 function applyWaveType(ctx: BaseAudioContext, osc: OscillatorNode, waveType: string) {
@@ -147,6 +147,7 @@ export class AudioEngine {
     timelineBeats: number,
     tempoCurveType: TempoCurveType = 'constant',
     tempoCurveTargetBpm?: number,
+    masterEQ?: MasterEQ,
   ): Promise<AudioBuffer> {
     const durationSec = getTimelineDurationSec(timelineBeats, {
       bpm,
@@ -171,6 +172,7 @@ export class AudioEngine {
       tempoCurveTargetBpm,
       offlineCtx,
       masterGain,
+      masterEQ,
     );
     
     return await offlineCtx.startRendering();
@@ -182,8 +184,9 @@ export class AudioEngine {
     timelineBeats: number,
     tempoCurveType: TempoCurveType = 'constant',
     tempoCurveTargetBpm?: number,
+    masterEQ?: MasterEQ,
   ): Promise<ArrayBuffer> {
-    const renderedBuffer = await this.renderBuffer(tracks, bpm, timelineBeats, tempoCurveType, tempoCurveTargetBpm);
+    const renderedBuffer = await this.renderBuffer(tracks, bpm, timelineBeats, tempoCurveType, tempoCurveTargetBpm, masterEQ);
     
     const numChannels = renderedBuffer.numberOfChannels;
     const format = 1;
@@ -244,10 +247,35 @@ export class AudioEngine {
     tempoCurveTargetBpm?: number,
     customCtx?: BaseAudioContext,
     customMaster?: GainNode,
+    masterEQ?: MasterEQ,
   ) {
     const ctx = customCtx || this.ctx
     const master = customMaster || this.masterGain
     if (!ctx || !master) return
+
+    const masterBus = ctx.createGain()
+    masterBus.gain.value = 1
+
+    const masterEqLow = ctx.createBiquadFilter()
+    masterEqLow.type = 'lowshelf'
+    masterEqLow.frequency.value = 250
+    masterEqLow.gain.value = masterEQ?.low ?? 0
+
+    const masterEqMid = ctx.createBiquadFilter()
+    masterEqMid.type = 'peaking'
+    masterEqMid.frequency.value = 1000
+    masterEqMid.Q.value = 1
+    masterEqMid.gain.value = masterEQ?.mid ?? 0
+
+    const masterEqHigh = ctx.createBiquadFilter()
+    masterEqHigh.type = 'highshelf'
+    masterEqHigh.frequency.value = 4000
+    masterEqHigh.gain.value = masterEQ?.high ?? 0
+
+    masterBus.connect(masterEqLow)
+    masterEqLow.connect(masterEqMid)
+    masterEqMid.connect(masterEqHigh)
+    masterEqHigh.connect(master)
 
     const soloActive = tracks.some((t) => t.solo)
     const loopBeats = loopEnabled ? loopLengthBeats : timelineBeats
@@ -271,7 +299,7 @@ export class AudioEngine {
         clickGain.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.05)
 
         clickOsc.connect(clickGain)
-        clickGain.connect(master)
+        clickGain.connect(masterBus)
 
         clickOsc.start(beatTime)
         clickOsc.stop(beatTime + 0.05)
@@ -302,7 +330,7 @@ export class AudioEngine {
             currentOutput.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); currentOutput = eqHigh;
           }
           
-          currentOutput.connect(master);
+          currentOutput.connect(masterBus);
           trackOutputNode = trackInputNode;
 
           const seq = track.drumSequence;
@@ -539,7 +567,7 @@ export class AudioEngine {
           trackOutput.connect(delayNode)
           delayNode.connect(feedbackGain)
           feedbackGain.connect(delayNode)
-          delayNode.connect(master)
+          delayNode.connect(masterBus)
         }
 
         // Tremolo
@@ -582,10 +610,10 @@ export class AudioEngine {
           wetGain.gain.value = track.reverbMix ?? 0.3
           trackOutput.connect(convolver)
           convolver.connect(wetGain)
-          wetGain.connect(master)
+          wetGain.connect(masterBus)
         }
 
-        trackOutput.connect(master)
+        trackOutput.connect(masterBus)
 
         osc.start(clipStart)
         osc.stop(clipEnd)

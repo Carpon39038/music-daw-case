@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
-import type { Clip, MasterEQ, ProjectState, Track, WaveType } from '../types'
+import type { Clip, MasterEQ, MasterPreset, ProjectState, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
@@ -431,6 +431,7 @@ export interface DAWActions {
   metronomeEnabled: boolean
   masterVolume: number
   masterEQ: MasterEQ
+  masterPreset: MasterPreset
   loopEnabled: boolean
   loopLengthBeats: number
   selectedTrackId: string | null
@@ -473,6 +474,8 @@ export interface DAWActions {
   setPlayheadBeat: (value: number) => void
   setMasterVolume: (value: number) => void
   setMasterEQ: (value: MasterEQ | ((prev: MasterEQ) => MasterEQ)) => void
+  applyMasterPreset: (preset: MasterPreset) => void
+  resetMasterPresetToBaseline: () => void
   setLoopEnabled: (value: boolean) => void
   setLoopLengthBeats: (value: number) => void
   setSelectedTrackId: (value: string | null) => void
@@ -572,6 +575,7 @@ export function useDAWActions(): DAWActions {
   const metronomeEnabled = useDAWStore((state) => state.metronomeEnabled)
   const masterVolume = useDAWStore((state) => state.masterVolume)
   const masterEQ = useDAWStore((state) => state.masterEQ)
+  const masterPreset = useDAWStore((state) => state.masterPreset)
   const loopEnabled = useDAWStore((state) => state.loopEnabled)
   const loopLengthBeats = useDAWStore((state) => state.loopLengthBeats)
   const selectedTrackId = useDAWStore((state) => state.selectedTrackId)
@@ -587,6 +591,8 @@ export function useDAWActions(): DAWActions {
   const storeSetPlayheadBeat = useDAWStore((state) => state.setPlayheadBeat)
   const storeSetMasterVolume = useDAWStore((state) => state.setMasterVolume)
   const storeSetMasterEQ = useDAWStore((state) => state.setMasterEQ)
+  const storeApplyMasterPreset = useDAWStore((state) => state.applyMasterPreset)
+  const storeResetMasterPresetToBaseline = useDAWStore((state) => state.resetMasterPresetToBaseline)
   const storeSetLoopEnabled = useDAWStore((state) => state.setLoopEnabled)
   const storeSetLoopLengthBeats = useDAWStore((state) => state.setLoopLengthBeats)
   const storeSetSelectedTrackId = useDAWStore((state) => state.setSelectedTrackId)
@@ -644,6 +650,14 @@ export function useDAWActions(): DAWActions {
 
   const setMasterEQ = (value: MasterEQ | ((prev: MasterEQ) => MasterEQ)) => {
     storeSetMasterEQ(typeof value === 'function' ? value(masterEQ) : value)
+  }
+
+  const applyMasterPreset = (preset: MasterPreset) => {
+    storeApplyMasterPreset(preset)
+  }
+
+  const resetMasterPresetToBaseline = () => {
+    storeResetMasterPresetToBaseline()
   }
 
   const setLoopEnabled = (value: boolean) => {
@@ -776,6 +790,7 @@ export function useDAWActions(): DAWActions {
         effectiveTimelineBeats,
         tempoCurveType,
         tempoCurveTargetBpm,
+        masterEQ,
       )
       const blob = new Blob([wavData], { type: 'audio/wav' })
       const url = URL.createObjectURL(blob)
@@ -800,6 +815,7 @@ export function useDAWActions(): DAWActions {
         effectiveTimelineBeats,
         tempoCurveType,
         tempoCurveTargetBpm,
+        masterEQ,
       )
       const mp3Data = audioBufferToMp3(audioBuffer)
       const blob = new Blob([mp3Data], { type: 'audio/mp3' })
@@ -825,6 +841,7 @@ export function useDAWActions(): DAWActions {
         effectiveTimelineBeats,
         tempoCurveType,
         tempoCurveTargetBpm,
+        masterEQ,
       )
       const mp3Data = audioBufferToMp3(audioBuffer)
       const mp3Blob = new Blob([mp3Data], { type: 'audio/mp3' })
@@ -962,6 +979,9 @@ export function useDAWActions(): DAWActions {
       TIMELINE_BEATS,
       tempoCurveType,
       tempoCurveTargetBpm,
+      undefined,
+      undefined,
+      masterEQ,
     )
   }
 
@@ -2764,6 +2784,7 @@ export function useDAWActions(): DAWActions {
     metronomeEnabled,
     masterVolume,
     masterEQ,
+    masterPreset,
     loopEnabled,
     loopLengthBeats,
     selectedTrackId,
@@ -2797,6 +2818,8 @@ export function useDAWActions(): DAWActions {
     setPlayheadBeat,
     setMasterVolume,
     setMasterEQ,
+    applyMasterPreset,
+    resetMasterPresetToBaseline,
     setLoopEnabled,
     setLoopLengthBeats,
     setSelectedTrackId,

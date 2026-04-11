@@ -79,6 +79,14 @@ export interface MasterEQ {
   high: number
 }
 
+export type MasterPreset = 'none' | 'clean' | 'loud' | 'warm' | 'bright'
+
+export interface MasterSnapshot {
+  masterVolume: number
+  masterEQ: MasterEQ
+  masterPreset: MasterPreset
+}
+
 export interface SelectedClipRef {
   trackId: string
   clipId: string

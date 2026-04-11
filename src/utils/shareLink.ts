@@ -1,10 +1,11 @@
 import { strFromU8, strToU8, zlibSync, unzlibSync } from 'fflate'
-import type { ProjectState, MasterEQ } from '../types'
+import type { ProjectState, MasterEQ, MasterPreset } from '../types'
 
 interface SharePayload {
   project: ProjectState
   masterVolume: number
   masterEQ: MasterEQ
+  masterPreset?: MasterPreset
   loopEnabled: boolean
   loopLengthBeats: number
 }

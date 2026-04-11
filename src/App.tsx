@@ -26,6 +26,8 @@ function App() {
           project: payload.project,
           masterVolume: payload.masterVolume,
           masterEQ: payload.masterEQ,
+          masterPreset: payload.masterPreset ?? 'none',
+          masterPresetBaseline: null,
           loopEnabled: payload.loopEnabled,
           loopLengthBeats: payload.loopLengthBeats
         })

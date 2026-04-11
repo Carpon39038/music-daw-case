@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { ClipboardState, MasterEQ, ProjectState, SelectedClipRef, WaveType } from '../types'
+import type { ClipboardState, MasterEQ, MasterPreset, MasterSnapshot, ProjectState, SelectedClipRef, WaveType } from '../types'
 
 export interface PlayheadDragState {
   isDragging: boolean
@@ -33,6 +33,14 @@ const STORE_STORAGE_KEY = 'music-daw-case.store.v1'
 const LEGACY_PROJECT_STORAGE_KEY = 'music-daw-case.project.v1'
 const LEGACY_MASTER_VOLUME_KEY = 'music-daw-case.masterVolume.v1'
 const LEGACY_MASTER_EQ_KEY = 'music-daw-case.masterEQ.v1'
+
+export const MASTER_PRESET_SETTINGS = {
+  none: { volume: 0.8, eq: { low: 0, mid: 0, high: 0 } },
+  clean: { volume: 0.78, eq: { low: -0.5, mid: 0.8, high: 1.2 } },
+  loud: { volume: 0.86, eq: { low: 1.5, mid: 0.8, high: 1.4 } },
+  warm: { volume: 0.8, eq: { low: 2.6, mid: -0.8, high: -1.8 } },
+  bright: { volume: 0.8, eq: { low: -1.2, mid: 0.6, high: 2.8 } },
+} as const satisfies Record<MasterPreset, { volume: number; eq: MasterEQ }>
 
 export interface ProjectTemplate {
   id: string
@@ -73,6 +81,8 @@ interface PersistedDAWState {
   projectTemplates: ProjectTemplate[]
   galleryProjects: GalleryProject[]
   achievements: AchievementsState
+  masterPreset: MasterPreset
+  masterPresetBaseline: MasterSnapshot | null
 }
 
 interface DAWState extends PersistedDAWState {
@@ -117,6 +127,9 @@ interface DAWState extends PersistedDAWState {
   unlockAchievement: (key: AchievementKey) => void
   deleteGalleryProject: (id: string) => void
   loadGalleryProject: (id: string) => void
+  setMasterPreset: (value: MasterPreset) => void
+  applyMasterPreset: (preset: MasterPreset) => void
+  resetMasterPresetToBaseline: () => void
 }
 
 function createInitialProject(): ProjectState {
@@ -255,8 +268,10 @@ function createInitialAchievements(): AchievementsState {
 function getDefaultPersistedState(): PersistedDAWState {
   return {
     project: createInitialProject(),
-    masterVolume: 0.8,
-    masterEQ: { low: 0, mid: 0, high: 0 },
+    masterVolume: MASTER_PRESET_SETTINGS.none.volume,
+    masterEQ: { ...MASTER_PRESET_SETTINGS.none.eq },
+    masterPreset: 'none',
+    masterPresetBaseline: null,
     loopEnabled: false,
     loopLengthBeats: 8,
     metronomeEnabled: false,
@@ -321,6 +336,8 @@ function loadLegacyPersistedState(): PersistedDAWState {
     project,
     masterVolume,
     masterEQ,
+    masterPreset: 'none',
+    masterPresetBaseline: null,
   }
 }
 
@@ -394,8 +411,62 @@ export const useDAWStore = create<DAWState>()(
       setMetronomeEnabled: (value) => set({ metronomeEnabled: value }),
       setPerformanceMode: (value) => set({ performanceMode: value }),
       setPlayheadBeat: (value) => set({ playheadBeat: value }),
-      setMasterVolume: (value) => set({ masterVolume: value }),
-      setMasterEQ: (value) => set({ masterEQ: value }),
+      setMasterVolume: (value) =>
+        set((state) => ({
+          masterVolume: value,
+          ...(state.masterPreset === 'none' ? {} : { masterPreset: 'none', masterPresetBaseline: null }),
+        })),
+      setMasterEQ: (value) =>
+        set((state) => ({
+          masterEQ: value,
+          ...(state.masterPreset === 'none' ? {} : { masterPreset: 'none', masterPresetBaseline: null }),
+        })),
+      setMasterPreset: (value) => set({ masterPreset: value }),
+      applyMasterPreset: (preset) =>
+        set((state) => {
+          if (preset === 'none') {
+            if (!state.masterPresetBaseline) {
+              return { masterPreset: 'none' }
+            }
+            return {
+              masterVolume: state.masterPresetBaseline.masterVolume,
+              masterEQ: state.masterPresetBaseline.masterEQ,
+              masterPreset: 'none',
+              masterPresetBaseline: null,
+            }
+          }
+
+          const baseline = state.masterPreset === 'none'
+            ? {
+                masterVolume: state.masterVolume,
+                masterEQ: state.masterEQ,
+                masterPreset: 'none' as MasterPreset,
+              }
+            : (state.masterPresetBaseline ?? {
+                masterVolume: state.masterVolume,
+                masterEQ: state.masterEQ,
+                masterPreset: 'none' as MasterPreset,
+              })
+          const presetSettings = MASTER_PRESET_SETTINGS[preset]
+          return {
+            masterVolume: presetSettings.volume,
+            masterEQ: presetSettings.eq,
+            masterPreset: preset,
+            masterPresetBaseline: baseline,
+          }
+        }),
+      resetMasterPresetToBaseline: () =>
+        set((state) => {
+          if (!state.masterPresetBaseline) {
+            return { masterPreset: 'none' }
+          }
+          return {
+            masterVolume: state.masterPresetBaseline.masterVolume,
+            masterEQ: state.masterPresetBaseline.masterEQ,
+            masterPreset: 'none',
+            masterPresetBaseline: null,
+          }
+        }),
       setLoopEnabled: (value) => set({ loopEnabled: value }),
       setLoopLengthBeats: (value) => set({ loopLengthBeats: value }),
       setSelectedTrackId: (value) => set({ selectedTrackId: value }),
@@ -547,6 +618,8 @@ export const useDAWStore = create<DAWState>()(
         project: state.project,
         masterVolume: state.masterVolume,
         masterEQ: state.masterEQ,
+        masterPreset: state.masterPreset,
+        masterPresetBaseline: state.masterPresetBaseline,
         loopEnabled: state.loopEnabled,
         loopLengthBeats: state.loopLengthBeats,
         metronomeEnabled: state.metronomeEnabled,

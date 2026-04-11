@@ -12,6 +12,7 @@ export function ShareButton() {
       project: state.project,
       masterVolume: state.masterVolume,
       masterEQ: state.masterEQ,
+      masterPreset: state.masterPreset,
       loopEnabled: state.loopEnabled,
       loopLengthBeats: state.loopLengthBeats
     }

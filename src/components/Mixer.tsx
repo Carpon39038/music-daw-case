@@ -2,12 +2,23 @@ import { useEffect, useState } from 'react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { audioEngine } from '../audio/AudioEngine'
 
+const PRESET_OPTIONS: Array<{ key: DAWActions['masterPreset']; label: string }> = [
+  { key: 'none', label: 'RAW' },
+  { key: 'clean', label: 'CLEAN' },
+  { key: 'loud', label: 'LOUD' },
+  { key: 'warm', label: 'WARM' },
+  { key: 'bright', label: 'BRIGHT' },
+]
+
 export function Mixer({
   masterVolume,
   setMasterVolume,
   masterEQ,
   setMasterEQ,
-}: Pick<DAWActions, 'masterVolume' | 'setMasterVolume' | 'masterEQ' | 'setMasterEQ'>) {
+  masterPreset,
+  applyMasterPreset,
+  resetMasterPresetToBaseline,
+}: Pick<DAWActions, 'masterVolume' | 'setMasterVolume' | 'masterEQ' | 'setMasterEQ' | 'masterPreset' | 'applyMasterPreset' | 'resetMasterPresetToBaseline'>) {
   const [rms, setRms] = useState(0)
 
   useEffect(() => {
@@ -60,7 +71,34 @@ export function Mixer({
       </div>
 
       {/* Master EQ */}
-      <div className="flex flex-col w-64 border-l border-gray-800 pl-8">
+      <div className="flex flex-col w-80 border-l border-gray-800 pl-8">
+        <div className="mb-3">
+          <span className="text-xs text-gray-500 font-medium">MASTER PRESET</span>
+          <div className="grid grid-cols-5 gap-1 mt-2" data-testid="master-preset-pack">
+            {PRESET_OPTIONS.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => {
+                  if (option.key === 'none') {
+                    resetMasterPresetToBaseline()
+                    return
+                  }
+                  applyMasterPreset(option.key)
+                }}
+                data-testid={`master-preset-${option.key}`}
+                className={`text-[10px] rounded px-1.5 py-1 border transition-colors ${masterPreset === option.key ? 'bg-emerald-600/30 border-emerald-400 text-emerald-200' : 'bg-gray-900 border-gray-700 text-gray-300 hover:border-gray-500'}`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {masterPreset !== 'none' && (
+            <div className="text-[10px] text-emerald-300 mt-1" data-testid="master-preset-active-label">
+              Active: {masterPreset.toUpperCase()} preset
+            </div>
+          )}
+        </div>
         <span className="text-xs text-gray-500 font-medium mb-4">MASTER EQ</span>
         <div className="flex justify-between flex-1">
           <div className="flex flex-col items-center">
