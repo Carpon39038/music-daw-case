@@ -17,6 +17,7 @@ export function Inspector(d: DAWActions) {
     duplicateClip, splitClip, clipboard, previewClip,
     autoMixSuggestionItems, autoMixAvailable, autoMixPreviewMode, autoMixCoverageReady,
     runAutoMixAssistant, toggleAutoMixSuggestion, previewAutoMixVersion,
+    enableVocalCleanChain,
     favoriteClips, favoriteClipSearchQuery, setFavoriteClipSearchQuery,
     saveFavoriteClipFromSelection, pasteFavoriteClipToTrack, deleteFavoriteClip,
     selectedClipRef, selectedClipRefs, chordSuggestions,
@@ -421,6 +422,61 @@ export function Inspector(d: DAWActions) {
                     if (!selectedTrack) return null;
                     return (
                       <div className="space-y-3">
+                        {/* Vocal Clean Chain */}
+                        <details className="inspector-subgroup bg-[#1a1a1a] rounded border border-gray-800 overflow-hidden">
+                          <summary className="text-sm font-medium flex items-center gap-2 text-gray-300 p-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              data-testid={`vocal-clean-enabled-${selectedTrack.id}`}
+                              checked={!!selectedTrack.vocalCleanEnabled}
+                              disabled={isPlaying}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  enableVocalCleanChain(selectedTrack.id)
+                                  return
+                                }
+                                applyProjectUpdate(prev => ({
+                                  ...prev,
+                                  tracks: prev.tracks.map(t => t.id === selectedTrack.id
+                                    ? { ...t, vocalCleanEnabled: false, vocalInputWarning: null, vocalInputAdvice: '' }
+                                    : t),
+                                }))
+                              }}
+                              className="accent-emerald-500"
+                            />
+                            Vocal Clean Chain
+                          </summary>
+                          <div className="p-3 pt-0">
+                            {selectedTrack.vocalCleanEnabled && (
+                              <div className="space-y-2 pl-6 mt-2" data-testid={`vocal-clean-chain-${selectedTrack.id}`}>
+                                <p className="text-[10px] text-gray-500">包含：去底噪（高通）/ 齿音抑制 / 基础压缩 / 响度补偿（导出生效）</p>
+                                <div>
+                                  <label className="text-[10px] text-gray-500 flex justify-between"><span>Denoise</span><span>{Math.round((selectedTrack.vocalDenoiseAmount ?? 0.45) * 100)}%</span></label>
+                                  <input type="range" min="0" max="1" step="0.05" data-testid={`vocal-denoise-${selectedTrack.id}`} value={selectedTrack.vocalDenoiseAmount ?? 0.45} disabled={isPlaying} onChange={(e) => applyProjectUpdate(prev => ({ ...prev, tracks: prev.tracks.map(t => t.id === selectedTrack.id ? { ...t, vocalDenoiseAmount: Number(e.target.value) } : t) }))} className="w-full h-1 accent-emerald-500" />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-gray-500 flex justify-between"><span>De-ess</span><span>{Math.round((selectedTrack.vocalDeEssAmount ?? 0.5) * 100)}%</span></label>
+                                  <input type="range" min="0" max="1" step="0.05" data-testid={`vocal-deess-${selectedTrack.id}`} value={selectedTrack.vocalDeEssAmount ?? 0.5} disabled={isPlaying} onChange={(e) => applyProjectUpdate(prev => ({ ...prev, tracks: prev.tracks.map(t => t.id === selectedTrack.id ? { ...t, vocalDeEssAmount: Number(e.target.value) } : t) }))} className="w-full h-1 accent-emerald-500" />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-gray-500 flex justify-between"><span>Comp</span><span>{Math.round((selectedTrack.vocalCompAmount ?? 0.55) * 100)}%</span></label>
+                                  <input type="range" min="0" max="1" step="0.05" data-testid={`vocal-comp-${selectedTrack.id}`} value={selectedTrack.vocalCompAmount ?? 0.55} disabled={isPlaying} onChange={(e) => applyProjectUpdate(prev => ({ ...prev, tracks: prev.tracks.map(t => t.id === selectedTrack.id ? { ...t, vocalCompAmount: Number(e.target.value) } : t) }))} className="w-full h-1 accent-emerald-500" />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-gray-500 flex justify-between"><span>Make-up</span><span>{(selectedTrack.vocalMakeupGainDb ?? 2).toFixed(1)}dB</span></label>
+                                  <input type="range" min="-3" max="8" step="0.5" data-testid={`vocal-makeup-${selectedTrack.id}`} value={selectedTrack.vocalMakeupGainDb ?? 2} disabled={isPlaying} onChange={(e) => applyProjectUpdate(prev => ({ ...prev, tracks: prev.tracks.map(t => t.id === selectedTrack.id ? { ...t, vocalMakeupGainDb: Number(e.target.value) } : t) }))} className="w-full h-1 accent-emerald-500" />
+                                </div>
+                                {selectedTrack.vocalInputWarning && (
+                                  <div data-testid={`vocal-input-warning-${selectedTrack.id}`} className={`rounded border px-2 py-1 text-[10px] ${selectedTrack.vocalInputWarning === 'clipping' ? 'border-red-800 bg-red-950/40 text-red-300' : 'border-amber-700 bg-amber-950/30 text-amber-200'}`}>
+                                    <strong>{selectedTrack.vocalInputWarning === 'clipping' ? '输入告警：可能削波' : '输入告警：电平偏低'}</strong>
+                                    <div>{selectedTrack.vocalInputAdvice || '建议调整录音输入后再导出。'}</div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </details>
+
                         {/* Reverb */}
                         <details className="inspector-subgroup bg-[#1a1a1a] rounded border border-gray-800 overflow-hidden">
                           <summary className="text-sm font-medium flex items-center gap-2 text-gray-300 p-3 cursor-pointer">

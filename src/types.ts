@@ -59,6 +59,13 @@ export interface FrozenTrackSnapshot {
   reverbEnabled?: boolean
   reverbMix?: number
   reverbDecay?: number
+  vocalCleanEnabled?: boolean
+  vocalDenoiseAmount?: number
+  vocalDeEssAmount?: number
+  vocalCompAmount?: number
+  vocalMakeupGainDb?: number
+  vocalInputWarning?: 'low' | 'clipping' | null
+  vocalInputAdvice?: string
 }
 
 export interface Track {
@@ -100,6 +107,13 @@ export interface Track {
   reverbEnabled?: boolean
   reverbMix?: number
   reverbDecay?: number
+  vocalCleanEnabled?: boolean
+  vocalDenoiseAmount?: number
+  vocalDeEssAmount?: number
+  vocalCompAmount?: number
+  vocalMakeupGainDb?: number
+  vocalInputWarning?: 'low' | 'clipping' | null
+  vocalInputAdvice?: string
   transposeSemitones: number
   filterType: 'none' | 'lowpass' | 'highpass'
   filterCutoff: number

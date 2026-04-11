@@ -212,6 +212,13 @@ function isValidProjectState(value: unknown): value is ProjectState {
       (t.reverbEnabled !== undefined && typeof t.reverbEnabled !== 'boolean') ||
       (t.reverbMix !== undefined && typeof t.reverbMix !== 'number') ||
       (t.reverbDecay !== undefined && typeof t.reverbDecay !== 'number') ||
+      (t.vocalCleanEnabled !== undefined && typeof t.vocalCleanEnabled !== 'boolean') ||
+      (t.vocalDenoiseAmount !== undefined && typeof t.vocalDenoiseAmount !== 'number') ||
+      (t.vocalDeEssAmount !== undefined && typeof t.vocalDeEssAmount !== 'number') ||
+      (t.vocalCompAmount !== undefined && typeof t.vocalCompAmount !== 'number') ||
+      (t.vocalMakeupGainDb !== undefined && typeof t.vocalMakeupGainDb !== 'number') ||
+      (t.vocalInputWarning !== undefined && t.vocalInputWarning !== null && !['low', 'clipping'].includes(t.vocalInputWarning)) ||
+      (t.vocalInputAdvice !== undefined && typeof t.vocalInputAdvice !== 'string') ||
       (t.filterType && !['none', 'lowpass', 'highpass'].includes(t.filterType)) ||
       (t.filterCutoff !== undefined && typeof t.filterCutoff !== 'number') ||
       (t.frozen !== undefined && typeof t.frozen !== 'boolean') ||
@@ -267,6 +274,13 @@ function normalizeProject(project: ProjectState): ProjectState {
       distortionEnabled: track.distortionEnabled ?? false,
       reverbMix: track.reverbMix ?? 0.3,
       reverbDecay: track.reverbDecay ?? 2,
+      vocalCleanEnabled: track.vocalCleanEnabled ?? false,
+      vocalDenoiseAmount: track.vocalDenoiseAmount ?? 0.45,
+      vocalDeEssAmount: track.vocalDeEssAmount ?? 0.5,
+      vocalCompAmount: track.vocalCompAmount ?? 0.55,
+      vocalMakeupGainDb: track.vocalMakeupGainDb ?? 2,
+      vocalInputWarning: track.vocalInputWarning ?? null,
+      vocalInputAdvice: track.vocalInputAdvice ?? '',
       filterCutoff: track.filterCutoff ?? 20000,
       frozen: track.frozen ?? false,
       freezeAudioData: track.freezeAudioData,

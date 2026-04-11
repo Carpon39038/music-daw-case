@@ -379,6 +379,11 @@ interface ExportLoudnessReport {
 }
 
 type AutoMixCategory = 'drum' | 'bass' | 'harmony'
+
+type VocalInputWarning = {
+  level: 'low' | 'clipping'
+  advice: string
+}
 type AutoMixSuggestionKind = 'volume' | 'pan' | 'lowcut'
 
 interface AutoMixSuggestion {
@@ -543,6 +548,31 @@ function collectAutoMixCategories(items: AutoMixSuggestionItem[]) {
 function hasAllAutoMixCategories(items: AutoMixSuggestionItem[]) {
   const categories = collectAutoMixCategories(items)
   return categories.includes('drum') && categories.includes('bass') && categories.includes('harmony')
+}
+
+function analyzeVocalInputWarning(track: Track): VocalInputWarning | null {
+  const candidateClips = track.clips
+  if (candidateClips.length === 0) return null
+
+  const gains = candidateClips.map((clip) => clip.gain ?? 1)
+  const maxGain = Math.max(...gains)
+  const avgGain = gains.reduce((sum, gain) => sum + gain, 0) / gains.length
+
+  if (maxGain >= 1.7) {
+    return {
+      level: 'clipping',
+      advice: '检测到输入可能削波：请将录音输入增益下调约 6dB，或先降低该轨道/片段增益后再导出。',
+    }
+  }
+
+  if (avgGain <= 0.35) {
+    return {
+      level: 'low',
+      advice: '检测到输入电平偏低：建议靠近麦克风并提升录音输入增益（目标峰值约 -12dBFS）。',
+    }
+  }
+
+  return null
 }
 
 function ensureAutoMixCoverage(project: ProjectState, suggestions: AutoMixSuggestion[]) {
@@ -843,6 +873,7 @@ export interface DAWActions {
   runAutoMixAssistant: () => void
   toggleAutoMixSuggestion: (suggestionId: string) => void
   previewAutoMixVersion: (mode: 'before' | 'after') => void
+  enableVocalCleanChain: (trackId: string) => void
   handleSocialPublish: () => Promise<void>
   handleExportProjectCard: () => Promise<void>
   handleTapTempo: () => void
@@ -1204,6 +1235,27 @@ export function useDAWActions(): DAWActions {
     setAutoMixPreviewMode('after')
     setProject(nextProject, { saveHistory: true })
   }
+
+  const enableVocalCleanChain = React.useCallback((trackId: string) => {
+    updateProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((track) => {
+        if (track.id !== trackId) return track
+
+        const warning = analyzeVocalInputWarning(track)
+        return {
+          ...track,
+          vocalCleanEnabled: true,
+          vocalDenoiseAmount: track.vocalDenoiseAmount ?? 0.45,
+          vocalDeEssAmount: track.vocalDeEssAmount ?? 0.5,
+          vocalCompAmount: track.vocalCompAmount ?? 0.55,
+          vocalMakeupGainDb: track.vocalMakeupGainDb ?? 2,
+          vocalInputWarning: warning?.level ?? null,
+          vocalInputAdvice: warning?.advice ?? '',
+        }
+      }),
+    }), { saveHistory: true })
+  }, [updateProject])
 
   useEffect(() => {
     audioEngine.setMasterVolume(masterVolume)
@@ -3645,6 +3697,7 @@ export function useDAWActions(): DAWActions {
     runAutoMixAssistant,
     toggleAutoMixSuggestion,
     previewAutoMixVersion,
+    enableVocalCleanChain,
     handleSocialPublish,
     handleExportProjectCard,
     handleTapTempo,

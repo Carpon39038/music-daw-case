@@ -48,6 +48,62 @@ function makeDistortionCurve(amount = 50) {
   return curve
 }
 
+function createHighPassFilter(ctx: BaseAudioContext, cutoffHz: number) {
+  const hp = ctx.createBiquadFilter()
+  hp.type = 'highpass'
+  hp.frequency.value = Math.max(40, Math.min(400, cutoffHz))
+  hp.Q.value = 0.707
+  return hp
+}
+
+function createDeEsserFilter(ctx: BaseAudioContext, amount: number) {
+  const deEss = ctx.createBiquadFilter()
+  deEss.type = 'peaking'
+  deEss.frequency.value = 6500
+  deEss.Q.value = 2.5
+  deEss.gain.value = -Math.max(0, Math.min(10, amount * 10))
+  return deEss
+}
+
+function applyVocalCleanChain(
+  ctx: BaseAudioContext,
+  input: AudioNode,
+  track: Track,
+): AudioNode {
+  if (!track.vocalCleanEnabled) return input
+
+  let node: AudioNode = input
+
+  const denoiseAmount = track.vocalDenoiseAmount ?? 0.45
+  const deEssAmount = track.vocalDeEssAmount ?? 0.5
+  const compAmount = track.vocalCompAmount ?? 0.55
+  const makeupGainDb = track.vocalMakeupGainDb ?? 2
+
+  const hpCutoff = 60 + denoiseAmount * 180
+  const hp = createHighPassFilter(ctx, hpCutoff)
+  node.connect(hp)
+  node = hp
+
+  const deEss = createDeEsserFilter(ctx, deEssAmount)
+  node.connect(deEss)
+  node = deEss
+
+  const comp = ctx.createDynamicsCompressor()
+  comp.threshold.value = -28 + (1 - compAmount) * 20
+  comp.ratio.value = 2 + compAmount * 6
+  comp.attack.value = 0.003
+  comp.release.value = 0.12
+  node.connect(comp)
+  node = comp
+
+  const makeup = ctx.createGain()
+  makeup.gain.value = Math.pow(10, Math.max(-3, Math.min(8, makeupGainDb)) / 20)
+  node.connect(makeup)
+  node = makeup
+
+  return node
+}
+
 function normalizeEnvelope(envelope: ClipEnvelopePoint[] | undefined, clipLengthBeats: number): ClipEnvelopePoint[] {
   const fallback: ClipEnvelopePoint[] = [
     { beat: 0, gain: 1 },
@@ -492,6 +548,9 @@ export class AudioEngine {
         gain.connect(panner)
 
         let trackOutput: AudioNode = panner
+
+        // Vocal clean chain (noise reduction + de-esser + compression + make-up gain)
+        trackOutput = applyVocalCleanChain(ctx, trackOutput, track)
 
         // Chorus
         if (track.chorusEnabled) {
