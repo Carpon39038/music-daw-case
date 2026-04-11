@@ -3,8 +3,10 @@ import type { Clip, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, P
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
+import { audioBufferToWav } from '../utils/audioBufferToWav'
 import { getTimelineDurationSec, secondsToBeat } from '../utils/tempoCurve'
 import { buildSocialExportBaseName, createSocialCardBlob, createSocialPackageZipBlob, triggerDownload } from '../utils/socialPublish'
+import { zipSync, strToU8 } from 'fflate'
 import { analyzeChordSuggestions } from '../utils/chordSuggestion'
 import { hzToClosestNoteLabel } from '../utils/notes'
 
@@ -1062,6 +1064,7 @@ export interface DAWActions {
   handleMIDIExport: () => void
   handleAudioExport: () => Promise<void>
   handleMp3Export: () => Promise<void>
+  handleStemExport: () => Promise<void>
   importReferenceTrack: (file: File) => Promise<void>
   clearReferenceTrack: () => void
   toggleReferenceAB: () => void
@@ -1618,6 +1621,73 @@ export function useDAWActions(): DAWActions {
       URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Failed to export MP3:', error)
+    }
+  }
+
+  const handleStemExport = async () => {
+    try {
+      const loudness = lastExportLoudnessReport ?? {
+        peakLinear: 0,
+        peakDb: -Infinity,
+        rmsLinear: 0,
+        rmsDb: -Infinity,
+        verdict: 'ready' as const,
+        checkedAt: Date.now(),
+      }
+
+      const canContinue = runPreExportChecks({
+        project,
+        masterVolume,
+        loopEnabled,
+        effectiveTimelineBeats,
+        loudness,
+        exportTargetLabel: '分轨 WAV',
+        setLastPreExportChecklistReport,
+      })
+      if (!canContinue) return
+
+      const bpmLabel = Math.round(project.bpm)
+      const zipEntries: Record<string, Uint8Array> = {}
+      const skippedTracks: string[] = []
+
+      for (const track of project.tracks) {
+        const hasContent = Boolean(track.isDrumTrack) || track.clips.length > 0
+        if (track.muted || !hasContent) {
+          skippedTracks.push(`${track.name || track.id} (${track.muted ? 'muted' : 'empty'})`)
+          continue
+        }
+
+        const renderedTrackBuffer = await audioEngine.renderBuffer(
+          [track],
+          project.bpm,
+          effectiveTimelineBeats,
+          tempoCurveType,
+          tempoCurveTargetBpm,
+          masterEQ,
+        )
+        const wavArrayBuffer = audioBufferToWav(renderedTrackBuffer)
+        const safeTrackName = (track.name || track.id)
+          .replace(/[\\/:*?"<>|]/g, '-')
+          .replace(/\s+/g, '_')
+        const fileName = `${safeTrackName}-${bpmLabel}BPM.wav`
+        zipEntries[fileName] = new Uint8Array(wavArrayBuffer)
+      }
+
+      zipEntries['README-skipped.txt'] = strToU8(
+        skippedTracks.length > 0
+          ? `Skipped tracks (${skippedTracks.length}):\n- ${skippedTracks.join('\n- ')}`
+          : 'Skipped tracks: none',
+      )
+
+      const zipData = zipSync(zipEntries)
+      const zipBuffer = new ArrayBuffer(zipData.byteLength)
+      new Uint8Array(zipBuffer).set(zipData)
+      const blob = new Blob([zipBuffer], { type: 'application/zip' })
+
+      const baseName = buildSocialExportBaseName(project.name)
+      triggerDownload(blob, `${baseName}-${bpmLabel}BPM-stems.zip`)
+    } catch (error) {
+      console.error('Failed to export stems:', error)
     }
   }
 
@@ -4103,6 +4173,7 @@ export function useDAWActions(): DAWActions {
     handleMIDIExport,
     handleAudioExport,
     handleMp3Export,
+    handleStemExport,
     importReferenceTrack,
     clearReferenceTrack,
     toggleReferenceAB,
