@@ -202,7 +202,10 @@ function isValidProjectState(value: unknown): value is ProjectState {
       (t.reverbMix !== undefined && typeof t.reverbMix !== 'number') ||
       (t.reverbDecay !== undefined && typeof t.reverbDecay !== 'number') ||
       (t.filterType && !['none', 'lowpass', 'highpass'].includes(t.filterType)) ||
-      (t.filterCutoff !== undefined && typeof t.filterCutoff !== 'number')
+      (t.filterCutoff !== undefined && typeof t.filterCutoff !== 'number') ||
+      (t.frozen !== undefined && typeof t.frozen !== 'boolean') ||
+      (t.freezeAudioData !== undefined && typeof t.freezeAudioData !== 'string') ||
+      (t.freezeSource !== undefined && typeof t.freezeSource !== 'object')
     ) {
       return false
     }
@@ -249,6 +252,9 @@ function normalizeProject(project: ProjectState): ProjectState {
       reverbMix: track.reverbMix ?? 0.3,
       reverbDecay: track.reverbDecay ?? 2,
       filterCutoff: track.filterCutoff ?? 20000,
+      frozen: track.frozen ?? false,
+      freezeAudioData: track.freezeAudioData,
+      freezeSource: track.freezeSource,
     })),
   }
 }

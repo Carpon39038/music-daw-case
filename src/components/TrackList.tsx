@@ -1,13 +1,13 @@
-import { Volume2, Plus, Trash2, ArrowUp, ArrowDown, Copy, Lock, Unlock } from 'lucide-react'
+import { Volume2, Plus, Trash2, ArrowUp, ArrowDown, Copy, Lock, Unlock, Snowflake } from 'lucide-react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import type { Track } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 
-interface TrackListProps extends Pick<DAWActions, 'selectedTrackId' | 'isPlaying' | 'setSelectedTrackId' | 'toggleTrackMute' | 'toggleTrackSolo' | 'toggleTrackLock' | 'addClip' | 'setTrackVolume' | 'moveTrack' | 'duplicateTrack' | 'deleteTrack' | 'project'> {
+interface TrackListProps extends Pick<DAWActions, 'selectedTrackId' | 'isPlaying' | 'setSelectedTrackId' | 'toggleTrackMute' | 'toggleTrackSolo' | 'toggleTrackLock' | 'addClip' | 'setTrackVolume' | 'moveTrack' | 'duplicateTrack' | 'deleteTrack' | 'freezeTrack' | 'unfreezeTrack' | 'project'> {
   track: Track
 }
 
-export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackId, toggleTrackMute, toggleTrackSolo, toggleTrackLock, addClip, setTrackVolume, moveTrack, duplicateTrack, deleteTrack, project }: TrackListProps) {
+export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackId, toggleTrackMute, toggleTrackSolo, toggleTrackLock, addClip, setTrackVolume, moveTrack, duplicateTrack, deleteTrack, freezeTrack, unfreezeTrack, project }: TrackListProps) {
   const trackIndex = project.tracks.findIndex(t => t.id === track.id)
   const updateProject = useDAWStore((state) => state.updateProject)
 
@@ -74,6 +74,23 @@ export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackI
               disabled={isPlaying}
             >
               <Copy size={12} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                if (track.frozen) {
+                  unfreezeTrack(track.id)
+                } else {
+                  void freezeTrack(track.id)
+                }
+              }}
+              className={`p-1 rounded ${track.frozen ? 'text-cyan-400' : 'text-gray-600 hover:text-cyan-400'}`}
+              data-testid={`freeze-${track.id}`}
+              title={track.frozen ? 'Unfreeze Track' : 'Freeze Track'}
+              disabled={isPlaying || track.locked}
+              aria-pressed={Boolean(track.frozen)}
+            >
+              <Snowflake size={12} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); toggleTrackLock(track.id); }}
@@ -147,7 +164,7 @@ export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackI
   )
 }
 
-type TrackListPanelProps = Pick<DAWActions, 'project' | 'selectedTrackId' | 'isPlaying' | 'setSelectedTrackId' | 'toggleTrackMute' | 'toggleTrackSolo' | 'toggleTrackLock' | 'addClip' | 'setTrackVolume' | 'addTrack' | 'addDrumTrack' | 'moveTrack' | 'duplicateTrack' | 'deleteTrack'>
+type TrackListPanelProps = Pick<DAWActions, 'project' | 'selectedTrackId' | 'isPlaying' | 'setSelectedTrackId' | 'toggleTrackMute' | 'toggleTrackSolo' | 'toggleTrackLock' | 'addClip' | 'setTrackVolume' | 'addTrack' | 'addDrumTrack' | 'moveTrack' | 'duplicateTrack' | 'deleteTrack' | 'freezeTrack' | 'unfreezeTrack'>
 
 export function TrackListPanel({ project, addTrack, addDrumTrack, ...rest }: TrackListPanelProps) {
   return (

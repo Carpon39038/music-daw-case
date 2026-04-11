@@ -22,6 +22,45 @@ export interface Clip {
   envelope?: ClipEnvelopePoint[]
 }
 
+export interface FrozenTrackSnapshot {
+  clips: Clip[]
+  volume: number
+  pan: number
+  transposeSemitones: number
+  filterType: 'none' | 'lowpass' | 'highpass'
+  filterCutoff: number
+  isDrumTrack?: boolean
+  drumSequence?: {
+    kick: boolean[]
+    snare: boolean[]
+    hihat: boolean[]
+  }
+  delayEnabled?: boolean
+  delayTime?: number
+  delayFeedback?: number
+  flangerEnabled?: boolean
+  flangerSpeed?: number
+  flangerDepth?: number
+  flangerFeedback?: number
+  eqEnabled?: boolean
+  eqLow?: number
+  eqMid?: number
+  eqHigh?: number
+  distortionEnabled?: boolean
+  compressorEnabled?: boolean
+  compressorThreshold?: number
+  compressorRatio?: number
+  chorusEnabled?: boolean
+  chorusDepth?: number
+  chorusRate?: number
+  tremoloEnabled?: boolean
+  tremoloDepth?: number
+  tremoloRate?: number
+  reverbEnabled?: boolean
+  reverbMix?: number
+  reverbDecay?: number
+}
+
 export interface Track {
   id: string
   name: string
@@ -65,6 +104,9 @@ export interface Track {
   filterType: 'none' | 'lowpass' | 'highpass'
   filterCutoff: number
   clips: Clip[]
+  frozen?: boolean
+  freezeAudioData?: string
+  freezeSource?: FrozenTrackSnapshot
 }
 
 export interface ProjectState {

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
-import type { Clip, MasterEQ, MasterPreset, ProjectState, Track, WaveType } from '../types'
+import type { Clip, FrozenTrackSnapshot, MasterEQ, MasterPreset, ProjectState, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
@@ -569,6 +569,8 @@ export interface DAWActions {
   deleteTrack: (trackId: string) => void
   moveTrack: (trackId: string, direction: 'up' | 'down') => void
   duplicateTrack: (trackId: string) => void
+  freezeTrack: (trackId: string) => Promise<void>
+  unfreezeTrack: (trackId: string) => void
   setSelectedClipWave: (trackId: string, clipId: string, wave: WaveType) => void
   setSelectedClipNote: (trackId: string, clipId: string, noteHz: number) => void
   updateClipStartBeat: (trackId: string, clipId: string, startBeat: number) => void
@@ -1771,7 +1773,185 @@ export function useDAWActions(): DAWActions {
     })
   }
 
-  
+  const encodeArrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    let binary = ''
+    const bytes = new Uint8Array(buffer)
+    const chunkSize = 0x8000
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize)
+      binary += String.fromCharCode(...chunk)
+    }
+    return btoa(binary)
+  }
+
+  const buildFreezeSnapshot = (track: Track): FrozenTrackSnapshot => ({
+    clips: track.clips.map((c) => ({ ...c })),
+    volume: track.volume,
+    pan: track.pan,
+    transposeSemitones: track.transposeSemitones,
+    filterType: track.filterType,
+    filterCutoff: track.filterCutoff,
+    isDrumTrack: track.isDrumTrack,
+    drumSequence: track.drumSequence
+      ? {
+          kick: [...track.drumSequence.kick],
+          snare: [...track.drumSequence.snare],
+          hihat: [...track.drumSequence.hihat],
+        }
+      : undefined,
+    delayEnabled: track.delayEnabled,
+    delayTime: track.delayTime,
+    delayFeedback: track.delayFeedback,
+    flangerEnabled: track.flangerEnabled,
+    flangerSpeed: track.flangerSpeed,
+    flangerDepth: track.flangerDepth,
+    flangerFeedback: track.flangerFeedback,
+    eqEnabled: track.eqEnabled,
+    eqLow: track.eqLow,
+    eqMid: track.eqMid,
+    eqHigh: track.eqHigh,
+    distortionEnabled: track.distortionEnabled,
+    compressorEnabled: track.compressorEnabled,
+    compressorThreshold: track.compressorThreshold,
+    compressorRatio: track.compressorRatio,
+    chorusEnabled: track.chorusEnabled,
+    chorusDepth: track.chorusDepth,
+    chorusRate: track.chorusRate,
+    tremoloEnabled: track.tremoloEnabled,
+    tremoloDepth: track.tremoloDepth,
+    tremoloRate: track.tremoloRate,
+    reverbEnabled: track.reverbEnabled,
+    reverbMix: track.reverbMix,
+    reverbDecay: track.reverbDecay,
+  })
+
+  const freezeTrack = async (trackId: string) => {
+    if (isPlaying) return
+    const currentProject = useDAWStore.getState().project
+    const track = currentProject.tracks.find((t) => t.id === trackId)
+    if (!track || track.locked || track.frozen) return
+
+    const snapshot = buildFreezeSnapshot(track)
+    const maxBeat = track.clips.reduce((m, c) => Math.max(m, c.startBeat + c.lengthBeats), 0)
+    const renderBeats = Math.max(1, Math.ceil(maxBeat * 4) / 4)
+    if (renderBeats <= 0) return
+
+    const renderTrack: Track = {
+      ...track,
+      volume: 1,
+      pan: 0,
+      muted: false,
+      solo: false,
+    }
+
+    try {
+      const wavData = await audioEngine.exportWav(
+        [renderTrack],
+        currentProject.bpm,
+        renderBeats,
+        currentProject.tempoCurveType ?? 'constant',
+        currentProject.tempoCurveTargetBpm,
+        { low: 0, mid: 0, high: 0 },
+      )
+      const freezeAudioData = `data:audio/wav;base64,${encodeArrayBufferToBase64(wavData)}`
+      const frozenClip: Clip = {
+        id: `frozen-${track.id}-${Date.now()}`,
+        startBeat: 0,
+        lengthBeats: renderBeats,
+        noteHz: 440,
+        wave: 'sine',
+        name: `${track.name} (Frozen)`,
+        audioData: freezeAudioData,
+        gain: 1,
+      }
+
+      applyProjectUpdate((prev) => ({
+        ...prev,
+        tracks: prev.tracks.map((t) =>
+          t.id === trackId
+            ? {
+                ...t,
+                frozen: true,
+                freezeAudioData,
+                freezeSource: snapshot,
+                clips: [frozenClip],
+                transposeSemitones: 0,
+                filterType: 'none',
+                filterCutoff: 20000,
+                isDrumTrack: false,
+                drumSequence: undefined,
+                delayEnabled: false,
+                flangerEnabled: false,
+                eqEnabled: false,
+                distortionEnabled: false,
+                compressorEnabled: false,
+                chorusEnabled: false,
+                tremoloEnabled: false,
+                reverbEnabled: false,
+              }
+            : t,
+        ),
+      }))
+    } catch (error) {
+      console.error('Failed to freeze track:', error)
+    }
+  }
+
+  const unfreezeTrack = (trackId: string) => {
+    if (isPlaying) return
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((track) => {
+        if (track.id !== trackId || !track.frozen || !track.freezeSource) return track
+        const source = track.freezeSource
+        return {
+          ...track,
+          clips: source.clips.map((c) => ({ ...c })),
+          volume: source.volume,
+          pan: source.pan,
+          transposeSemitones: source.transposeSemitones,
+          filterType: source.filterType,
+          filterCutoff: source.filterCutoff,
+          isDrumTrack: source.isDrumTrack,
+          drumSequence: source.drumSequence
+            ? {
+                kick: [...source.drumSequence.kick],
+                snare: [...source.drumSequence.snare],
+                hihat: [...source.drumSequence.hihat],
+              }
+            : undefined,
+          delayEnabled: source.delayEnabled,
+          delayTime: source.delayTime,
+          delayFeedback: source.delayFeedback,
+          flangerEnabled: source.flangerEnabled,
+          flangerSpeed: source.flangerSpeed,
+          flangerDepth: source.flangerDepth,
+          flangerFeedback: source.flangerFeedback,
+          eqEnabled: source.eqEnabled,
+          eqLow: source.eqLow,
+          eqMid: source.eqMid,
+          eqHigh: source.eqHigh,
+          distortionEnabled: source.distortionEnabled,
+          compressorEnabled: source.compressorEnabled,
+          compressorThreshold: source.compressorThreshold,
+          compressorRatio: source.compressorRatio,
+          chorusEnabled: source.chorusEnabled,
+          chorusDepth: source.chorusDepth,
+          chorusRate: source.chorusRate,
+          tremoloEnabled: source.tremoloEnabled,
+          tremoloDepth: source.tremoloDepth,
+          tremoloRate: source.tremoloRate,
+          reverbEnabled: source.reverbEnabled,
+          reverbMix: source.reverbMix,
+          reverbDecay: source.reverbDecay,
+          frozen: false,
+          freezeAudioData: undefined,
+          freezeSource: undefined,
+        }
+      }),
+    }))
+  }
+
   const setSelectedClipWave = (trackId: string, clipId: string, wave: WaveType) => {
     applyProjectUpdate((prev) => ({
       ...prev,
@@ -3016,6 +3196,8 @@ export function useDAWActions(): DAWActions {
     deleteTrack,
     moveTrack,
     duplicateTrack,
+    freezeTrack,
+    unfreezeTrack,
     setSelectedClipWave,
     setSelectedClipNote,
     updateClipStartBeat,
