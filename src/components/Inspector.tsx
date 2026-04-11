@@ -12,7 +12,7 @@ export function Inspector(d: DAWActions) {
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
     updateClipEnvelopePoint, resetClipEnvelope,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, generateSongArrangement, continueTrackIdea,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, alignAudioClipToProjectBpm, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, generateSongArrangement, continueTrackIdea,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
     autoMixSuggestionItems, autoMixAvailable, autoMixPreviewMode, autoMixCoverageReady,
@@ -886,6 +886,33 @@ export function Inspector(d: DAWActions) {
                 <div><label className="text-xs text-gray-500 block mb-1">Fade In</label><input data-testid="selected-clip-fade-in-input" type="number" min={0} max={selectedClipData.clip.lengthBeats / 2} step={0.1} value={selectedClipData.clip.fadeIn ?? 0} onChange={(e) => updateClipFades(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value), selectedClipData.clip.fadeOut ?? 0)} disabled={isPlaying || selectedClipData.track.locked} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200" /></div>
               </div>
               <div><label className="text-xs text-gray-500 block mb-1">Fade Out</label><input data-testid="selected-clip-fade-out-input" type="number" min={0} max={selectedClipData.clip.lengthBeats / 2} step={0.1} value={selectedClipData.clip.fadeOut ?? 0} onChange={(e) => updateClipFades(selectedClipData.track.id, selectedClipData.clip.id, selectedClipData.clip.fadeIn ?? 0, Number(e.target.value))} disabled={isPlaying || selectedClipData.track.locked} className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500 text-gray-200" /></div>
+
+              {selectedClipData.clip.audioData && (
+                <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="audio-beat-align-panel">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-gray-500">Audio Beat Align</label>
+                    <span className="text-[10px] text-gray-500" data-testid="audio-beat-align-ratio">x{(selectedClipData.clip.audioStretchRatio ?? 1).toFixed(2)}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      data-testid="audio-align-preserve-pitch-btn"
+                      onClick={() => alignAudioClipToProjectBpm(selectedClipData.track.id, selectedClipData.clip.id, 'preservePitch')}
+                      disabled={isPlaying || selectedClipData.track.locked}
+                      className={`px-2 py-1 text-xs border rounded ${selectedClipData.clip.audioAlignMode !== 'preserveDuration' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' : 'bg-[#1a1a1a] border-gray-800 text-gray-300 hover:bg-gray-800'}`}
+                    >
+                      保持音高
+                    </button>
+                    <button
+                      data-testid="audio-align-preserve-duration-btn"
+                      onClick={() => alignAudioClipToProjectBpm(selectedClipData.track.id, selectedClipData.clip.id, 'preserveDuration')}
+                      disabled={isPlaying || selectedClipData.track.locked}
+                      className={`px-2 py-1 text-xs border rounded ${selectedClipData.clip.audioAlignMode === 'preserveDuration' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' : 'bg-[#1a1a1a] border-gray-800 text-gray-300 hover:bg-gray-800'}`}
+                    >
+                      保持时长
+                    </button>
+                  </div>
+                </div>
+              )}
               
               <div>
                 <label className="text-xs text-gray-500 block mb-1">Quantize</label>

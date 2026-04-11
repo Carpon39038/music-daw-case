@@ -493,8 +493,14 @@ export class AudioEngine {
 
         if (clip.audioData && this.audioBufferCache.has(clip.id)) {
           const bufferSource = ctx.createBufferSource()
-          bufferSource.buffer = this.audioBufferCache.get(clip.id)!
-          bufferSource.playbackRate.value = semitoneToRatio(track.transposeSemitones + (clip.transposeSemitones || 0))
+          const buffer = this.audioBufferCache.get(clip.id)!
+          const clipDurationSec = Math.max(0.001, clipEnd - clipStart)
+          const preserveDurationRate = buffer.duration > 0 ? buffer.duration / clipDurationSec : 1
+          const stretchRate = clip.audioAlignMode === 'preserveDuration'
+            ? preserveDurationRate
+            : 1
+          bufferSource.buffer = buffer
+          bufferSource.playbackRate.value = semitoneToRatio(track.transposeSemitones + (clip.transposeSemitones || 0)) * stretchRate
           osc = bufferSource
         } else {
           const synthOsc = ctx.createOscillator()

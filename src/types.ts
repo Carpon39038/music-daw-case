@@ -19,6 +19,8 @@ export interface Clip {
   fadeIn?: number
   fadeOut?: number
   audioData?: string
+  audioAlignMode?: 'preservePitch' | 'preserveDuration'
+  audioStretchRatio?: number
   envelope?: ClipEnvelopePoint[]
 }
 

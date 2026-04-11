@@ -236,8 +236,16 @@ export function Timeline({
               }}
             >
               {/* Clip header with name */}
-              <div className="h-5 bg-black/20 px-1 flex items-center text-[10px] text-white/90 truncate relative z-1">
-                <span>{clip.name || `${clip.wave} ${Math.round(clip.noteHz)}Hz`}</span>
+              <div className="h-5 bg-black/20 px-1 flex items-center gap-1 text-[10px] text-white/90 truncate relative z-1">
+                <span className="truncate">{clip.name || `${clip.wave} ${Math.round(clip.noteHz)}Hz`}</span>
+                {clip.audioData && clip.audioAlignMode && (
+                  <span
+                    className="px-1 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[9px]"
+                    title={clip.audioAlignMode === 'preserveDuration' ? 'Beat Align: 保持时长' : 'Beat Align: 保持音高'}
+                  >
+                    Stretch x{(clip.audioStretchRatio ?? 1).toFixed(2)}
+                  </span>
+                )}
                 {clip.muted && <span className="ml-1 text-red-400">(M)</span>}
               </div>
 

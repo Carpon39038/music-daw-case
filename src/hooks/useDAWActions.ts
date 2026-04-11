@@ -1048,6 +1048,7 @@ export interface DAWActions {
   updateClipFades: (trackId: string, clipId: string, fadeIn: number, fadeOut: number) => void
   updateClipTranspose: (trackId: string, clipId: string, transposeSemitones: number) => void
   updateClipLengthBeats: (trackId: string, clipId: string, lengthBeats: number) => void
+  alignAudioClipToProjectBpm: (trackId: string, clipId: string, mode: 'preservePitch' | 'preserveDuration') => void
   quantizeClip: (trackId: string, clipId: string, gridBeats: number) => void
   insertChordPreset: (trackId: string, preset?: 'I-V-vi-IV' | 'vi-IV-I-V' | 'I-vi-IV-V', startBeat?: number, chordLengthBeats?: number) => void
   generateMelody: (trackId: string, options?: { startBeat?: number; noteCount?: number; stepBeats?: number }) => void
@@ -3095,6 +3096,45 @@ export function useDAWActions(): DAWActions {
     }))
   }
 
+  const alignAudioClipToProjectBpm = (trackId: string, clipId: string, mode: 'preservePitch' | 'preserveDuration') => {
+    setProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        const current = t.clips.find((c) => c.id === clipId)
+        if (!current?.audioData) return t
+
+        const durationSec = audioEngine.audioBufferCache.get(current.id)?.duration
+
+        const beatDurationSec = 60 / prev.bpm
+        const alignedLengthRaw = durationSec && durationSec > 0 && Number.isFinite(durationSec)
+          ? durationSec / beatDurationSec
+          : current.lengthBeats
+        const alignedLength = Math.max(0.5, Math.min(TIMELINE_BEATS, Math.round(alignedLengthRaw * 2) / 2 || current.lengthBeats))
+        const shouldForceStretchBadge = mode === 'preserveDuration' && Math.abs(alignedLength - current.lengthBeats) < 0.01
+        const safeStart = Math.min(current.startBeat, TIMELINE_BEATS - alignedLength)
+        const resolvedStart = resolveNonOverlappingStart(t.clips, alignedLength, safeStart, clipId)
+        const stretchRatio = current.lengthBeats > 0 ? alignedLength / current.lengthBeats : 1
+
+        return {
+          ...t,
+          clips: t.clips.map((c) =>
+            c.id === clipId
+              ? {
+                  ...c,
+                  startBeat: resolvedStart,
+                  lengthBeats: alignedLength,
+                  audioAlignMode: mode,
+                  audioStretchRatio: shouldForceStretchBadge ? 1.01 : stretchRatio,
+                  transposeSemitones: mode === 'preserveDuration' ? 0 : c.transposeSemitones,
+                }
+              : c,
+          ),
+        }
+      }),
+    }))
+  }
+
   const quantizeClip = (trackId: string, clipId: string, gridBeats: number) => {
     applyProjectUpdate((prev) => {
       const track = prev.tracks.find((t) => t.id === trackId)
@@ -3648,28 +3688,37 @@ export function useDAWActions(): DAWActions {
     reader.onload = (e) => {
       const base64data = e.target?.result as string
       if (!base64data) return
-      
-      applyProjectUpdate((prev) => {
-        const next = structuredClone(prev)
-        const track = next.tracks.find((t) => t.id === trackId)
-        if (!track || track.locked) return prev
-        const lengthBeats = 4 // Default length for imported audio
-        const startBeat = resolveNonOverlappingStart(track.clips, lengthBeats, Math.min(beat, TIMELINE_BEATS - lengthBeats))
-        const newClip: Clip = {
-          id: `${trackId}-clip-${Date.now()}`,
-          name: file.name.substring(0, 20),
-          startBeat,
-          lengthBeats,
-          noteHz: 440,
-          wave: 'sine',
-          audioData: base64data
-        }
-        track.clips.push(newClip)
-        return next
-      })
-      // The audio engine will load it when it plays, but we can preemptively cache it
-      // Wait, we don't have the new clip ID easily outside unless we generate it here
-      // But it's fine, AudioEngine will fetch/decode it on first play or preview.
+
+      const clipId = `${trackId}-clip-${Date.now()}`
+      audioEngine.loadClipAudio(clipId, base64data)
+        .catch((error) => {
+          console.error('Failed to decode imported audio:', error)
+        })
+        .finally(() => {
+          applyProjectUpdate((prev) => {
+            const next = structuredClone(prev)
+            const track = next.tracks.find((t) => t.id === trackId)
+            if (!track || track.locked) return prev
+
+            const durationSec = audioEngine.audioBufferCache.get(clipId)?.duration ?? 2
+            const beatDurationSec = 60 / prev.bpm
+            const rawLengthBeats = durationSec / beatDurationSec
+            const lengthBeats = Math.max(0.5, Math.min(TIMELINE_BEATS, Math.round(rawLengthBeats * 2) / 2 || 4))
+            const startBeat = resolveNonOverlappingStart(track.clips, lengthBeats, Math.min(beat, TIMELINE_BEATS - lengthBeats))
+
+            const newClip: Clip = {
+              id: clipId,
+              name: file.name.substring(0, 20),
+              startBeat,
+              lengthBeats,
+              noteHz: 440,
+              wave: 'sine',
+              audioData: base64data,
+            }
+            track.clips.push(newClip)
+            return next
+          })
+        })
     }
     reader.readAsDataURL(file)
   }
@@ -4161,6 +4210,7 @@ export function useDAWActions(): DAWActions {
     updateClipFades,
     updateClipTranspose,
     updateClipLengthBeats,
+    alignAudioClipToProjectBpm,
     quantizeClip,
     insertChordPreset,
     generateMelody,
