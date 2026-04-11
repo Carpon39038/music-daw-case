@@ -109,6 +109,12 @@ export interface Track {
   freezeSource?: FrozenTrackSnapshot
 }
 
+export interface Marker {
+  id: string
+  name: string
+  beat: number
+}
+
 export interface ProjectState {
   id?: string
   name?: string
@@ -119,6 +125,7 @@ export interface ProjectState {
   scaleKey?: string
   scaleType?: string
   tracks: Track[]
+  markers?: Marker[]
 }
 
 export interface MasterEQ {

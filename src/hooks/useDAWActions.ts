@@ -152,6 +152,13 @@ function clampTimelineBeat(beat: number) {
   return Math.max(0, Math.min(TIMELINE_BEATS - 0.25, beat))
 }
 
+function prevMarkerDefaultBeat(project: ProjectState): number {
+  const markers = project.markers ?? []
+  if (markers.length === 0) return 0
+  const maxBeat = markers.reduce((acc, marker) => Math.max(acc, marker.beat), 0)
+  return Math.min(TIMELINE_BEATS, maxBeat + 4)
+}
+
 function normalizeMelodyStep(step: number) {
   if (step <= 0.25) return 0.25
   if (step <= 0.5) return 0.5
@@ -541,6 +548,10 @@ export interface DAWActions {
   setClipboard: (value: { clip: Clip; sourceTrackId: string } | null) => void
   // Actions
   applyProjectUpdate: (updater: (prev: ProjectState) => ProjectState) => void
+  addMarker: (beat?: number, name?: string) => void
+  renameMarker: (markerId: string, name: string) => void
+  removeMarker: (markerId: string) => void
+  jumpToMarker: (markerId: string) => void
   addClip: (trackId: string) => void
   addClipAtBeat: (trackId: string, beat: number) => void
   addAudioFileClip: (trackId: string, beat: number, file: File) => void
@@ -1313,6 +1324,46 @@ export function useDAWActions(): DAWActions {
 
   const applyProjectUpdate = (updater: (prev: ProjectState) => ProjectState) => {
     setProject(updater, { saveHistory: true })
+  }
+
+  const addMarker = (beat?: number, name?: string) => {
+    applyProjectUpdate((prev) => {
+      const markerBeat = Math.max(0, Math.min(TIMELINE_BEATS, Number.isFinite(beat as number) ? Number(beat) : prevMarkerDefaultBeat(prev)))
+      const nextMarkers = [...(prev.markers ?? [])]
+      const markerName = (name?.trim() || `Marker ${nextMarkers.length + 1}`).slice(0, 40)
+      nextMarkers.push({ id: crypto.randomUUID(), name: markerName, beat: markerBeat })
+      nextMarkers.sort((a, b) => a.beat - b.beat)
+      return { ...prev, markers: nextMarkers }
+    })
+  }
+
+  const renameMarker = (markerId: string, name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    applyProjectUpdate((prev) => {
+      const markers = prev.markers ?? []
+      const exists = markers.some((m) => m.id === markerId)
+      if (!exists) return prev
+      return {
+        ...prev,
+        markers: markers.map((m) => (m.id === markerId ? { ...m, name: trimmed.slice(0, 40) } : m)),
+      }
+    })
+  }
+
+  const removeMarker = (markerId: string) => {
+    applyProjectUpdate((prev) => {
+      const markers = prev.markers ?? []
+      const nextMarkers = markers.filter((m) => m.id !== markerId)
+      if (nextMarkers.length === markers.length) return prev
+      return { ...prev, markers: nextMarkers }
+    })
+  }
+
+  const jumpToMarker = (markerId: string) => {
+    const marker = (project.markers ?? []).find((m) => m.id === markerId)
+    if (!marker) return
+    setPlayheadBeat(Math.max(0, Math.min(TIMELINE_BEATS, marker.beat)))
   }
 
   const addClip = (trackId: string) => {
@@ -3168,6 +3219,10 @@ export function useDAWActions(): DAWActions {
     removeSelectedClipRef,
     setClipboard,
     applyProjectUpdate,
+    addMarker,
+    renameMarker,
+    removeMarker,
+    jumpToMarker,
     addClip,
     addClipAtBeat,
     addAudioFileClip,

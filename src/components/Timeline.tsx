@@ -339,27 +339,73 @@ export function Timeline({
 
 interface TimelineHeaderProps {
   startPlayheadDrag: (e: React.MouseEvent) => void
+  markers?: { id: string; name: string; beat: number }[]
+  addMarker: (beat?: number, name?: string) => void
+  renameMarker: (markerId: string, name: string) => void
+  removeMarker: (markerId: string) => void
+  jumpToMarker: (markerId: string) => void
 }
 
-export function TimelineHeader({ startPlayheadDrag }: TimelineHeaderProps) {
+export function TimelineHeader({ startPlayheadDrag, markers = [], addMarker, renameMarker, removeMarker, jumpToMarker }: TimelineHeaderProps) {
   return (
-    <div
-      className="timeline-header h-8 bg-[#0a0a0a] border-b border-gray-800 sticky top-0 z-10 cursor-pointer flex"
-      data-testid="timeline-header"
-      onMouseDown={(e) => {
-        startPlayheadDrag(e)
-      }}
-    >
-      {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => {
-        return (
-          <div
-            key={beat}
-            className={`timeline-header-beat flex-1 flex items-center justify-center text-[10px] font-mono border-r ${beat % 4 === 0 ? 'timeline-header-bar border-gray-700 text-gray-500 font-semibold' : 'border-gray-800/50 text-gray-700'}`}
+    <div className="timeline-header sticky top-0 z-10 bg-[#0a0a0a] border-b border-gray-800" data-testid="timeline-header-wrap">
+      <div
+        className="timeline-header h-8 cursor-pointer flex"
+        data-testid="timeline-header"
+        onMouseDown={(e) => {
+          startPlayheadDrag(e)
+        }}
+      >
+        {Array.from({ length: TIMELINE_BEATS }).map((_, beat) => {
+          return (
+            <div
+              key={beat}
+              className={`timeline-header-beat flex-1 flex items-center justify-center text-[10px] font-mono border-r ${beat % 4 === 0 ? 'timeline-header-bar border-gray-700 text-gray-500 font-semibold' : 'border-gray-800/50 text-gray-700'}`}
+            >
+              {beat % 4 === 0 ? `${beat / 4 + 1}` : ''}
+            </div>
+          )
+        })}
+      </div>
+      <div className="timeline-markers relative h-7 border-t border-gray-800/70" data-testid="timeline-markers-row">
+        <button
+          type="button"
+          data-testid="add-marker-btn"
+          className="absolute left-1 top-1/2 -translate-y-1/2 rounded bg-emerald-600/80 px-1.5 py-0.5 text-[10px] text-white hover:bg-emerald-500"
+          onClick={(e) => {
+            e.stopPropagation()
+            addMarker()
+          }}
+        >
+          + Marker
+        </button>
+        {markers.map((marker) => (
+          <button
+            key={marker.id}
+            type="button"
+            data-testid={`timeline-marker-${marker.id}`}
+            className="absolute top-0 bottom-0 -translate-x-1/2 border-l border-amber-400/70 text-[10px] text-amber-200 hover:text-amber-100"
+            style={{ left: `${(Math.max(0, Math.min(TIMELINE_BEATS, marker.beat)) / TIMELINE_BEATS) * 100}%` }}
+            onClick={(e) => {
+              e.stopPropagation()
+              jumpToMarker(marker.id)
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              const nextName = window.prompt('Rename marker', marker.name)
+              if (nextName && nextName.trim()) renameMarker(marker.id, nextName)
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              if (window.confirm(`Delete marker "${marker.name}"?`)) removeMarker(marker.id)
+            }}
+            title={`${marker.name} @ beat ${marker.beat}`}
           >
-            {beat % 4 === 0 ? `${beat / 4 + 1}` : ''}
-          </div>
-        )
-      })}
+            <span className="absolute left-1 top-1/2 -translate-y-1/2 whitespace-nowrap">{marker.name}</span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -377,7 +423,7 @@ function GlobalPlayheadLine({ effectiveTimelineBeats }: { effectiveTimelineBeats
   )
 }
 
-type TimelineSectionProps = Pick<DAWActions, 'project' | 'toggleDrumStep' | 'selectedClipRef' | 'selectedClipRefs' | 'selectedTrackId' | 'isPlaying' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'copyClip' | 'updateClipTranspose' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'setPlayheadBeat' | 'startPlayheadDrag' | 'addClipAtBeat' | 'addAudioFileClip'>
+type TimelineSectionProps = Pick<DAWActions, 'project' | 'toggleDrumStep' | 'selectedClipRef' | 'selectedClipRefs' | 'selectedTrackId' | 'isPlaying' | 'effectiveTimelineBeats' | 'timelineRef' | 'setSelectedTrackId' | 'setSelectedClipRef' | 'setSelectedClipRefs' | 'addSelectedClipRef' | 'previewClip' | 'startClipDrag' | 'startClipResize' | 'removeClip' | 'copyClip' | 'updateClipTranspose' | 'cycleClipWave' | 'duplicateClip' | 'splitClip' | 'loopEnabled' | 'loopLengthBeats' | 'setPlayheadBeat' | 'startPlayheadDrag' | 'addClipAtBeat' | 'addAudioFileClip' | 'addMarker' | 'renameMarker' | 'removeMarker' | 'jumpToMarker'>
 
 export function TimelineSection(props: TimelineSectionProps) {
   const { project, effectiveTimelineBeats, ...rest } = props
@@ -387,7 +433,14 @@ export function TimelineSection(props: TimelineSectionProps) {
 
   return (
     <section className="timeline flex-1 flex flex-col overflow-auto min-w-0 bg-[#151515]" data-testid="timeline">
-      <TimelineHeader startPlayheadDrag={props.startPlayheadDrag} />
+      <TimelineHeader
+        startPlayheadDrag={props.startPlayheadDrag}
+        markers={project.markers ?? []}
+        addMarker={props.addMarker}
+        renameMarker={props.renameMarker}
+        removeMarker={props.removeMarker}
+        jumpToMarker={props.jumpToMarker}
+      />
       <div className="relative flex-1">
         {project.tracks.map((track) => (
           <div className="track-row border-b border-gray-800/50" key={track.id} data-testid={`track-row-${track.id}`}>

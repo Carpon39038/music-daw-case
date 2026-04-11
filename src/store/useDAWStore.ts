@@ -143,6 +143,7 @@ function createInitialProject(): ProjectState {
     tempoCurveTargetBpm: 120,
     scaleKey: 'C',
     scaleType: 'chromatic',
+    markers: [],
     tracks: Array.from({ length: TRACK_COUNT }).map((_, i) => ({
       id: `track-${i + 1}`,
       name: `Track ${i + 1}`,
@@ -176,8 +177,13 @@ function isValidProjectState(value: unknown): value is ProjectState {
   if (!value || typeof value !== 'object') return false
   const p = value as Partial<ProjectState>
   if (typeof p.bpm !== 'number' || !Array.isArray(p.tracks)) return false
+  if (p.markers !== undefined && !Array.isArray(p.markers)) return false
   if (p.name !== undefined && typeof p.name !== 'string') return false
   if (p.lastSavedAt !== undefined && typeof p.lastSavedAt !== 'number') return false
+  if (p.markers !== undefined) {
+    const validMarkers = p.markers.every((m) => m && typeof m.id === 'string' && typeof m.name === 'string' && typeof m.beat === 'number')
+    if (!validMarkers) return false
+  }
   return p.tracks.every((t) => {
     if (!t || typeof t !== 'object') return false
     if (
@@ -233,6 +239,11 @@ function normalizeProject(project: ProjectState): ProjectState {
     tempoCurveTargetBpm: project.tempoCurveTargetBpm ?? project.bpm,
     scaleKey: project.scaleKey ?? 'C',
     scaleType: project.scaleType ?? 'chromatic',
+    markers: (project.markers ?? []).map((marker) => ({
+      id: marker.id,
+      name: marker.name,
+      beat: Math.max(0, Math.min(16, marker.beat)),
+    })),
     tracks: project.tracks.map((track) => ({
       ...track,
       locked: track.locked ?? false,
