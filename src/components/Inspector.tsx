@@ -12,7 +12,7 @@ export function Inspector(d: DAWActions) {
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
     updateClipEnvelopePoint, resetClipEnvelope,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, continueTrackIdea,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, generateSongArrangement, continueTrackIdea,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
     autoMixSuggestionItems, autoMixAvailable, autoMixPreviewMode, autoMixCoverageReady,
@@ -145,6 +145,40 @@ export function Inspector(d: DAWActions) {
                   </button>
                 </div>
                 <p className="text-[10px] text-gray-500">One click generates drum + chord + bass draft and sets BPM/scale.</p>
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-arrangement-assistant">
+                <label className="text-xs text-gray-500 block">Song Arrangement Assistant</label>
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    type="button"
+                    data-testid="arrangement-8-bars-btn"
+                    onClick={() => generateSongArrangement(8)}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    8 Bars
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="arrangement-16-bars-btn"
+                    onClick={() => generateSongArrangement(16)}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    16 Bars
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="arrangement-32-bars-btn"
+                    onClick={() => generateSongArrangement(32)}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    32 Bars
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-500">按 Intro/Verse/Chorus/Drop 自动编排并覆盖段落标记；支持 Undo 一键撤销。</p>
               </div>
 
               <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-mood-presets">

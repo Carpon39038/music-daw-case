@@ -1004,6 +1004,7 @@ export interface DAWActions {
   renameMarker: (markerId: string, name: string) => void
   removeMarker: (markerId: string) => void
   jumpToMarker: (markerId: string) => void
+  generateSongArrangement: (lengthBars: 8 | 16 | 32) => void
   addClip: (trackId: string) => void
   addClipAtBeat: (trackId: string, beat: number) => void
   addAudioFileClip: (trackId: string, beat: number, file: File) => void
@@ -2118,6 +2119,65 @@ export function useDAWActions(): DAWActions {
     const marker = (project.markers ?? []).find((m) => m.id === markerId)
     if (!marker) return
     setPlayheadBeat(Math.max(0, Math.min(TIMELINE_BEATS, marker.beat)))
+  }
+
+  const generateSongArrangement = (lengthBars: 8 | 16 | 32) => {
+    if (isPlaying) return
+
+    applyProjectUpdate((prev) => {
+      const totalBeats = Math.max(4, Math.min(TIMELINE_BEATS, lengthBars * 4))
+      const activeTracks = prev.tracks.filter((track) => track.clips.length > 0 && !track.locked)
+      if (activeTracks.length === 0) return prev
+
+      const sections = [
+        { name: 'Intro' },
+        { name: 'Verse' },
+        { name: 'Chorus' },
+        { name: 'Drop' },
+      ]
+
+      const sectionSpan = Math.max(1, totalBeats / sections.length)
+      const sectionStarts = sections.map((_, index) => Math.max(0, Math.min(totalBeats - 1, Math.floor(index * sectionSpan))))
+
+      const nextTracks = prev.tracks.map((track) => {
+        if (track.locked || track.clips.length === 0) return track
+
+        const templateClip = [...track.clips]
+          .sort((a, b) => a.startBeat - b.startBeat)
+          .find((clip) => clip.startBeat + clip.lengthBeats <= totalBeats)
+          ?? [...track.clips].sort((a, b) => b.lengthBeats - a.lengthBeats)[0]
+
+        if (!templateClip) return track
+
+        const arrangedClips = sectionStarts.map((startBeat, index) => {
+          const nextLength = Math.max(0.25, Math.min(templateClip.lengthBeats, totalBeats - startBeat))
+          return {
+            ...templateClip,
+            id: `${track.id}-arr-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+            startBeat,
+            lengthBeats: nextLength,
+            name: templateClip.name || `${sections[index]?.name ?? 'Section'} ${index + 1}`,
+          }
+        })
+
+        return {
+          ...track,
+          clips: arrangedClips,
+        }
+      })
+
+      const arrangementMarkers = sectionStarts.map((beat, index) => ({
+        id: crypto.randomUUID(),
+        name: sections[index]?.name ?? `Section ${index + 1}`,
+        beat,
+      }))
+
+      return {
+        ...prev,
+        tracks: nextTracks,
+        markers: arrangementMarkers,
+      }
+    })
   }
 
   const addClip = (trackId: string) => {
@@ -3989,6 +4049,7 @@ export function useDAWActions(): DAWActions {
     renameMarker,
     removeMarker,
     jumpToMarker,
+    generateSongArrangement,
     addClip,
     addClipAtBeat,
     addAudioFileClip,
