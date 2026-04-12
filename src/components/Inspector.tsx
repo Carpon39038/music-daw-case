@@ -20,6 +20,7 @@ export function Inspector(d: DAWActions) {
     projectHealthReport, resolveProjectHealthRisk,
     chorusLiftMarkerOptions, selectedChorusLiftMarkerId, chorusLiftSettings, chorusDoubleHarmonySettings,
     setSelectedChorusLiftMarkerId, toggleChorusLiftSetting, toggleChorusDoubleHarmonySetting, applyChorusLiftBuilder, applyChorusDoubleHarmonyBuilder,
+    sectionEnergyOptions, selectedSectionEnergyIds, toggleSectionEnergySelection, applySectionEnergyAutomation, resetSectionEnergyAutomation,
     enableVocalCleanChain, setVocalFinalizerEnabled, setVocalFinalizerPreset, setVocalFinalizerMix,
     favoriteClips, favoriteClipSearchQuery, setFavoriteClipSearchQuery,
     saveFavoriteClipFromSelection, pasteFavoriteClipToTrack, deleteFavoriteClip,
@@ -182,6 +183,58 @@ export function Inspector(d: DAWActions) {
                   </button>
                 </div>
                 <p className="text-[10px] text-gray-500">按 Intro/Verse/Chorus/Drop 自动编排并覆盖段落标记；支持 Undo 一键撤销。</p>
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-section-energy-automation">
+                <label className="text-xs text-gray-500 block">Section Energy Automation (Marker-driven)</label>
+                {sectionEnergyOptions.length === 0 ? (
+                  <p className="text-[10px] text-gray-500" data-testid="section-energy-empty">暂无段落标记（请先在时间线添加 Intro/Verse/Chorus/Drop 标记）</p>
+                ) : (
+                  <>
+                    <div className="space-y-1" data-testid="section-energy-selection-list">
+                      {sectionEnergyOptions.map((section) => (
+                        <label
+                          key={section.id}
+                          className="inline-flex w-full items-start gap-2 rounded border border-gray-700 bg-[#111] px-2 py-1 text-[10px] text-gray-300"
+                          data-testid={`section-energy-option-${section.id}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedSectionEnergyIds.includes(section.id)}
+                            onChange={() => toggleSectionEnergySelection(section.id)}
+                            disabled={isPlaying}
+                            className="mt-0.5 accent-emerald-500"
+                            data-testid={`section-energy-toggle-${section.id}`}
+                          />
+                          <span>
+                            <strong>{section.name}</strong> · {Math.round(section.startBeat / 4) + 1}-{Math.round(section.endBeat / 4) + 1} 小节
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      <button
+                        type="button"
+                        data-testid="section-energy-apply-btn"
+                        onClick={() => applySectionEnergyAutomation()}
+                        disabled={isPlaying || selectedSectionEnergyIds.length === 0}
+                        className="text-xs px-2 py-1 rounded bg-[#0f766e] hover:bg-[#115e59] text-white disabled:opacity-40"
+                      >
+                        应用能量曲线
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="section-energy-reset-btn"
+                        onClick={() => resetSectionEnergyAutomation()}
+                        disabled={isPlaying}
+                        className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                      >
+                        恢复应用前
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-500">基于段落类型自动联动 clip gain、master 趋势与鼓/贝斯/和声轨道能量（reverb + filter）。</p>
+                  </>
+                )}
               </div>
 
               <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-chorus-lift-builder">

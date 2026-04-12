@@ -875,6 +875,113 @@ interface AutoMixSuggestionItem extends AutoMixSuggestion {
 
 type ChorusLiftToggleKey = 'drumDensity' | 'harmonyThicken' | 'gainLift'
 type ChorusDoubleHarmonyToggleKey = 'highOctaveHarmony'
+type SectionEnergyAutomationType = 'intro' | 'verse' | 'chorus' | 'drop' | 'other'
+
+interface SectionEnergyOption {
+  id: string
+  name: string
+  startBeat: number
+  endBeat: number
+  type: SectionEnergyAutomationType
+}
+
+interface SectionEnergyProfile {
+  startGain: number
+  endGain: number
+  masterStart: number
+  masterEnd: number
+  reverbMix: number
+  filterCutoff: number
+}
+
+const SECTION_ENERGY_PROFILES: Record<SectionEnergyAutomationType, SectionEnergyProfile> = {
+  intro: { startGain: 0.92, endGain: 1.02, masterStart: 0.95, masterEnd: 1.02, reverbMix: 0.35, filterCutoff: 9000 },
+  verse: { startGain: 0.98, endGain: 1.06, masterStart: 1.0, masterEnd: 1.05, reverbMix: 0.4, filterCutoff: 12000 },
+  chorus: { startGain: 1.08, endGain: 1.22, masterStart: 1.05, masterEnd: 1.14, reverbMix: 0.5, filterCutoff: 17000 },
+  drop: { startGain: 1.14, endGain: 1.28, masterStart: 1.08, masterEnd: 1.18, reverbMix: 0.45, filterCutoff: 20000 },
+  other: { startGain: 1.0, endGain: 1.08, masterStart: 1.0, masterEnd: 1.06, reverbMix: 0.4, filterCutoff: 14000 },
+}
+
+function classifySectionEnergyType(name: string): SectionEnergyAutomationType {
+  if (/intro|前奏/i.test(name)) return 'intro'
+  if (/verse|主歌/i.test(name)) return 'verse'
+  if (/chorus|副歌/i.test(name)) return 'chorus'
+  if (/drop|桥段|高潮/i.test(name)) return 'drop'
+  return 'other'
+}
+
+function buildSectionEnergyOptions(project: ProjectState, timelineBeats: number): SectionEnergyOption[] {
+  const markers = [...(project.markers ?? [])].sort((a, b) => a.beat - b.beat)
+  return markers
+    .map((marker, index) => {
+      const next = markers[index + 1]
+      const startBeat = Math.max(0, marker.beat)
+      const endBeat = Math.max(startBeat + 0.25, Math.min(timelineBeats, next?.beat ?? timelineBeats))
+      return {
+        id: marker.id,
+        name: marker.name,
+        startBeat,
+        endBeat,
+        type: classifySectionEnergyType(marker.name),
+      }
+    })
+    .filter((section) => section.endBeat > section.startBeat)
+}
+
+function overlapsRange(clip: Clip, startBeat: number, endBeat: number) {
+  return clip.startBeat < endBeat && (clip.startBeat + clip.lengthBeats) > startBeat
+}
+
+function applySectionEnergyAutomation(
+  baseProject: ProjectState,
+  sections: SectionEnergyOption[],
+): ProjectState {
+  const next = structuredClone(baseProject)
+  if (sections.length === 0) return next
+
+  const { drumTrack, bassTrack, harmonyTrack } = chooseCategoryTracks(next)
+  const focusTrackIds = new Set([drumTrack?.id, bassTrack?.id, harmonyTrack?.id].filter(Boolean) as string[])
+
+  next.tracks = next.tracks.map((track) => {
+    const updatedTrack = { ...track }
+    const isFocus = focusTrackIds.has(track.id)
+
+    updatedTrack.clips = updatedTrack.clips.map((clip) => {
+      let gain = clip.gain ?? 1
+      sections.forEach((section) => {
+        if (!overlapsRange(clip, section.startBeat, section.endBeat)) return
+        const profile = SECTION_ENERGY_PROFILES[section.type]
+        const center = Math.max(section.startBeat, Math.min(section.endBeat, clip.startBeat + clip.lengthBeats / 2))
+        const progress = (center - section.startBeat) / Math.max(0.001, section.endBeat - section.startBeat)
+        const sectionGain = profile.startGain + (profile.endGain - profile.startGain) * progress
+        const masterGain = profile.masterStart + (profile.masterEnd - profile.masterStart) * progress
+        const combinedGain = sectionGain * masterGain * (isFocus ? 1.04 : 1)
+        gain = Math.min(2, gain * combinedGain)
+      })
+      return { ...clip, gain }
+    })
+
+    if (isFocus) {
+      const strongestSection = sections
+        .map((section) => SECTION_ENERGY_PROFILES[section.type])
+        .sort((a, b) => b.endGain - a.endGain)[0]
+      if (strongestSection) {
+        updatedTrack.filterType = 'lowpass'
+        updatedTrack.filterCutoff = Math.max(updatedTrack.filterCutoff ?? 20000, strongestSection.filterCutoff)
+        updatedTrack.reverbEnabled = true
+        updatedTrack.reverbMix = Math.max(updatedTrack.reverbMix ?? 0.3, strongestSection.reverbMix)
+      }
+    }
+
+    return updatedTrack
+  })
+
+  return next
+}
+
+function toggleSectionId(ids: string[], id: string) {
+  return ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]
+}
 
 interface ChorusLiftSettings {
   drumDensity: boolean
@@ -1791,6 +1898,11 @@ export interface DAWActions {
   toggleChorusDoubleHarmonySetting: (key: ChorusDoubleHarmonyToggleKey) => void
   applyChorusLiftBuilder: () => void
   applyChorusDoubleHarmonyBuilder: () => void
+  sectionEnergyOptions: SectionEnergyOption[]
+  selectedSectionEnergyIds: string[]
+  toggleSectionEnergySelection: (sectionId: string) => void
+  applySectionEnergyAutomation: () => void
+  resetSectionEnergyAutomation: () => void
   enableVocalCleanChain: (trackId: string) => void
   setVocalFinalizerEnabled: (trackId: string, enabled: boolean) => void
   setVocalFinalizerPreset: (trackId: string, preset: 'clear' | 'warm' | 'intimate') => void
@@ -1899,6 +2011,8 @@ export function useDAWActions(): DAWActions {
   const [selectedChorusLiftMarkerId, setSelectedChorusLiftMarkerId] = React.useState<string | null>(null)
   const [chorusLiftSettings, setChorusLiftSettings] = React.useState<ChorusLiftSettings>(DEFAULT_CHORUS_LIFT_SETTINGS)
   const [chorusDoubleHarmonySettings, setChorusDoubleHarmonySettings] = React.useState<ChorusDoubleHarmonySettings>(DEFAULT_CHORUS_DOUBLE_HARMONY_SETTINGS)
+  const [selectedSectionEnergyIds, setSelectedSectionEnergyIds] = React.useState<string[]>([])
+  const [sectionEnergyBaseProject, setSectionEnergyBaseProject] = React.useState<ProjectState | null>(null)
   const resetProjectState = useDAWStore((state) => state.resetProject)
   const tapTempoRef = useRef<number[]>([])
   useEffect(() => {
@@ -2183,6 +2297,10 @@ export function useDAWActions(): DAWActions {
     () => buildChorusMarkerOptions(project, effectiveTimelineBeats),
     [project, effectiveTimelineBeats],
   )
+  const sectionEnergyOptions = useMemo(
+    () => buildSectionEnergyOptions(project, effectiveTimelineBeats),
+    [project, effectiveTimelineBeats],
+  )
 
   useEffect(() => {
     if (chorusLiftMarkerOptions.length === 0) {
@@ -2198,6 +2316,20 @@ export function useDAWActions(): DAWActions {
     const exists = chorusLiftMarkerOptions.some((marker) => marker.id === selectedChorusLiftMarkerId)
     if (!exists) setSelectedChorusLiftMarkerId(chorusLiftMarkerOptions[0].id)
   }, [chorusLiftMarkerOptions, selectedChorusLiftMarkerId])
+
+  useEffect(() => {
+    if (sectionEnergyOptions.length === 0) {
+      if (selectedSectionEnergyIds.length !== 0) setSelectedSectionEnergyIds([])
+      return
+    }
+
+    setSelectedSectionEnergyIds((prev) => {
+      const allowed = new Set(sectionEnergyOptions.map((item) => item.id))
+      const filtered = prev.filter((id) => allowed.has(id))
+      if (filtered.length > 0) return filtered
+      return [sectionEnergyOptions[0].id]
+    })
+  }, [sectionEnergyOptions, selectedSectionEnergyIds.length])
 
   const toggleChorusLiftSetting = (key: ChorusLiftToggleKey) => {
     setChorusLiftSettings((prev) => ({
@@ -2240,6 +2372,27 @@ export function useDAWActions(): DAWActions {
       setSelectedClipRef(null)
       setSelectedClipRefs([])
     }
+  }
+
+  const toggleSectionEnergySelection = (sectionId: string) => {
+    setSelectedSectionEnergyIds((prev) => toggleSectionId(prev, sectionId))
+  }
+
+  const runSectionEnergyAutomation = () => {
+    if (isPlaying) return
+    const sectionMap = new Map(sectionEnergyOptions.map((item) => [item.id, item]))
+    const sections = selectedSectionEnergyIds
+      .map((id) => sectionMap.get(id))
+      .filter((item): item is SectionEnergyOption => Boolean(item))
+    if (sections.length === 0) return
+
+    setSectionEnergyBaseProject(structuredClone(project))
+    applyProjectUpdate((prev) => applySectionEnergyAutomation(prev, sections))
+  }
+
+  const resetSectionEnergyAutomation = () => {
+    if (isPlaying || !sectionEnergyBaseProject) return
+    setProject(structuredClone(sectionEnergyBaseProject), { saveHistory: true })
   }
 
   const runAutoMixAssistant = () => {
@@ -5686,6 +5839,11 @@ export function useDAWActions(): DAWActions {
     toggleChorusDoubleHarmonySetting,
     applyChorusLiftBuilder: runChorusLiftBuilder,
     applyChorusDoubleHarmonyBuilder: runChorusDoubleHarmonyBuilder,
+    sectionEnergyOptions,
+    selectedSectionEnergyIds,
+    toggleSectionEnergySelection,
+    applySectionEnergyAutomation: runSectionEnergyAutomation,
+    resetSectionEnergyAutomation,
     enableVocalCleanChain,
     setVocalFinalizerEnabled,
     setVocalFinalizerPreset,
