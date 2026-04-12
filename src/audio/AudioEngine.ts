@@ -104,6 +104,80 @@ function applyVocalCleanChain(
   return node
 }
 
+function applyVocalFinalizerChain(
+  ctx: BaseAudioContext,
+  input: AudioNode,
+  track: Track,
+): AudioNode {
+  if (!track.vocalFinalizerEnabled) return input
+
+  const preset = track.vocalFinalizerPreset ?? 'clear'
+  const mix = Math.max(0, Math.min(1, track.vocalFinalizerMix ?? 0.7))
+
+  const presetSettings = {
+    clear: { hpHz: 110, presenceHz: 3200, presenceDb: 2.5, deEssAmount: 0.45, compThreshold: -22, compRatio: 2.8, roomSec: 0.7, roomMix: 0.12 },
+    warm: { hpHz: 85, presenceHz: 2600, presenceDb: 1.2, deEssAmount: 0.35, compThreshold: -24, compRatio: 3.2, roomSec: 0.95, roomMix: 0.16 },
+    intimate: { hpHz: 95, presenceHz: 4200, presenceDb: 3.2, deEssAmount: 0.6, compThreshold: -26, compRatio: 3.8, roomSec: 0.5, roomMix: 0.08 },
+  } as const
+
+  const settings = presetSettings[preset]
+
+  const dry = ctx.createGain()
+  dry.gain.value = 1 - mix
+  input.connect(dry)
+
+  let wetChain: AudioNode = input
+
+  const hp = createHighPassFilter(ctx, settings.hpHz)
+  wetChain.connect(hp)
+  wetChain = hp
+
+  const presence = ctx.createBiquadFilter()
+  presence.type = 'peaking'
+  presence.frequency.value = settings.presenceHz
+  presence.Q.value = 1.2
+  presence.gain.value = settings.presenceDb
+  wetChain.connect(presence)
+  wetChain = presence
+
+  const deEss = createDeEsserFilter(ctx, settings.deEssAmount)
+  wetChain.connect(deEss)
+  wetChain = deEss
+
+  const comp = ctx.createDynamicsCompressor()
+  comp.threshold.value = settings.compThreshold
+  comp.ratio.value = settings.compRatio
+  comp.attack.value = 0.002
+  comp.release.value = 0.1
+  wetChain.connect(comp)
+  wetChain = comp
+
+  const preSpaceGain = ctx.createGain()
+  preSpaceGain.gain.value = 1 - settings.roomMix
+  wetChain.connect(preSpaceGain)
+
+  const convolver = ctx.createConvolver()
+  convolver.buffer = createReverbIR(ctx, settings.roomSec)
+  const spaceGain = ctx.createGain()
+  spaceGain.gain.value = settings.roomMix
+  wetChain.connect(convolver)
+  convolver.connect(spaceGain)
+
+  const wetMix = ctx.createGain()
+  preSpaceGain.connect(wetMix)
+  spaceGain.connect(wetMix)
+
+  const wet = ctx.createGain()
+  wet.gain.value = mix
+  wetMix.connect(wet)
+
+  const output = ctx.createGain()
+  dry.connect(output)
+  wet.connect(output)
+
+  return output
+}
+
 function normalizeEnvelope(envelope: ClipEnvelopePoint[] | undefined, clipLengthBeats: number): ClipEnvelopePoint[] {
   const fallback: ClipEnvelopePoint[] = [
     { beat: 0, gain: 1 },
@@ -559,6 +633,9 @@ export class AudioEngine {
 
         // Vocal clean chain (noise reduction + de-esser + compression + make-up gain)
         trackOutput = applyVocalCleanChain(ctx, trackOutput, track)
+
+        // Vocal finalizer chain (clear / warm / intimate)
+        trackOutput = applyVocalFinalizerChain(ctx, trackOutput, track)
 
         // Chorus
         if (track.chorusEnabled) {

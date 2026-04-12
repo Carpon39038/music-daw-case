@@ -20,7 +20,7 @@ export function Inspector(d: DAWActions) {
     projectHealthReport, resolveProjectHealthRisk,
     chorusLiftMarkerOptions, selectedChorusLiftMarkerId, chorusLiftSettings, chorusDoubleHarmonySettings,
     setSelectedChorusLiftMarkerId, toggleChorusLiftSetting, toggleChorusDoubleHarmonySetting, applyChorusLiftBuilder, applyChorusDoubleHarmonyBuilder,
-    enableVocalCleanChain,
+    enableVocalCleanChain, setVocalFinalizerEnabled, setVocalFinalizerPreset, setVocalFinalizerMix,
     favoriteClips, favoriteClipSearchQuery, setFavoriteClipSearchQuery,
     saveFavoriteClipFromSelection, pasteFavoriteClipToTrack, deleteFavoriteClip,
     selectedClipRef, selectedClipRefs, chordSuggestions,
@@ -279,7 +279,7 @@ export function Inspector(d: DAWActions) {
                       type="button"
                       data-testid="chorus-double-harmony-apply-btn"
                       onClick={() => applyChorusDoubleHarmonyBuilder()}
-                      disabled={isPlaying || !selectedChorusLiftMarkerId}
+                      disabled={isPlaying || chorusLiftMarkerOptions.length === 0}
                       className="w-full text-xs px-2 py-1 rounded bg-indigo-700 hover:bg-indigo-600 text-white disabled:opacity-40"
                     >
                       生成 Double + Harmony 轨
@@ -654,6 +654,41 @@ export function Inspector(d: DAWActions) {
                             )}
                           </div>
                         </details>
+
+                        {/* Vocal Finalizer */}
+                        <div className="inspector-subgroup bg-[#1a1a1a] rounded border border-gray-800 overflow-hidden">
+                          <div className="text-sm font-medium flex items-center gap-2 text-gray-300 p-3">
+                            <input
+                              type="checkbox"
+                              data-testid={`vocal-finalizer-enabled-${selectedTrack.id}`}
+                              checked={!!selectedTrack.vocalFinalizerEnabled}
+                              disabled={isPlaying}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => setVocalFinalizerEnabled(selectedTrack.id, e.target.checked)}
+                              className="accent-emerald-500"
+                            />
+                            Vocal Finalizer
+                          </div>
+                          <div className="p-3 pt-0">
+                            {selectedTrack.vocalFinalizerEnabled && (
+                              <div className="space-y-2 pl-6 mt-2" data-testid={`vocal-finalizer-chain-${selectedTrack.id}`}>
+                                <p className="text-[10px] text-gray-500">三档成品链：清晰 / 暖声 / 贴耳，实时 A/B + 导出生效</p>
+                                <div>
+                                  <label className="text-[10px] text-gray-500 block mb-1">Preset</label>
+                                  <div className="grid grid-cols-3 gap-1">
+                                    <button type="button" data-testid={`vocal-finalizer-preset-clear-${selectedTrack.id}`} onClick={() => setVocalFinalizerPreset(selectedTrack.id, 'clear')} disabled={isPlaying} className={`text-[10px] px-2 py-1 rounded border ${selectedTrack.vocalFinalizerPreset === 'clear' || !selectedTrack.vocalFinalizerPreset ? 'border-emerald-500 text-emerald-300 bg-emerald-950/20' : 'border-gray-700 text-gray-300 hover:bg-gray-800/50'}`}>清晰</button>
+                                    <button type="button" data-testid={`vocal-finalizer-preset-warm-${selectedTrack.id}`} onClick={() => setVocalFinalizerPreset(selectedTrack.id, 'warm')} disabled={isPlaying} className={`text-[10px] px-2 py-1 rounded border ${selectedTrack.vocalFinalizerPreset === 'warm' ? 'border-emerald-500 text-emerald-300 bg-emerald-950/20' : 'border-gray-700 text-gray-300 hover:bg-gray-800/50'}`}>暖声</button>
+                                    <button type="button" data-testid={`vocal-finalizer-preset-intimate-${selectedTrack.id}`} onClick={() => setVocalFinalizerPreset(selectedTrack.id, 'intimate')} disabled={isPlaying} className={`text-[10px] px-2 py-1 rounded border ${selectedTrack.vocalFinalizerPreset === 'intimate' ? 'border-emerald-500 text-emerald-300 bg-emerald-950/20' : 'border-gray-700 text-gray-300 hover:bg-gray-800/50'}`}>贴耳</button>
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-gray-500 flex justify-between"><span>强度</span><span>{Math.round((selectedTrack.vocalFinalizerMix ?? 0.7) * 100)}%</span></label>
+                                  <input type="range" min="0" max="1" step="0.01" data-testid={`vocal-finalizer-mix-${selectedTrack.id}`} value={selectedTrack.vocalFinalizerMix ?? 0.7} disabled={isPlaying} onChange={(e) => setVocalFinalizerMix(selectedTrack.id, Number(e.target.value))} className="w-full h-1 accent-emerald-500" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
 
                         {/* Reverb */}
                         <details className="inspector-subgroup bg-[#1a1a1a] rounded border border-gray-800 overflow-hidden">

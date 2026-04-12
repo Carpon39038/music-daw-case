@@ -1792,6 +1792,9 @@ export interface DAWActions {
   applyChorusLiftBuilder: () => void
   applyChorusDoubleHarmonyBuilder: () => void
   enableVocalCleanChain: (trackId: string) => void
+  setVocalFinalizerEnabled: (trackId: string, enabled: boolean) => void
+  setVocalFinalizerPreset: (trackId: string, preset: 'clear' | 'warm' | 'intimate') => void
+  setVocalFinalizerMix: (trackId: string, mix: number) => void
   handleSocialPublish: () => Promise<void>
   handleExportProjectCard: () => Promise<void>
   handleTapTempo: () => void
@@ -2301,6 +2304,51 @@ export function useDAWActions(): DAWActions {
           vocalInputAdvice: warning?.advice ?? '',
         }
       }),
+    }), { saveHistory: true })
+  }, [updateProject])
+
+  const setVocalFinalizerEnabled = React.useCallback((trackId: string, enabled: boolean) => {
+    updateProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((track) =>
+        track.id === trackId
+          ? {
+              ...track,
+              vocalFinalizerEnabled: enabled,
+              vocalFinalizerPreset: track.vocalFinalizerPreset ?? 'clear',
+              vocalFinalizerMix: track.vocalFinalizerMix ?? 0.7,
+            }
+          : track,
+      ),
+    }), { saveHistory: true })
+  }, [updateProject])
+
+  const setVocalFinalizerPreset = React.useCallback((trackId: string, preset: 'clear' | 'warm' | 'intimate') => {
+    updateProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((track) =>
+        track.id === trackId
+          ? {
+              ...track,
+              vocalFinalizerPreset: preset,
+            }
+          : track,
+      ),
+    }), { saveHistory: true })
+  }, [updateProject])
+
+  const setVocalFinalizerMix = React.useCallback((trackId: string, mix: number) => {
+    const clamped = Math.max(0, Math.min(1, mix))
+    updateProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((track) =>
+        track.id === trackId
+          ? {
+              ...track,
+              vocalFinalizerMix: clamped,
+            }
+          : track,
+      ),
     }), { saveHistory: true })
   }, [updateProject])
 
@@ -5639,6 +5687,9 @@ export function useDAWActions(): DAWActions {
     applyChorusLiftBuilder: runChorusLiftBuilder,
     applyChorusDoubleHarmonyBuilder: runChorusDoubleHarmonyBuilder,
     enableVocalCleanChain,
+    setVocalFinalizerEnabled,
+    setVocalFinalizerPreset,
+    setVocalFinalizerMix,
     handleSocialPublish,
     handleExportProjectCard,
     handleTapTempo,

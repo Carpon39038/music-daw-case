@@ -77,6 +77,9 @@ export interface FrozenTrackSnapshot {
   vocalMakeupGainDb?: number
   vocalInputWarning?: 'low' | 'clipping' | null
   vocalInputAdvice?: string
+  vocalFinalizerEnabled?: boolean
+  vocalFinalizerPreset?: 'clear' | 'warm' | 'intimate'
+  vocalFinalizerMix?: number
 }
 
 export interface Track {
@@ -125,6 +128,9 @@ export interface Track {
   vocalMakeupGainDb?: number
   vocalInputWarning?: 'low' | 'clipping' | null
   vocalInputAdvice?: string
+  vocalFinalizerEnabled?: boolean
+  vocalFinalizerPreset?: 'clear' | 'warm' | 'intimate'
+  vocalFinalizerMix?: number
   transposeSemitones: number
   filterType: 'none' | 'lowpass' | 'highpass'
   filterCutoff: number

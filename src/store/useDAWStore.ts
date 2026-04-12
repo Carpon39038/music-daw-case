@@ -184,6 +184,9 @@ function createInitialProject(): ProjectState {
       distortionEnabled: false,
       reverbMix: 0.3,
       reverbDecay: 2,
+      vocalFinalizerEnabled: false,
+      vocalFinalizerPreset: 'clear',
+      vocalFinalizerMix: 0.7,
       clips: [
         {
           id: `clip-${i + 1}-1`,
@@ -253,6 +256,9 @@ function isValidProjectState(value: unknown): value is ProjectState {
       (t.vocalMakeupGainDb !== undefined && typeof t.vocalMakeupGainDb !== 'number') ||
       (t.vocalInputWarning !== undefined && t.vocalInputWarning !== null && !['low', 'clipping'].includes(t.vocalInputWarning)) ||
       (t.vocalInputAdvice !== undefined && typeof t.vocalInputAdvice !== 'string') ||
+      (t.vocalFinalizerEnabled !== undefined && typeof t.vocalFinalizerEnabled !== 'boolean') ||
+      (t.vocalFinalizerPreset !== undefined && !['clear', 'warm', 'intimate'].includes(t.vocalFinalizerPreset)) ||
+      (t.vocalFinalizerMix !== undefined && typeof t.vocalFinalizerMix !== 'number') ||
       (t.filterType && !['none', 'lowpass', 'highpass'].includes(t.filterType)) ||
       (t.filterCutoff !== undefined && typeof t.filterCutoff !== 'number') ||
       (t.frozen !== undefined && typeof t.frozen !== 'boolean') ||
