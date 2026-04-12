@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { ClipboardState, FavoriteClip, MasterEQ, MasterPreset, MasterSnapshot, ProjectState, SelectedClipRef, WaveType } from '../types'
+import type { BusGroup, ClipboardState, FavoriteClip, MasterEQ, MasterPreset, MasterSnapshot, ProjectState, SelectedClipRef, WaveType } from '../types'
 
 export interface PlayheadDragState {
   isDragging: boolean
@@ -37,6 +37,65 @@ export interface ClipDragState {
 }
 
 const TRACK_COUNT = 4
+const DEFAULT_BUS_GROUPS: BusGroup[] = [
+  {
+    id: 'bus-drum',
+    name: 'Drum',
+    volume: 1,
+    muted: false,
+    solo: false,
+    eqEnabled: false,
+    eqLow: 0,
+    eqMid: 0,
+    eqHigh: 0,
+    compressorEnabled: false,
+    compressorThreshold: -24,
+    compressorRatio: 3,
+  },
+  {
+    id: 'bus-bass',
+    name: 'Bass',
+    volume: 1,
+    muted: false,
+    solo: false,
+    eqEnabled: false,
+    eqLow: 0,
+    eqMid: 0,
+    eqHigh: 0,
+    compressorEnabled: false,
+    compressorThreshold: -24,
+    compressorRatio: 3,
+  },
+  {
+    id: 'bus-music',
+    name: 'Music',
+    volume: 1,
+    muted: false,
+    solo: false,
+    eqEnabled: false,
+    eqLow: 0,
+    eqMid: 0,
+    eqHigh: 0,
+    compressorEnabled: false,
+    compressorThreshold: -24,
+    compressorRatio: 3,
+  },
+  {
+    id: 'bus-fx',
+    name: 'FX',
+    volume: 1,
+    muted: false,
+    solo: false,
+    eqEnabled: false,
+    eqLow: 0,
+    eqMid: 0,
+    eqHigh: 0,
+    compressorEnabled: false,
+    compressorThreshold: -24,
+    compressorRatio: 3,
+  },
+]
+
 const STORE_STORAGE_KEY = 'music-daw-case.store.v1'
 const LEGACY_PROJECT_STORAGE_KEY = 'music-daw-case.project.v1'
 const LEGACY_MASTER_VOLUME_KEY = 'music-daw-case.masterVolume.v1'
@@ -168,6 +227,7 @@ function createInitialProject(): ProjectState {
     scaleType: 'chromatic',
     markers: [],
     exportVersions: [],
+    busGroups: structuredClone(DEFAULT_BUS_GROUPS),
     tracks: Array.from({ length: TRACK_COUNT }).map((_, i) => ({
       id: `track-${i + 1}`,
       name: `Track ${i + 1}`,
@@ -187,6 +247,7 @@ function createInitialProject(): ProjectState {
       vocalFinalizerEnabled: false,
       vocalFinalizerPreset: 'clear',
       vocalFinalizerMix: 0.7,
+      busGroupId: i === 0 ? 'bus-drum' : i === 1 ? 'bus-bass' : 'bus-music',
       clips: [
         {
           id: `clip-${i + 1}-1`,
@@ -258,6 +319,25 @@ function isValidProjectState(value: unknown): value is ProjectState {
     ) {
       return false
     }
+  }
+  if (p.busGroups !== undefined) {
+    if (!Array.isArray(p.busGroups)) return false
+    const validBusGroups = p.busGroups.every((group) =>
+      group &&
+      typeof group.id === 'string' &&
+      typeof group.name === 'string' &&
+      typeof group.volume === 'number' &&
+      typeof group.muted === 'boolean' &&
+      typeof group.solo === 'boolean' &&
+      (group.eqEnabled === undefined || typeof group.eqEnabled === 'boolean') &&
+      (group.eqLow === undefined || typeof group.eqLow === 'number') &&
+      (group.eqMid === undefined || typeof group.eqMid === 'number') &&
+      (group.eqHigh === undefined || typeof group.eqHigh === 'number') &&
+      (group.compressorEnabled === undefined || typeof group.compressorEnabled === 'boolean') &&
+      (group.compressorThreshold === undefined || typeof group.compressorThreshold === 'number') &&
+      (group.compressorRatio === undefined || typeof group.compressorRatio === 'number')
+    )
+    if (!validBusGroups) return false
   }
   return p.tracks.every((t) => {
     if (!t || typeof t !== 'object') return false
@@ -403,9 +483,26 @@ function normalizeProject(project: ProjectState): ProjectState {
               : null,
         }
       : undefined,
+    busGroups: Array.isArray(project.busGroups) && project.busGroups.length > 0
+      ? project.busGroups.map((group) => ({
+          id: String(group.id),
+          name: String(group.name ?? 'Bus'),
+          volume: typeof group.volume === 'number' ? Math.max(0, Math.min(1.5, group.volume)) : 1,
+          muted: Boolean(group.muted),
+          solo: Boolean(group.solo),
+          eqEnabled: Boolean(group.eqEnabled),
+          eqLow: typeof group.eqLow === 'number' ? Math.max(-12, Math.min(12, group.eqLow)) : 0,
+          eqMid: typeof group.eqMid === 'number' ? Math.max(-12, Math.min(12, group.eqMid)) : 0,
+          eqHigh: typeof group.eqHigh === 'number' ? Math.max(-12, Math.min(12, group.eqHigh)) : 0,
+          compressorEnabled: Boolean(group.compressorEnabled),
+          compressorThreshold: typeof group.compressorThreshold === 'number' ? Math.max(-60, Math.min(0, group.compressorThreshold)) : -24,
+          compressorRatio: typeof group.compressorRatio === 'number' ? Math.max(1, Math.min(20, group.compressorRatio)) : 3,
+        }))
+      : structuredClone(DEFAULT_BUS_GROUPS),
     tracks: project.tracks.map((track) => ({
       ...track,
       locked: track.locked ?? false,
+      busGroupId: track.busGroupId ?? null,
       pan: track.pan ?? 0,
       filterType: track.filterType ?? 'none',
       compressorEnabled: track.compressorEnabled ?? false,

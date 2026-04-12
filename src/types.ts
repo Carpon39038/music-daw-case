@@ -91,6 +91,7 @@ export interface Track {
   solo: boolean
   color?: string
   locked: boolean
+  busGroupId?: string | null
   isDrumTrack?: boolean
   drumSequence?: {
     kick: boolean[]
@@ -261,6 +262,21 @@ export interface ArrangementVariationBundle {
   activeVariantId?: string | null
 }
 
+export interface BusGroup {
+  id: string
+  name: string
+  volume: number
+  muted: boolean
+  solo: boolean
+  eqEnabled?: boolean
+  eqLow?: number
+  eqMid?: number
+  eqHigh?: number
+  compressorEnabled?: boolean
+  compressorThreshold?: number
+  compressorRatio?: number
+}
+
 export interface ProjectState {
   id?: string
   name?: string
@@ -279,6 +295,7 @@ export interface ProjectState {
   publishWizardTemplate?: PublishWizardTemplate
   referenceMatchHistory?: ReferenceMatchReport[]
   arrangementVariationBundle?: ArrangementVariationBundle
+  busGroups?: BusGroup[]
 }
 
 export interface MasterEQ {

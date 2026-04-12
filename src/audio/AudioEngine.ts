@@ -1,4 +1,4 @@
-import type { Clip, ClipEnvelopePoint, MasterEQ, Track } from '../types'
+import type { BusGroup, Clip, ClipEnvelopePoint, MasterEQ, Track } from '../types'
 import { beatToSeconds, getTimelineDurationSec, type TempoCurveType } from '../utils/tempoCurve'
 
 function applyWaveType(ctx: BaseAudioContext, osc: OscillatorNode, waveType: string) {
@@ -308,6 +308,7 @@ export class AudioEngine {
     tempoCurveTargetBpm?: number,
     masterEQ?: MasterEQ,
     sampleRate = 44100,
+    busGroups?: BusGroup[],
   ): Promise<AudioBuffer> {
     const durationSec = getTimelineDurationSec(timelineBeats, {
       bpm,
@@ -333,6 +334,7 @@ export class AudioEngine {
       offlineCtx,
       masterGain,
       masterEQ,
+      busGroups,
     );
     
     return await offlineCtx.startRendering();
@@ -346,8 +348,9 @@ export class AudioEngine {
     tempoCurveTargetBpm?: number,
     masterEQ?: MasterEQ,
     sampleRate = 44100,
+    busGroups?: BusGroup[],
   ): Promise<ArrayBuffer> {
-    const renderedBuffer = await this.renderBuffer(tracks, bpm, timelineBeats, tempoCurveType, tempoCurveTargetBpm, masterEQ, sampleRate);
+    const renderedBuffer = await this.renderBuffer(tracks, bpm, timelineBeats, tempoCurveType, tempoCurveTargetBpm, masterEQ, sampleRate, busGroups);
     
     const numChannels = renderedBuffer.numberOfChannels;
     const format = 1;
@@ -409,6 +412,7 @@ export class AudioEngine {
     customCtx?: BaseAudioContext,
     customMaster?: GainNode,
     masterEQ?: MasterEQ,
+    busGroups?: BusGroup[],
   ) {
     const ctx = customCtx || this.ctx
     const master = customMaster || this.masterGain
@@ -439,6 +443,69 @@ export class AudioEngine {
     masterEqHigh.connect(master)
 
     const soloActive = tracks.some((t) => t.solo)
+    const normalizedBusGroups: BusGroup[] = Array.isArray(busGroups) && busGroups.length > 0
+      ? busGroups
+      : [
+          { id: 'bus-drum', name: 'Drum', volume: 1, muted: false, solo: false },
+          { id: 'bus-bass', name: 'Bass', volume: 1, muted: false, solo: false },
+          { id: 'bus-music', name: 'Music', volume: 1, muted: false, solo: false },
+          { id: 'bus-fx', name: 'FX', volume: 1, muted: false, solo: false },
+        ]
+    const busSoloActive = normalizedBusGroups.some((group) => group.solo)
+    const busOutputMap = new Map<string, AudioNode>()
+    normalizedBusGroups.forEach((group) => {
+      const busGain = ctx.createGain()
+      const busAudible = !group.muted && (!busSoloActive || group.solo)
+      busGain.gain.value = busAudible ? Math.max(0, Math.min(1.5, group.volume ?? 1)) : 0
+
+      let busOutput: AudioNode = busGain
+      if (group.eqEnabled) {
+        const eqLow = ctx.createBiquadFilter()
+        eqLow.type = 'lowshelf'
+        eqLow.frequency.value = 250
+        eqLow.gain.value = Math.max(-12, Math.min(12, group.eqLow ?? 0))
+
+        const eqMid = ctx.createBiquadFilter()
+        eqMid.type = 'peaking'
+        eqMid.frequency.value = 1000
+        eqMid.Q.value = 1
+        eqMid.gain.value = Math.max(-12, Math.min(12, group.eqMid ?? 0))
+
+        const eqHigh = ctx.createBiquadFilter()
+        eqHigh.type = 'highshelf'
+        eqHigh.frequency.value = 4000
+        eqHigh.gain.value = Math.max(-12, Math.min(12, group.eqHigh ?? 0))
+
+        busOutput.connect(eqLow)
+        eqLow.connect(eqMid)
+        eqMid.connect(eqHigh)
+        busOutput = eqHigh
+      }
+
+      if (group.compressorEnabled) {
+        const compressor = ctx.createDynamicsCompressor()
+        compressor.threshold.value = Math.max(-60, Math.min(0, group.compressorThreshold ?? -24))
+        compressor.ratio.value = Math.max(1, Math.min(20, group.compressorRatio ?? 3))
+        compressor.attack.value = 0.01
+        compressor.release.value = 0.2
+        busOutput.connect(compressor)
+        busOutput = compressor
+      }
+
+      busOutput.connect(masterBus)
+      busOutputMap.set(group.id, busGain)
+    })
+
+    const connectTrackToOutput = (node: AudioNode, track: Track) => {
+      const busId = track.busGroupId ?? ''
+      const busNode = busOutputMap.get(busId)
+      if (busNode) {
+        node.connect(busNode)
+      } else {
+        node.connect(masterBus)
+      }
+    }
+
     const loopBeats = loopEnabled ? loopLengthBeats : timelineBeats
     const tempoSettings = { bpm, curveType: tempoCurveType, targetBpm: tempoCurveTargetBpm }
     const loopDurationSec = getTimelineDurationSec(loopBeats, tempoSettings)
@@ -491,7 +558,7 @@ export class AudioEngine {
             currentOutput.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); currentOutput = eqHigh;
           }
           
-          currentOutput.connect(masterBus);
+          connectTrackToOutput(currentOutput, track);
           trackOutputNode = trackInputNode;
 
           const seq = track.drumSequence;
@@ -804,7 +871,7 @@ export class AudioEngine {
           wetGain.connect(masterBus)
         }
 
-        trackOutput.connect(masterBus)
+        connectTrackToOutput(trackOutput, track)
 
         osc.start(clipStart)
         osc.stop(clipEnd)

@@ -3,11 +3,11 @@ import type { DAWActions } from '../hooks/useDAWActions'
 import type { Track } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 
-interface TrackListProps extends Pick<DAWActions, 'selectedTrackId' | 'isPlaying' | 'setSelectedTrackId' | 'toggleTrackMute' | 'toggleTrackSolo' | 'toggleTrackLock' | 'addClip' | 'setTrackVolume' | 'moveTrack' | 'duplicateTrack' | 'deleteTrack' | 'freezeTrack' | 'unfreezeTrack' | 'project'> {
+interface TrackListProps extends Pick<DAWActions, 'selectedTrackId' | 'isPlaying' | 'setSelectedTrackId' | 'toggleTrackMute' | 'toggleTrackSolo' | 'toggleTrackLock' | 'addClip' | 'setTrackVolume' | 'moveTrack' | 'duplicateTrack' | 'deleteTrack' | 'freezeTrack' | 'unfreezeTrack' | 'assignTrackToBusGroup' | 'project'> {
   track: Track
 }
 
-export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackId, toggleTrackMute, toggleTrackSolo, toggleTrackLock, addClip, setTrackVolume, moveTrack, duplicateTrack, deleteTrack, freezeTrack, unfreezeTrack, project }: TrackListProps) {
+export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackId, toggleTrackMute, toggleTrackSolo, toggleTrackLock, addClip, setTrackVolume, moveTrack, duplicateTrack, deleteTrack, freezeTrack, unfreezeTrack, assignTrackToBusGroup, project }: TrackListProps) {
   const trackIndex = project.tracks.findIndex(t => t.id === track.id)
   const updateProject = useDAWStore((state) => state.updateProject)
 
@@ -156,6 +156,21 @@ export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackI
             />
           </div>
         </div>
+        <div className="mt-1 flex items-center gap-1">
+          <span className="text-[10px] text-gray-500">BUS</span>
+          <select
+            data-testid={`track-bus-${track.id}`}
+            className="flex-1 bg-gray-900 text-[10px] text-gray-300 border border-gray-800 rounded px-1 py-0.5"
+            value={track.busGroupId ?? ''}
+            onChange={(e) => assignTrackToBusGroup(track.id, e.target.value || null)}
+            disabled={isPlaying}
+          >
+            <option value="">None</option>
+            {(project.busGroups || []).map((group) => (
+              <option key={group.id} value={group.id}>{group.name}</option>
+            ))}
+          </select>
+        </div>
         <details className="track-header-params" style={{ opacity: 0.01, position: 'absolute', width: 1, height: 1, overflow: 'hidden' }}>
           <summary>More Params</summary>
         </details>
@@ -164,7 +179,7 @@ export function TrackList({ track, selectedTrackId, isPlaying, setSelectedTrackI
   )
 }
 
-type TrackListPanelProps = Pick<DAWActions, 'project' | 'selectedTrackId' | 'isPlaying' | 'setSelectedTrackId' | 'toggleTrackMute' | 'toggleTrackSolo' | 'toggleTrackLock' | 'addClip' | 'setTrackVolume' | 'addTrack' | 'addDrumTrack' | 'moveTrack' | 'duplicateTrack' | 'deleteTrack' | 'freezeTrack' | 'unfreezeTrack'>
+type TrackListPanelProps = Pick<DAWActions, 'project' | 'selectedTrackId' | 'isPlaying' | 'setSelectedTrackId' | 'toggleTrackMute' | 'toggleTrackSolo' | 'toggleTrackLock' | 'addClip' | 'setTrackVolume' | 'addTrack' | 'addDrumTrack' | 'moveTrack' | 'duplicateTrack' | 'deleteTrack' | 'freezeTrack' | 'unfreezeTrack' | 'assignTrackToBusGroup'>
 
 export function TrackListPanel({ project, addTrack, addDrumTrack, ...rest }: TrackListPanelProps) {
   return (

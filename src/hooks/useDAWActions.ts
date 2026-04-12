@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
-import type { ArrangementVariation, BandProfile, Clip, ExportTargetPreset, ExportTargetPresetKey, ExportVersionEntry, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, MixReportEntry, ProjectState, ReferenceMatchReport, ReferenceMatchSuggestion, Track, WaveType } from '../types'
+import type { ArrangementVariation, BandProfile, BusGroup, Clip, ExportTargetPreset, ExportTargetPresetKey, ExportVersionEntry, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, MixReportEntry, ProjectState, ReferenceMatchReport, ReferenceMatchSuggestion, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
@@ -2169,6 +2169,15 @@ export interface DAWActions {
   pasteClip: (trackId: string) => void
   cutClip: (trackId: string, clipId: string) => void
   cycleClipWave: (trackId: string, clipId: string) => void
+  busGroups: BusGroup[]
+  assignTrackToBusGroup: (trackId: string, busGroupId: string | null) => void
+  setBusGroupVolume: (busGroupId: string, volume: number) => void
+  toggleBusGroupMute: (busGroupId: string) => void
+  toggleBusGroupSolo: (busGroupId: string) => void
+  setBusGroupEQEnabled: (busGroupId: string, enabled: boolean) => void
+  setBusGroupEQBand: (busGroupId: string, band: 'low' | 'mid' | 'high', value: number) => void
+  setBusGroupCompressorEnabled: (busGroupId: string, enabled: boolean) => void
+  setBusGroupCompressorParam: (busGroupId: string, param: 'threshold' | 'ratio', value: number) => void
   setTrackVolume: (trackId: string, volume: number) => void
   setTrackPan: (trackId: string, pan: number) => void
   toggleClipMute: (trackId: string, clipId: string) => void
@@ -2329,6 +2338,7 @@ export function useDAWActions(): DAWActions {
   const clipboard = useDAWStore((state) => state.clipboard)
   const favoriteClips = useDAWStore((state) => state.favoriteClips || [])
   const favoriteClipSearchQuery = useDAWStore((state) => state.favoriteClipSearchQuery || '')
+  const busGroups = useDAWStore((state) => state.project.busGroups || [])
   const past = useDAWStore((state) => state.past)
   const future = useDAWStore((state) => state.future)
   const storeSetProject = useDAWStore((state) => state.setProject)
@@ -3333,6 +3343,7 @@ export function useDAWActions(): DAWActions {
         tempoCurveTargetBpm,
         masterEQ,
         exportTargetPreset.sampleRate,
+        project.busGroups,
       )
       const loudness = analyzeBufferLoudness(audioBuffer)
       setLastExportLoudnessReport(loudness)
@@ -3360,6 +3371,7 @@ export function useDAWActions(): DAWActions {
         tempoCurveTargetBpm,
         masterEQ,
         exportTargetPreset.sampleRate,
+        project.busGroups,
       )
       const mixReport = buildMixReportFromExport({
         project,
@@ -3410,6 +3422,7 @@ export function useDAWActions(): DAWActions {
         tempoCurveTargetBpm,
         masterEQ,
         exportTargetPreset.sampleRate,
+        project.busGroups,
       )
       const loudness = analyzeBufferLoudness(audioBuffer)
       setLastExportLoudnessReport(loudness)
@@ -3513,6 +3526,8 @@ export function useDAWActions(): DAWActions {
           tempoCurveType,
           tempoCurveTargetBpm,
           masterEQ,
+          44100,
+          project.busGroups,
         )
         const wavArrayBuffer = audioBufferToWav(renderedTrackBuffer)
         const safeTrackName = (track.name || track.id)
@@ -3553,6 +3568,7 @@ export function useDAWActions(): DAWActions {
         tempoCurveTargetBpm,
         masterEQ,
         exportTargetPreset.sampleRate,
+        project.busGroups,
       )
       const loudness = analyzeBufferLoudness(audioBuffer)
       setLastExportLoudnessReport(loudness)
@@ -3783,6 +3799,7 @@ export function useDAWActions(): DAWActions {
       undefined,
       undefined,
       masterEQ,
+      project.busGroups,
     )
   }
 
@@ -4434,6 +4451,86 @@ export function useDAWActions(): DAWActions {
     }))
   }
 
+  const assignTrackToBusGroup = (trackId: string, busGroupId: string | null) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => (t.id === trackId ? { ...t, busGroupId } : t)),
+    }))
+  }
+
+  const setBusGroupVolume = (busGroupId: string, volume: number) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      busGroups: (prev.busGroups || []).map((group) =>
+        group.id === busGroupId
+          ? { ...group, volume: Math.max(0, Math.min(1.5, volume)) }
+          : group,
+      ),
+    }))
+  }
+
+  const toggleBusGroupMute = (busGroupId: string) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      busGroups: (prev.busGroups || []).map((group) =>
+        group.id === busGroupId ? { ...group, muted: !group.muted } : group,
+      ),
+    }))
+  }
+
+  const toggleBusGroupSolo = (busGroupId: string) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      busGroups: (prev.busGroups || []).map((group) =>
+        group.id === busGroupId ? { ...group, solo: !group.solo } : group,
+      ),
+    }))
+  }
+
+  const setBusGroupEQEnabled = (busGroupId: string, enabled: boolean) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      busGroups: (prev.busGroups || []).map((group) =>
+        group.id === busGroupId ? { ...group, eqEnabled: enabled } : group,
+      ),
+    }))
+  }
+
+  const setBusGroupEQBand = (busGroupId: string, band: 'low' | 'mid' | 'high', value: number) => {
+    const clamped = Math.max(-12, Math.min(12, value))
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      busGroups: (prev.busGroups || []).map((group) => {
+        if (group.id !== busGroupId) return group
+        if (band === 'low') return { ...group, eqLow: clamped }
+        if (band === 'mid') return { ...group, eqMid: clamped }
+        return { ...group, eqHigh: clamped }
+      }),
+    }))
+  }
+
+  const setBusGroupCompressorEnabled = (busGroupId: string, enabled: boolean) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      busGroups: (prev.busGroups || []).map((group) =>
+        group.id === busGroupId ? { ...group, compressorEnabled: enabled } : group,
+      ),
+    }))
+  }
+
+  const setBusGroupCompressorParam = (busGroupId: string, param: 'threshold' | 'ratio', value: number) => {
+    applyProjectUpdate((prev) => ({
+      ...prev,
+      busGroups: (prev.busGroups || []).map((group) => {
+        if (group.id !== busGroupId) return group
+        if (param === 'threshold') {
+          return { ...group, compressorThreshold: Math.max(-60, Math.min(0, value)) }
+        }
+        return { ...group, compressorRatio: Math.max(1, Math.min(20, value)) }
+      }),
+    }))
+  }
+
   const setTrackVolume = (trackId: string, volume: number) => {
     applyProjectUpdate((prev) => ({
       ...prev,
@@ -4759,6 +4856,8 @@ export function useDAWActions(): DAWActions {
         currentProject.tempoCurveType ?? 'constant',
         currentProject.tempoCurveTargetBpm,
         { low: 0, mid: 0, high: 0 },
+        44100,
+        currentProject.busGroups,
       )
       const freezeAudioData = `data:audio/wav;base64,${encodeArrayBufferToBase64(wavData)}`
       const frozenClip: Clip = {
@@ -6258,6 +6357,7 @@ export function useDAWActions(): DAWActions {
     clipboard,
     favoriteClips,
     favoriteClipSearchQuery,
+    busGroups,
     undoDepth,
     redoDepth,
     beatDuration,
@@ -6316,6 +6416,14 @@ export function useDAWActions(): DAWActions {
     pasteClip,
     cutClip,
     cycleClipWave,
+    assignTrackToBusGroup,
+    setBusGroupVolume,
+    toggleBusGroupMute,
+    toggleBusGroupSolo,
+    setBusGroupEQEnabled,
+    setBusGroupEQBand,
+    setBusGroupCompressorEnabled,
+    setBusGroupCompressorParam,
     setTrackVolume,
     setTrackPan,
     toggleClipMute,
