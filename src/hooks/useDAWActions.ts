@@ -2081,6 +2081,14 @@ declare global {
       selectedClipSplitBlockedReason: 'none' | 'playing' | 'trackLocked' | 'clipTooShort' | 'noSelection'
       clipboardClipId: string | null
       clipboardSourceTrackId: string | null
+      exportQueue: {
+        id: string
+        type: 'wav' | 'mp3' | 'stem'
+        status: 'queued' | 'processing' | 'success' | 'failed'
+        progress: number
+        createdAt: number
+        message?: string
+      }[]
     }
   }
 }
@@ -2231,9 +2239,19 @@ export interface DAWActions {
   exportTargetPreset: ExportTargetPreset
   setExportTargetPresetKey: (key: ExportTargetPresetKey) => void
   resetExportTargetPresetToCustom: () => void
-  handleAudioExport: () => Promise<void>
-  handleMp3Export: () => Promise<void>
-  handleStemExport: () => Promise<void>
+  handleAudioExport: () => Promise<{ ok: boolean; message: string }>
+  handleMp3Export: () => Promise<{ ok: boolean; message: string }>
+  handleStemExport: () => Promise<{ ok: boolean; message: string }>
+  exportQueue: {
+    id: string
+    type: 'wav' | 'mp3' | 'stem'
+    status: 'queued' | 'processing' | 'success' | 'failed'
+    progress: number
+    createdAt: number
+    message?: string
+  }[]
+  enqueueExportTask: (type: 'wav' | 'mp3' | 'stem') => void
+  clearFinishedExportTasks: () => void
   recoverySnapshots: {
     id: string
     timestamp: number
@@ -2401,6 +2419,14 @@ export function useDAWActions(): DAWActions {
   const [chorusDoubleHarmonySettings, setChorusDoubleHarmonySettings] = React.useState<ChorusDoubleHarmonySettings>(DEFAULT_CHORUS_DOUBLE_HARMONY_SETTINGS)
   const [selectedSectionEnergyIds, setSelectedSectionEnergyIds] = React.useState<string[]>([])
   const [sectionEnergyBaseProject, setSectionEnergyBaseProject] = React.useState<ProjectState | null>(null)
+  const [exportQueue, setExportQueue] = React.useState<{
+    id: string
+    type: 'wav' | 'mp3' | 'stem'
+    status: 'queued' | 'processing' | 'success' | 'failed'
+    progress: number
+    createdAt: number
+    message?: string
+  }[]>([])
   const resetProjectState = useDAWStore((state) => state.resetProject)
   const tapTempoRef = useRef<number[]>([])
   useEffect(() => {
@@ -3333,7 +3359,7 @@ export function useDAWActions(): DAWActions {
     storeDeleteRecoverySnapshot(id)
   }, [storeDeleteRecoverySnapshot])
 
-  const handleAudioExport = async () => {
+  const handleAudioExport = async (): Promise<{ ok: boolean; message: string }> => {
     try {
       const audioBuffer = await audioEngine.renderBuffer(
         project.tracks,
@@ -3361,7 +3387,9 @@ export function useDAWActions(): DAWActions {
         setLastPreExportChecklistReport,
         setProjectHealthReport,
       })
-      if (!canContinue) return
+      if (!canContinue) {
+        return { ok: false, message: '导出清单未通过，已取消导出' }
+      }
 
       const wavData = await audioEngine.exportWav(
         project.tracks,
@@ -3407,12 +3435,15 @@ export function useDAWActions(): DAWActions {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      return { ok: true, message: 'WAV 导出完成' }
     } catch (error) {
       console.error('Failed to export audio:', error)
+      const message = error instanceof Error ? error.message : '导出失败'
+      return { ok: false, message }
     }
   }
 
-  const handleMp3Export = async () => {
+  const handleMp3Export = async (): Promise<{ ok: boolean; message: string }> => {
     try {
       const audioBuffer = await audioEngine.renderBuffer(
         project.tracks,
@@ -3440,7 +3471,9 @@ export function useDAWActions(): DAWActions {
         setLastPreExportChecklistReport,
         setProjectHealthReport,
       })
-      if (!canContinue) return
+      if (!canContinue) {
+        return { ok: false, message: '导出清单未通过，已取消导出' }
+      }
 
       const mp3Data = audioBufferToMp3(audioBuffer, { kbps: exportTargetPreset.bitrateKbps })
       const mixReport = buildMixReportFromExport({
@@ -3477,12 +3510,15 @@ export function useDAWActions(): DAWActions {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      return { ok: true, message: 'MP3 导出完成' }
     } catch (error) {
       console.error('Failed to export MP3:', error)
+      const message = error instanceof Error ? error.message : '导出失败'
+      return { ok: false, message }
     }
   }
 
-  const handleStemExport = async () => {
+  const handleStemExport = async (): Promise<{ ok: boolean; message: string }> => {
     try {
       const loudness = lastExportLoudnessReport ?? {
         peakLinear: 0,
@@ -3506,7 +3542,9 @@ export function useDAWActions(): DAWActions {
         setLastPreExportChecklistReport,
         setProjectHealthReport,
       })
-      if (!canContinue) return
+      if (!canContinue) {
+        return { ok: false, message: '导出清单未通过，已取消导出' }
+      }
 
       const bpmLabel = Math.round(project.bpm)
       const zipEntries: Record<string, Uint8Array> = {}
@@ -3550,10 +3588,71 @@ export function useDAWActions(): DAWActions {
 
       const baseName = buildSocialExportBaseName(project.name)
       triggerDownload(blob, `${baseName}-${bpmLabel}BPM-stems.zip`)
+      return { ok: true, message: '分轨导出完成' }
     } catch (error) {
       console.error('Failed to export stems:', error)
+      const message = error instanceof Error ? error.message : '导出失败'
+      return { ok: false, message }
     }
   }
+
+  const enqueueExportTask = React.useCallback((type: 'wav' | 'mp3' | 'stem') => {
+    setExportQueue((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        type,
+        status: 'queued',
+        progress: 0,
+        createdAt: Date.now(),
+      },
+    ])
+  }, [])
+
+  const clearFinishedExportTasks = React.useCallback(() => {
+    setExportQueue((prev) => prev.filter((task) => task.status === 'queued' || task.status === 'processing'))
+  }, [])
+
+  useEffect(() => {
+    const running = exportQueue.some((task) => task.status === 'processing')
+    if (running) return
+
+    const nextTask = exportQueue.find((task) => task.status === 'queued')
+    if (!nextTask) return
+
+    setExportQueue((prev) => prev.map((task) =>
+      task.id === nextTask.id
+        ? { ...task, status: 'processing', progress: 0.1 }
+        : task,
+    ))
+
+    let cancelled = false
+    ;(async () => {
+      let result: { ok: boolean; message: string }
+      if (nextTask.type === 'wav') {
+        result = await handleAudioExport()
+      } else if (nextTask.type === 'mp3') {
+        result = await handleMp3Export()
+      } else {
+        result = await handleStemExport()
+      }
+      if (cancelled) return
+      setExportQueue((prev) => prev.map((task) =>
+        task.id === nextTask.id
+          ? {
+            ...task,
+            status: result.ok ? 'success' : 'failed',
+            progress: 1,
+            message: result.message,
+          }
+          : task,
+      ))
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [exportQueue, handleAudioExport, handleMp3Export, handleStemExport])
 
   const handleSocialPublish = async () => {
     const releaseMetadata = ensureReleaseMetadata()
@@ -3980,6 +4079,7 @@ export function useDAWActions(): DAWActions {
       latestExportVersionPresetKey: exportVersionHistory[0]?.exportTargetPresetKey ?? null,
       latestExportVersionSampleRate: exportVersionHistory[0]?.sampleRate ?? null,
       latestExportVersionBitrateKbps: exportVersionHistory[0]?.bitrateKbps ?? null,
+      exportQueue,
       audioContextState: audioEngine.ctx?.state ?? 'uninitialized',
       beatDurationSec: beatDuration,
       timelineDurationSec: totalDurationSec,
@@ -6476,6 +6576,9 @@ export function useDAWActions(): DAWActions {
     handleAudioExport,
     handleMp3Export,
     handleStemExport,
+    exportQueue,
+    enqueueExportTask,
+    clearFinishedExportTasks,
     recoverySnapshots,
     restoreRecoverySnapshotAsCopy,
     previewRecoverySnapshot,

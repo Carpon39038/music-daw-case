@@ -147,9 +147,10 @@ export function Transport({
   exportTargetPreset,
   setExportTargetPresetKey,
   resetExportTargetPresetToCustom,
-  handleAudioExport,
   handleMp3Export,
-  handleStemExport,
+  exportQueue,
+  enqueueExportTask,
+  clearFinishedExportTasks,
   recoverySnapshots,
   restoreRecoverySnapshotAsCopy,
   previewRecoverySnapshot,
@@ -625,38 +626,38 @@ export function Transport({
           </div>
         ) : null}
         <button
-          onClick={async () => {
-            await handleAudioExport()
+          onClick={() => {
+            enqueueExportTask('wav')
             unlockIfNeeded('firstExport')
           }}
           disabled={isPlaying}
           data-testid="audio-export-btn"
           className="p-2 text-gray-500 hover:text-gray-300"
-          title="Export WAV"
+          title="Queue WAV Export"
         >
           <FileAudio size={18} />
         </button>
         <button
-          onClick={async () => {
-            await handleMp3Export()
+          onClick={() => {
+            enqueueExportTask('mp3')
             unlockIfNeeded('firstExport')
           }}
           disabled={isPlaying}
           data-testid="mp3-export-btn"
           className="p-2 text-gray-500 hover:text-gray-300"
-          title="Export MP3"
+          title="Queue MP3 Export"
         >
           <span className="text-xs font-bold">MP3</span>
         </button>
         <button
-          onClick={async () => {
-            await handleStemExport()
+          onClick={() => {
+            enqueueExportTask('stem')
             unlockIfNeeded('firstExport')
           }}
           disabled={isPlaying}
           data-testid="stem-export-btn"
           className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded"
-          title="Export per-track WAV stems (.zip)"
+          title="Queue per-track WAV stems (.zip)"
         >
           Stems
         </button>
@@ -709,6 +710,35 @@ export function Transport({
             )
           })}
         </div>
+        <div className="px-2 py-1 text-xs border border-gray-800 rounded bg-[#121212] min-w-[260px]" data-testid="offline-export-queue-panel">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-emerald-300 font-semibold text-[11px]">Offline Export Queue</span>
+            <button
+              type="button"
+              onClick={clearFinishedExportTasks}
+              data-testid="offline-export-queue-clear-finished"
+              className="text-[10px] text-gray-500 hover:text-gray-300"
+            >
+              清理已完成
+            </button>
+          </div>
+          {exportQueue.length === 0 ? (
+            <div className="mt-1 text-[10px] text-gray-500">暂无任务。可连续添加 WAV/MP3/Stems 导出。</div>
+          ) : (
+            <ul className="mt-1 space-y-1" data-testid="offline-export-queue-list">
+              {exportQueue.map((item, index) => (
+                <li key={item.id} className="text-[10px] text-gray-300 border border-gray-800/70 rounded px-1.5 py-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate">#{index + 1} {item.type.toUpperCase()} · {item.status === 'queued' ? '排队中' : item.status === 'processing' ? '导出中' : item.status === 'success' ? '已完成' : '失败'}</span>
+                    <span className="text-gray-500 shrink-0">{Math.round(item.progress * 100)}%</span>
+                  </div>
+                  {item.message ? <div className="mt-0.5 text-[10px] text-gray-500 truncate">{item.message}</div> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <button
           onClick={undo}
           disabled={undoDepth === 0 || isPlaying}
