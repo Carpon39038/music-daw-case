@@ -240,6 +240,27 @@ export interface ReferenceMatchReport {
   suggestions: ReferenceMatchSuggestion[]
 }
 
+export interface ArrangementVariation {
+  id: string
+  name: 'conservative' | 'standard' | 'aggressive'
+  createdAt: number
+  rangeStartBeat: number
+  rangeLengthBeats: number
+  tracks: Array<{
+    trackId: string
+    clips: Clip[]
+  }>
+  markers: Marker[]
+}
+
+export interface ArrangementVariationBundle {
+  createdAt: number
+  rangeStartBeat: number
+  rangeLengthBeats: number
+  variants: ArrangementVariation[]
+  activeVariantId?: string | null
+}
+
 export interface ProjectState {
   id?: string
   name?: string
@@ -257,6 +278,7 @@ export interface ProjectState {
   releaseMetadata?: ReleaseMetadata
   publishWizardTemplate?: PublishWizardTemplate
   referenceMatchHistory?: ReferenceMatchReport[]
+  arrangementVariationBundle?: ArrangementVariationBundle
 }
 
 export interface MasterEQ {

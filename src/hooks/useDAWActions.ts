@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
-import type { BandProfile, Clip, ExportTargetPreset, ExportTargetPresetKey, ExportVersionEntry, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, MixReportEntry, ProjectState, ReferenceMatchReport, ReferenceMatchSuggestion, Track, WaveType } from '../types'
+import type { ArrangementVariation, BandProfile, Clip, ExportTargetPreset, ExportTargetPresetKey, ExportVersionEntry, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, MixReportEntry, ProjectState, ReferenceMatchReport, ReferenceMatchSuggestion, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
@@ -114,6 +114,157 @@ const CHORD_PRESETS: Record<ChordPreset, string[]> = {
 
 const CHORD_PRESET_OPTIONS: ChordPreset[] = ['I-V-vi-IV', 'vi-IV-I-V', 'I-vi-IV-V']
 const NOTE_CLASSES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
+
+function clampVariationRange(startBeat: number, lengthBeats: number) {
+  const safeLength = Math.max(8, Math.min(TIMELINE_BEATS, Math.round(lengthBeats)))
+  const safeStart = Math.max(0, Math.min(TIMELINE_BEATS - safeLength, Math.round(startBeat)))
+  return { safeStart, safeLength }
+}
+
+function clipIntersectsRange(clip: Clip, rangeStartBeat: number, rangeLengthBeats: number) {
+  return rangesOverlap(clip.startBeat, clip.lengthBeats, rangeStartBeat, rangeLengthBeats)
+}
+
+function buildArrangementVariation(
+  project: ProjectState,
+  profile: ArrangementVariation['name'],
+  rangeStartBeat: number,
+  rangeLengthBeats: number,
+): ArrangementVariation {
+  const { safeStart, safeLength } = clampVariationRange(rangeStartBeat, rangeLengthBeats)
+  const rangeEnd = safeStart + safeLength
+  const sections = profile === 'conservative'
+    ? [
+        { name: 'Verse', density: 1 },
+        { name: 'Pre', density: 0.85 },
+        { name: 'Chorus', density: 1 },
+        { name: 'Drop', density: 0.8 },
+      ]
+    : profile === 'aggressive'
+      ? [
+          { name: 'Intro', density: 0.65 },
+          { name: 'Verse', density: 1 },
+          { name: 'Break', density: 0.55 },
+          { name: 'Chorus', density: 1.15 },
+          { name: 'Drop', density: 1.25 },
+          { name: 'Outro', density: 0.75 },
+        ]
+      : [
+          { name: 'Intro', density: 0.8 },
+          { name: 'Verse', density: 1 },
+          { name: 'Chorus', density: 1.1 },
+          { name: 'Drop', density: 1.05 },
+        ]
+
+  const sectionSpan = Math.max(1, safeLength / sections.length)
+  const sectionStarts = sections.map((_, index) => Math.max(safeStart, Math.min(rangeEnd - 1, Math.floor(safeStart + index * sectionSpan))))
+
+  const tracks = project.tracks.map((track) => {
+    const sourceClips = track.clips
+      .filter((clip) => clipIntersectsRange(clip, safeStart, safeLength))
+      .sort((a, b) => a.startBeat - b.startBeat)
+
+    if (sourceClips.length === 0) {
+      return { trackId: track.id, clips: [] }
+    }
+
+    const arranged: Clip[] = []
+    sectionStarts.forEach((sectionStart, idx) => {
+      const sourceClip = sourceClips[idx % sourceClips.length]
+      const section = sections[idx]
+      const maxLength = Math.max(0.25, rangeEnd - sectionStart)
+      let nextLength = sourceClip.lengthBeats
+      if (profile === 'conservative') {
+        nextLength = Math.max(0.5, Math.min(maxLength, Math.round(nextLength * 2) / 2))
+      } else if (profile === 'standard') {
+        nextLength = Math.max(0.5, Math.min(maxLength, Math.round(nextLength * (section.density >= 1.1 ? 0.9 : 1.05) * 2) / 2))
+      } else {
+        nextLength = Math.max(0.25, Math.min(maxLength, Math.round(nextLength * (section.density >= 1.1 ? 0.75 : 1.2) * 4) / 4))
+      }
+
+      const variationClip: Clip = {
+        ...sourceClip,
+        id: `${track.id}-variation-${profile}-${idx}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        startBeat: sectionStart,
+        lengthBeats: nextLength,
+        name: `${section.name} ${idx + 1}`,
+      }
+
+      arranged.push(variationClip)
+
+      if (profile === 'aggressive' && section.density >= 1.15 && sectionStart + nextLength < rangeEnd) {
+        const echoLength = Math.max(0.25, Math.min(nextLength * 0.5, rangeEnd - (sectionStart + nextLength)))
+        if (echoLength > 0.24) {
+          arranged.push({
+            ...variationClip,
+            id: `${variationClip.id}-echo`,
+            startBeat: Math.min(rangeEnd - echoLength, sectionStart + nextLength),
+            lengthBeats: echoLength,
+            gain: Math.max(0.15, (variationClip.gain ?? 1) * 0.78),
+          })
+        }
+      }
+    })
+
+    const clamped = arranged
+      .map((clip) => {
+        const startBeat = Math.max(safeStart, Math.min(rangeEnd - 0.25, clip.startBeat))
+        const lengthBeats = Math.max(0.25, Math.min(rangeEnd - startBeat, clip.lengthBeats))
+        return { ...clip, startBeat, lengthBeats }
+      })
+      .filter((clip) => clip.startBeat >= safeStart && clip.startBeat < rangeEnd && clip.lengthBeats > 0)
+
+    return {
+      trackId: track.id,
+      clips: clamped,
+    }
+  })
+
+  const markers = sectionStarts.map((beat, idx) => ({
+    id: crypto.randomUUID(),
+    name: `${sections[idx]?.name ?? 'Section'} (${profile})`,
+    beat,
+  }))
+
+  return {
+    id: crypto.randomUUID(),
+    name: profile,
+    createdAt: Date.now(),
+    rangeStartBeat: safeStart,
+    rangeLengthBeats: safeLength,
+    tracks,
+    markers,
+  }
+}
+
+function applyArrangementVariationToProject(project: ProjectState, variation: ArrangementVariation): ProjectState {
+  const rangeStart = variation.rangeStartBeat
+  const rangeEnd = variation.rangeStartBeat + variation.rangeLengthBeats
+  const trackClipMap = new Map(variation.tracks.map((entry) => [entry.trackId, entry.clips]))
+
+  return {
+    ...project,
+    tracks: project.tracks.map((track) => {
+      const replacement = trackClipMap.get(track.id)
+      if (!replacement) return track
+      const outsideRange = track.clips.filter((clip) => !clipIntersectsRange(clip, rangeStart, variation.rangeLengthBeats))
+      return {
+        ...track,
+        clips: [...outsideRange, ...replacement].sort((a, b) => a.startBeat - b.startBeat),
+      }
+    }),
+    markers: [
+      ...(project.markers ?? []).filter((marker) => marker.beat < rangeStart || marker.beat >= rangeEnd),
+      ...variation.markers,
+    ].sort((a, b) => a.beat - b.beat),
+    arrangementVariationBundle: project.arrangementVariationBundle
+      ? {
+          ...project.arrangementVariationBundle,
+          activeVariantId: variation.id,
+        }
+      : undefined,
+  }
+}
 
 function midiNoteToFrequency(noteNumber: number): number {
   return 440 * Math.pow(2, (noteNumber - 69) / 12)
@@ -2125,6 +2276,9 @@ export interface DAWActions {
   toggleSectionEnergySelection: (sectionId: string) => void
   applySectionEnergyAutomation: () => void
   resetSectionEnergyAutomation: () => void
+  generateArrangementVariations: (rangeLengthBeats: 8 | 16, rangeStartBeat?: number) => void
+  applyArrangementVariation: (variantId: string) => void
+  clearArrangementVariations: () => void
   enableVocalCleanChain: (trackId: string) => void
   setVocalFinalizerEnabled: (trackId: string, enabled: boolean) => void
   setVocalFinalizerPreset: (trackId: string, preset: 'clear' | 'warm' | 'intimate') => void
@@ -4010,6 +4164,60 @@ export function useDAWActions(): DAWActions {
         ...prev,
         tracks: nextTracks,
         markers: arrangementMarkers,
+      }
+    })
+  }
+
+  const generateArrangementVariations = (rangeLengthBeats: 8 | 16, rangeStartBeat?: number) => {
+    if (isPlaying) return
+    applyProjectUpdate((prev) => {
+      const { safeStart, safeLength } = clampVariationRange(rangeStartBeat ?? 0, rangeLengthBeats)
+      const variants: ArrangementVariation[] = [
+        buildArrangementVariation(prev, 'conservative', safeStart, safeLength),
+        buildArrangementVariation(prev, 'standard', safeStart, safeLength),
+        buildArrangementVariation(prev, 'aggressive', safeStart, safeLength),
+      ]
+      const first = variants[0]
+      const withBundle: ProjectState = {
+        ...prev,
+        arrangementVariationBundle: {
+          createdAt: Date.now(),
+          rangeStartBeat: safeStart,
+          rangeLengthBeats: safeLength,
+          variants,
+          activeVariantId: first.id,
+        },
+      }
+      return applyArrangementVariationToProject(withBundle, first)
+    })
+  }
+
+  const applyArrangementVariation = (variantId: string) => {
+    if (isPlaying) return
+    applyProjectUpdate((prev) => {
+      const bundle = prev.arrangementVariationBundle
+      if (!bundle) return prev
+      const target = bundle.variants.find((variant) => variant.id === variantId)
+      if (!target) return prev
+      return applyArrangementVariationToProject(
+        {
+          ...prev,
+          arrangementVariationBundle: {
+            ...bundle,
+            activeVariantId: target.id,
+          },
+        },
+        target,
+      )
+    })
+  }
+
+  const clearArrangementVariations = () => {
+    applyProjectUpdate((prev) => {
+      if (!prev.arrangementVariationBundle) return prev
+      return {
+        ...prev,
+        arrangementVariationBundle: undefined,
       }
     })
   }
@@ -6205,6 +6413,9 @@ export function useDAWActions(): DAWActions {
     toggleSectionEnergySelection,
     applySectionEnergyAutomation: runSectionEnergyAutomation,
     resetSectionEnergyAutomation,
+    generateArrangementVariations,
+    applyArrangementVariation,
+    clearArrangementVariations,
     enableVocalCleanChain,
     setVocalFinalizerEnabled,
     setVocalFinalizerPreset,

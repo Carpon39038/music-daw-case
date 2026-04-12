@@ -21,6 +21,7 @@ export function Inspector(d: DAWActions) {
     chorusLiftMarkerOptions, selectedChorusLiftMarkerId, chorusLiftSettings, chorusDoubleHarmonySettings,
     setSelectedChorusLiftMarkerId, toggleChorusLiftSetting, toggleChorusDoubleHarmonySetting, applyChorusLiftBuilder, applyChorusDoubleHarmonyBuilder,
     sectionEnergyOptions, selectedSectionEnergyIds, toggleSectionEnergySelection, applySectionEnergyAutomation, resetSectionEnergyAutomation,
+    generateArrangementVariations, applyArrangementVariation, clearArrangementVariations,
     enableVocalCleanChain, setVocalFinalizerEnabled, setVocalFinalizerPreset, setVocalFinalizerMix,
     favoriteClips, favoriteClipSearchQuery, setFavoriteClipSearchQuery,
     saveFavoriteClipFromSelection, pasteFavoriteClipToTrack, deleteFavoriteClip,
@@ -48,6 +49,7 @@ export function Inspector(d: DAWActions) {
 
   const autoMixAppliedCount = autoMixSuggestionItems.filter((item) => item.applied).length
   const autoMixCoverageLabel = `${autoMixSuggestionItems.some((item) => item.applied && item.category === 'drum') ? '鼓组✓' : '鼓组—'} / ${autoMixSuggestionItems.some((item) => item.applied && item.category === 'bass') ? '贝斯✓' : '贝斯—'} / ${autoMixSuggestionItems.some((item) => item.applied && item.category === 'harmony') ? '和声✓' : '和声—'}`
+  const variationBundle = project.arrangementVariationBundle
 
   return (
     <section className="inspector w-80 bg-[#111] border-l border-gray-800 flex flex-col overflow-y-auto flex-shrink-0" data-testid="inspector-panel">
@@ -183,6 +185,60 @@ export function Inspector(d: DAWActions) {
                   </button>
                 </div>
                 <p className="text-[10px] text-gray-500">按 Intro/Verse/Chorus/Drop 自动编排并覆盖段落标记；支持 Undo 一键撤销。</p>
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-arrangement-variations">
+                <label className="text-xs text-gray-500 block">Arrangement Variations (8/16 bars)</label>
+                <div className="grid grid-cols-2 gap-1">
+                  <button
+                    type="button"
+                    data-testid="arrangement-variation-generate-8-btn"
+                    onClick={() => generateArrangementVariations(8)}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    生成 8 小节变体
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="arrangement-variation-generate-16-btn"
+                    onClick={() => generateArrangementVariations(16)}
+                    disabled={isPlaying}
+                    className="text-xs px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-200 disabled:opacity-40"
+                  >
+                    生成 16 小节变体
+                  </button>
+                </div>
+                {!variationBundle || variationBundle.variants.length === 0 ? (
+                  <p className="text-[10px] text-gray-500" data-testid="arrangement-variation-empty">暂无变体，点击上方按钮生成保守/标准/激进三个方案。</p>
+                ) : (
+                  <>
+                    <div className="space-y-1" data-testid="arrangement-variation-list">
+                      {variationBundle.variants.map((variant) => (
+                        <button
+                          key={variant.id}
+                          type="button"
+                          data-testid={`arrangement-variation-apply-${variant.name}`}
+                          onClick={() => applyArrangementVariation(variant.id)}
+                          disabled={isPlaying}
+                          className={`w-full text-left text-xs px-2 py-1 rounded border ${variationBundle.activeVariantId === variant.id ? 'border-emerald-500 bg-emerald-900/30 text-emerald-200' : 'border-gray-700 bg-[#111] text-gray-300 hover:bg-[#1b1b1b]'} disabled:opacity-40`}
+                        >
+                          {variant.name === 'conservative' ? '保守' : variant.name === 'standard' ? '标准' : '激进'}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      data-testid="arrangement-variation-clear-btn"
+                      onClick={() => clearArrangementVariations()}
+                      disabled={isPlaying}
+                      className="text-xs px-2 py-1 rounded bg-[#374151] hover:bg-[#4b5563] text-gray-100 disabled:opacity-40"
+                    >
+                      清空变体缓存
+                    </button>
+                  </>
+                )}
+                <p className="text-[10px] text-gray-500">保持当前调式/拍号；可在同一工程中一键 A/B 切换。</p>
               </div>
 
               <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-section-energy-automation">

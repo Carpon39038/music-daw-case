@@ -241,6 +241,24 @@ function isValidProjectState(value: unknown): value is ProjectState {
     const validMarkers = p.markers.every((m) => m && typeof m.id === 'string' && typeof m.name === 'string' && typeof m.beat === 'number')
     if (!validMarkers) return false
   }
+  if (p.arrangementVariationBundle !== undefined && p.arrangementVariationBundle !== null) {
+    const bundle = p.arrangementVariationBundle as {
+      createdAt?: unknown
+      rangeStartBeat?: unknown
+      rangeLengthBeats?: unknown
+      variants?: unknown
+      activeVariantId?: unknown
+    }
+    if (
+      typeof bundle.createdAt !== 'number' ||
+      typeof bundle.rangeStartBeat !== 'number' ||
+      typeof bundle.rangeLengthBeats !== 'number' ||
+      !Array.isArray(bundle.variants) ||
+      (bundle.activeVariantId !== undefined && bundle.activeVariantId !== null && typeof bundle.activeVariantId !== 'string')
+    ) {
+      return false
+    }
+  }
   return p.tracks.every((t) => {
     if (!t || typeof t !== 'object') return false
     if (
@@ -348,6 +366,41 @@ function normalizeProject(project: ProjectState): ProjectState {
           updatedAt: Number.isFinite(project.publishWizardTemplate.updatedAt)
             ? Number(project.publishWizardTemplate.updatedAt)
             : Date.now(),
+        }
+      : undefined,
+    arrangementVariationBundle: project.arrangementVariationBundle
+      ? {
+          createdAt: Number.isFinite(project.arrangementVariationBundle.createdAt)
+            ? Number(project.arrangementVariationBundle.createdAt)
+            : Date.now(),
+          rangeStartBeat: Math.max(0, Math.min(16, Math.round(project.arrangementVariationBundle.rangeStartBeat ?? 0))),
+          rangeLengthBeats: Math.max(8, Math.min(16, Math.round(project.arrangementVariationBundle.rangeLengthBeats ?? 8))),
+          variants: Array.isArray(project.arrangementVariationBundle.variants)
+            ? project.arrangementVariationBundle.variants.map((variant) => ({
+                id: String(variant.id),
+                name: variant.name === 'conservative' || variant.name === 'aggressive' ? variant.name : 'standard',
+                createdAt: Number.isFinite(variant.createdAt) ? Number(variant.createdAt) : Date.now(),
+                rangeStartBeat: Math.max(0, Math.min(16, Math.round(variant.rangeStartBeat ?? 0))),
+                rangeLengthBeats: Math.max(8, Math.min(16, Math.round(variant.rangeLengthBeats ?? 8))),
+                tracks: Array.isArray(variant.tracks)
+                  ? variant.tracks.map((track) => ({
+                      trackId: String(track.trackId),
+                      clips: Array.isArray(track.clips) ? track.clips : [],
+                    }))
+                  : [],
+                markers: Array.isArray(variant.markers)
+                  ? variant.markers.map((marker) => ({
+                      id: String(marker.id),
+                      name: String(marker.name),
+                      beat: Math.max(0, Math.min(16, Number(marker.beat) || 0)),
+                    }))
+                  : [],
+              }))
+            : [],
+          activeVariantId:
+            typeof project.arrangementVariationBundle.activeVariantId === 'string'
+              ? project.arrangementVariationBundle.activeVariantId
+              : null,
         }
       : undefined,
     tracks: project.tracks.map((track) => ({
