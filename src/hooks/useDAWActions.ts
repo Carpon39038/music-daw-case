@@ -572,6 +572,225 @@ interface PreExportChecklistReport {
   items: PreExportChecklistItem[]
 }
 
+interface PreExportAutoFixLogItem {
+  id: string
+  key: 'unnamed-project' | 'loop-export-mismatch' | 'peak-clipping'
+  label: string
+  status: 'fixed' | 'skipped'
+  detail: string
+  undoable: boolean
+}
+
+interface PreExportAutoFixReport {
+  fixedAt: number
+  totalFixable: number
+  fixedCount: number
+  passRate: number
+  logs: PreExportAutoFixLogItem[]
+}
+
+interface PreExportAutoFixUndoState {
+  unnamedProjectName?: string
+  loopEnabled?: boolean
+  masterVolume?: number
+}
+
+const PRE_EXPORT_AUTO_FIX_LABELS: Record<'unnamed-project' | 'loop-export-mismatch' | 'peak-clipping', string> = {
+  'unnamed-project': '未命名项目',
+  'loop-export-mismatch': '循环区与导出区不一致',
+  'peak-clipping': '主总线过载保护',
+}
+
+function toDbLinear(db: number) {
+  return Math.pow(10, db / 20)
+}
+
+function buildAutoFixProjectName(now = new Date()) {
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  return `Project-${y}${m}${d}-${hh}${mm}`
+}
+
+function buildPreExportAutoFixResult(options: {
+  project: ProjectState
+  loopEnabled: boolean
+  masterVolume: number
+  loudness: ExportLoudnessReport | null
+}) {
+  const undoState: PreExportAutoFixUndoState = {}
+  const logs: PreExportAutoFixLogItem[] = []
+  const applicableKeys: Array<'unnamed-project' | 'loop-export-mismatch' | 'peak-clipping'> = []
+
+  let nextProject = options.project
+  let nextLoopEnabled = options.loopEnabled
+  let nextMasterVolume = options.masterVolume
+
+  const normalizedProjectName = (options.project.name || '').trim().toLowerCase()
+  const shouldFixUnnamedProject = normalizedProjectName.length === 0 || normalizedProjectName === 'untitled project'
+  if (shouldFixUnnamedProject) {
+    applicableKeys.push('unnamed-project')
+    undoState.unnamedProjectName = options.project.name
+    nextProject = { ...nextProject, name: buildAutoFixProjectName(), lastSavedAt: Date.now() }
+    logs.push({
+      id: crypto.randomUUID(),
+      key: 'unnamed-project',
+      label: PRE_EXPORT_AUTO_FIX_LABELS['unnamed-project'],
+      status: 'fixed',
+      detail: `已设置项目名为 ${nextProject.name}`,
+      undoable: true,
+    })
+  } else {
+    logs.push({
+      id: crypto.randomUUID(),
+      key: 'unnamed-project',
+      label: PRE_EXPORT_AUTO_FIX_LABELS['unnamed-project'],
+      status: 'skipped',
+      detail: `当前项目名：${options.project.name?.trim()}`,
+      undoable: false,
+    })
+  }
+
+  const shouldFixLoopMismatch = options.loopEnabled
+  if (shouldFixLoopMismatch) {
+    applicableKeys.push('loop-export-mismatch')
+    undoState.loopEnabled = options.loopEnabled
+    nextLoopEnabled = false
+    logs.push({
+      id: crypto.randomUUID(),
+      key: 'loop-export-mismatch',
+      label: PRE_EXPORT_AUTO_FIX_LABELS['loop-export-mismatch'],
+      status: 'fixed',
+      detail: '已关闭 Loop，恢复全曲导出区间',
+      undoable: true,
+    })
+  } else {
+    logs.push({
+      id: crypto.randomUUID(),
+      key: 'loop-export-mismatch',
+      label: PRE_EXPORT_AUTO_FIX_LABELS['loop-export-mismatch'],
+      status: 'skipped',
+      detail: '导出区间已与全曲一致',
+      undoable: false,
+    })
+  }
+
+  const peakDb = options.loudness?.peakDb ?? -Infinity
+  const shouldFixClipping = options.loudness?.verdict === 'clipping-risk' && Number.isFinite(peakDb)
+  if (shouldFixClipping) {
+    applicableKeys.push('peak-clipping')
+    const targetPeakDb = -1
+    const requiredDb = Math.min(0, targetPeakDb - peakDb)
+    const reduction = toDbLinear(requiredDb - 0.5)
+    undoState.masterVolume = options.masterVolume
+    nextMasterVolume = Math.max(0.01, Math.min(1, options.masterVolume * reduction))
+    logs.push({
+      id: crypto.randomUUID(),
+      key: 'peak-clipping',
+      label: PRE_EXPORT_AUTO_FIX_LABELS['peak-clipping'],
+      status: 'fixed',
+      detail: `峰值 ${formatDbLabel(peakDb)}，Master ${(options.masterVolume * 100).toFixed(0)}% → ${(nextMasterVolume * 100).toFixed(0)}%`,
+      undoable: true,
+    })
+  } else {
+    logs.push({
+      id: crypto.randomUUID(),
+      key: 'peak-clipping',
+      label: PRE_EXPORT_AUTO_FIX_LABELS['peak-clipping'],
+      status: 'skipped',
+      detail: options.loudness ? `当前峰值 ${formatDbLabel(peakDb)}，无需过载保护` : '尚无响度检查结果，建议先执行一次导出检查',
+      undoable: false,
+    })
+  }
+
+  const fixedCount = logs.filter((item) => item.status === 'fixed').length
+  const totalFixable = Math.max(1, applicableKeys.length)
+
+  return {
+    nextProject,
+    nextLoopEnabled,
+    nextMasterVolume,
+    undoState,
+    report: {
+      fixedAt: Date.now(),
+      totalFixable,
+      fixedCount,
+      passRate: totalFixable > 0 ? fixedCount / totalFixable : 1,
+      logs,
+    } satisfies PreExportAutoFixReport,
+  }
+}
+
+function undoPreExportAutoFixChange(options: {
+  key: 'unnamed-project' | 'loop-export-mismatch' | 'peak-clipping'
+  undoState: PreExportAutoFixUndoState
+  setProject: (value: ProjectState | ((prev: ProjectState) => ProjectState), options?: { saveHistory?: boolean }) => void
+  setLoopEnabled: (value: boolean) => void
+  setMasterVolume: (value: number) => void
+}) {
+  const { key, undoState, setProject, setLoopEnabled, setMasterVolume } = options
+
+  if (key === 'unnamed-project' && undoState.unnamedProjectName !== undefined) {
+    setProject((prev) => ({ ...prev, name: undoState.unnamedProjectName ?? prev.name, lastSavedAt: Date.now() }), { saveHistory: true })
+    return true
+  }
+  if (key === 'loop-export-mismatch' && undoState.loopEnabled !== undefined) {
+    setLoopEnabled(undoState.loopEnabled)
+    return true
+  }
+  if (key === 'peak-clipping' && undoState.masterVolume !== undefined) {
+    setMasterVolume(undoState.masterVolume)
+    return true
+  }
+
+  return false
+}
+
+function applyUndoLog(logs: PreExportAutoFixLogItem[], key: 'unnamed-project' | 'loop-export-mismatch' | 'peak-clipping') {
+  return logs.map((item) => {
+    if (item.key !== key) return item
+    return {
+      ...item,
+      status: 'skipped' as const,
+      detail: `${item.detail}（已撤销）`,
+      undoable: false,
+    }
+  })
+}
+
+function buildAutoFixPassRate(logs: PreExportAutoFixLogItem[], totalFixable: number) {
+  const total = Math.max(1, totalFixable)
+  const fixed = logs.filter((item) => item.status === 'fixed').length
+  return fixed / total
+}
+
+function rerunChecklistForAutoFix(options: {
+  project: ProjectState
+  masterVolume: number
+  loopEnabled: boolean
+  effectiveTimelineBeats: number
+  loudness: ExportLoudnessReport | null
+}) {
+  const loudness = options.loudness ?? {
+    peakLinear: 0,
+    peakDb: -Infinity,
+    rmsLinear: 0,
+    rmsDb: -Infinity,
+    verdict: 'ready' as const,
+    checkedAt: Date.now(),
+  }
+
+  return buildPreExportChecklist({
+    project: options.project,
+    masterVolume: options.masterVolume,
+    loopEnabled: options.loopEnabled,
+    effectiveTimelineBeats: options.effectiveTimelineBeats,
+    loudness,
+  }).report
+}
+
 interface PreExportChecklistInput {
   project: ProjectState
   masterVolume: number
@@ -1878,6 +2097,9 @@ export interface DAWActions {
   renameExportVersion: (id: string, name: string) => void
   previewExportVersion: (id: string) => void
   lastPreExportChecklistReport: PreExportChecklistReport | null
+  lastPreExportAutoFixReport: PreExportAutoFixReport | null
+  applyPreExportAutoFix: () => void
+  undoPreExportAutoFixItem: (key: 'unnamed-project' | 'loop-export-mismatch' | 'peak-clipping') => void
   latestMixReport: MixReportEntry | null
   previousMixReport: MixReportEntry | null
   autoMixSuggestionItems: AutoMixSuggestionItem[]
@@ -1986,6 +2208,8 @@ export function useDAWActions(): DAWActions {
   const [isRecording, setIsRecording] = React.useState(false)
   const [lastExportLoudnessReport, setLastExportLoudnessReport] = React.useState<ExportLoudnessReport | null>(null)
   const [lastPreExportChecklistReport, setLastPreExportChecklistReport] = React.useState<PreExportChecklistReport | null>(null)
+  const [lastPreExportAutoFixReport, setLastPreExportAutoFixReport] = React.useState<PreExportAutoFixReport | null>(null)
+  const preExportAutoFixUndoRef = React.useRef<PreExportAutoFixUndoState>({})
   const [projectHealthReport, setProjectHealthReport] = React.useState<ProjectHealthReport>(() => buildProjectHealthReport({
     project,
     loopEnabled,
@@ -3138,6 +3362,60 @@ export function useDAWActions(): DAWActions {
       console.error('Failed to export project card:', error)
     }
   }
+
+  const applyPreExportAutoFix = React.useCallback(() => {
+    const result = buildPreExportAutoFixResult({
+      project,
+      loopEnabled,
+      masterVolume,
+      loudness: lastExportLoudnessReport,
+    })
+
+    preExportAutoFixUndoRef.current = result.undoState
+
+    if (result.nextProject !== project) {
+      setProject(result.nextProject, { saveHistory: true })
+    }
+    if (result.nextLoopEnabled !== loopEnabled) {
+      setLoopEnabled(result.nextLoopEnabled)
+    }
+    if (Math.abs(result.nextMasterVolume - masterVolume) > 0.0001) {
+      setMasterVolume(result.nextMasterVolume)
+    }
+
+    const checklistReport = rerunChecklistForAutoFix({
+      project: result.nextProject,
+      masterVolume: result.nextMasterVolume,
+      loopEnabled: result.nextLoopEnabled,
+      effectiveTimelineBeats: result.nextLoopEnabled ? loopLengthBeats : TIMELINE_BEATS,
+      loudness: lastExportLoudnessReport,
+    })
+
+    setLastPreExportChecklistReport(checklistReport)
+    setLastPreExportAutoFixReport(result.report)
+  }, [project, loopEnabled, masterVolume, lastExportLoudnessReport, setProject, setLoopEnabled, setMasterVolume, loopLengthBeats])
+
+  const undoPreExportAutoFixItem = React.useCallback((key: 'unnamed-project' | 'loop-export-mismatch' | 'peak-clipping') => {
+    const ok = undoPreExportAutoFixChange({
+      key,
+      undoState: preExportAutoFixUndoRef.current,
+      setProject,
+      setLoopEnabled,
+      setMasterVolume,
+    })
+    if (!ok) return
+
+    setLastPreExportAutoFixReport((prev) => {
+      if (!prev) return prev
+      const nextLogs = applyUndoLog(prev.logs, key)
+      return {
+        ...prev,
+        logs: nextLogs,
+        fixedCount: nextLogs.filter((item) => item.status === 'fixed').length,
+        passRate: buildAutoFixPassRate(nextLogs, prev.totalFixable),
+      }
+    })
+  }, [setProject, setLoopEnabled, setMasterVolume])
 
   const handleTapTempo = () => {
     const now = performance.now()
@@ -5819,6 +6097,9 @@ export function useDAWActions(): DAWActions {
     renameExportVersion,
     previewExportVersion,
     lastPreExportChecklistReport,
+    lastPreExportAutoFixReport,
+    applyPreExportAutoFix,
+    undoPreExportAutoFixItem,
     latestMixReport,
     previousMixReport,
     autoMixSuggestionItems,

@@ -167,6 +167,9 @@ export function Transport({
   renameExportVersion,
   previewExportVersion,
   lastPreExportChecklistReport,
+  lastPreExportAutoFixReport,
+  applyPreExportAutoFix,
+  undoPreExportAutoFixItem,
   latestMixReport,
   previousMixReport,
   handleSocialPublish,
@@ -941,6 +944,45 @@ export function Transport({
                 ? '全部通过'
                 : `${lastPreExportChecklistReport.failedCount} 项未通过`
               : '未检查'}
+          </div>
+          <div className="mt-2 rounded border border-gray-800/80 px-2 py-2" data-testid="pre-export-auto-fix-panel">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-emerald-300 font-semibold">导出前缺失项修复器</span>
+              <button
+                type="button"
+                data-testid="pre-export-auto-fix-btn"
+                onClick={applyPreExportAutoFix}
+                className="px-2 py-0.5 text-[10px] bg-emerald-700 hover:bg-emerald-600 text-white rounded"
+              >
+                自动修复
+              </button>
+            </div>
+            {!lastPreExportAutoFixReport ? (
+              <div className="mt-1 text-[10px] text-gray-500">尚未执行自动修复。点击后会处理：未命名项目 / 导出区间与 Loop 不一致 / 主总线过载保护。</div>
+            ) : (
+              <div className="mt-1 space-y-1" data-testid="pre-export-auto-fix-log">
+                <div className="text-[10px] text-gray-500" data-testid="pre-export-auto-fix-summary">
+                  可修复项通过率：{Math.round(lastPreExportAutoFixReport.passRate * 100)}%（{lastPreExportAutoFixReport.fixedCount}/{lastPreExportAutoFixReport.totalFixable}）
+                </div>
+                <ul className="space-y-1">
+                  {lastPreExportAutoFixReport.logs.map((item) => (
+                    <li key={item.id} className="flex items-center justify-between gap-2 text-[10px] text-gray-300 rounded border border-gray-800/60 px-2 py-1">
+                      <span className="truncate">{item.status === 'fixed' ? '✅' : '⏭️'} {item.label} · {item.detail}</span>
+                      {item.undoable ? (
+                        <button
+                          type="button"
+                          data-testid={`pre-export-auto-fix-undo-${item.key}`}
+                          onClick={() => undoPreExportAutoFixItem(item.key)}
+                          className="px-1 py-0.5 rounded border border-gray-700 text-gray-400 hover:text-gray-200 shrink-0"
+                        >
+                          撤销
+                        </button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
           <div className="mt-2 border-t border-gray-800 pt-2" data-testid="export-version-compare-panel">
             <div className="flex items-center justify-between gap-2">
