@@ -413,6 +413,189 @@ interface PreExportChecklistResult {
   failedItems: PreExportChecklistItem[]
 }
 
+type ProjectHealthRiskKey = 'cpu-overload' | 'muted-content-track' | 'unnamed-marker' | 'export-range-abnormal'
+
+interface ProjectHealthRisk {
+  key: ProjectHealthRiskKey
+  label: string
+  passed: boolean
+  detail: string
+  actionLabel: string
+}
+
+interface ProjectHealthReport {
+  checkedAt: number
+  failedCount: number
+  items: ProjectHealthRisk[]
+}
+
+function buildProjectHealthReport(input: {
+  project: ProjectState
+  loopEnabled: boolean
+  effectiveTimelineBeats: number
+  timelineBeats: number
+  performanceMode: 'auto' | 'on' | 'off'
+}): ProjectHealthReport {
+  const { project, loopEnabled, effectiveTimelineBeats, timelineBeats, performanceMode } = input
+
+  const totalClipCount = project.tracks.reduce((sum, track) => sum + track.clips.length, 0)
+  const cpuOverloadRisk = performanceMode === 'off' && totalClipCount > 30
+  const mutedContentTrack = project.tracks.find((track) => track.muted && (track.isDrumTrack || track.clips.length > 0))
+  const unnamedMarker = (project.markers ?? []).find((marker) => !marker.name.trim() || /^marker\s*\d*$/i.test(marker.name.trim()))
+  const exportRangeAbnormal = loopEnabled && effectiveTimelineBeats !== timelineBeats
+
+  const items: ProjectHealthRisk[] = [
+    {
+      key: 'cpu-overload',
+      label: 'CPU 过载风险',
+      passed: !cpuOverloadRisk,
+      detail: cpuOverloadRisk ? `当前 ${totalClipCount} 个片段，且性能模式关闭` : `性能模式 ${performanceMode.toUpperCase()}，当前 ${totalClipCount} 个片段`,
+      actionLabel: '开启性能模式',
+    },
+    {
+      key: 'muted-content-track',
+      label: '静音但有内容轨道',
+      passed: !mutedContentTrack,
+      detail: mutedContentTrack ? `${mutedContentTrack.name} 被静音但存在内容` : '未发现静音内容轨道',
+      actionLabel: '跳转并取消静音',
+    },
+    {
+      key: 'unnamed-marker',
+      label: '未命名标记',
+      passed: !unnamedMarker,
+      detail: unnamedMarker ? `检测到未命名标记（@${unnamedMarker.beat.toFixed(1)} beat）` : '标记命名完整',
+      actionLabel: '跳转并重命名',
+    },
+    {
+      key: 'export-range-abnormal',
+      label: '导出区间异常',
+      passed: !exportRangeAbnormal,
+      detail: exportRangeAbnormal ? `Loop 导出区 ${effectiveTimelineBeats} 小节（全曲 ${timelineBeats} 小节）` : '导出区间正常',
+      actionLabel: '恢复全曲导出',
+    },
+  ]
+
+  return {
+    checkedAt: Date.now(),
+    failedCount: items.filter((item) => !item.passed).length,
+    items,
+  }
+}
+
+function syncHealthChecklistItems(report: ProjectHealthReport, checklist: PreExportChecklistReport): PreExportChecklistReport {
+  const healthMap = new Map(report.items.map((item) => [item.key, item]))
+  return {
+    ...checklist,
+    items: checklist.items.map((item) => {
+      if (item.key === 'loop-export-mismatch') {
+        const health = healthMap.get('export-range-abnormal')
+        if (!health) return item
+        return {
+          ...item,
+          passed: health.passed,
+          detail: health.detail,
+        }
+      }
+      return item
+    }),
+  }
+}
+
+function buildUnifiedPreExportChecklist(input: PreExportChecklistInput & {
+  performanceMode: 'auto' | 'on' | 'off'
+  timelineBeats: number
+}): { checklist: PreExportChecklistResult; healthReport: ProjectHealthReport } {
+  const checklist = buildPreExportChecklist(input)
+  const healthReport = buildProjectHealthReport({
+    project: input.project,
+    loopEnabled: input.loopEnabled,
+    effectiveTimelineBeats: input.effectiveTimelineBeats,
+    timelineBeats: input.timelineBeats,
+    performanceMode: input.performanceMode,
+  })
+
+  return {
+    checklist: {
+      ...checklist,
+      report: syncHealthChecklistItems(healthReport, checklist.report),
+    },
+    healthReport,
+  }
+}
+
+function runPreExportChecks(options: {
+  project: ProjectState
+  masterVolume: number
+  loopEnabled: boolean
+  effectiveTimelineBeats: number
+  timelineBeats: number
+  performanceMode: 'auto' | 'on' | 'off'
+  loudness: ExportLoudnessReport
+  exportTargetLabel: string
+  setLastPreExportChecklistReport: (report: PreExportChecklistReport) => void
+  setProjectHealthReport: (report: ProjectHealthReport) => void
+}) {
+  const { checklist, healthReport } = buildUnifiedPreExportChecklist(options)
+  const { report, failedItems } = checklist
+  options.setLastPreExportChecklistReport(report)
+  options.setProjectHealthReport(healthReport)
+  if (!confirmIgnoreChecklistFailures(failedItems, report.items, options.exportTargetLabel)) {
+    return false
+  }
+  return confirmLoudnessAdjust(options.loudness, options.exportTargetLabel)
+}
+
+function resolveHealthRiskAction(options: {
+  riskKey: ProjectHealthRiskKey
+  project: ProjectState
+  setSelectedTrackId: (value: string | null) => void
+  setSelectedClipRef: (value: { trackId: string; clipId: string } | null) => void
+  setSelectedClipRefs: (value: { trackId: string; clipId: string }[]) => void
+  setPlayheadBeat: (value: number) => void
+  setProject: (value: ProjectState | ((prev: ProjectState) => ProjectState), options?: { saveHistory?: boolean }) => void
+  setPerformanceMode: (value: 'auto' | 'on' | 'off') => void
+  setLoopEnabled: (value: boolean) => void
+  effectiveTimelineBeats: number
+}) {
+  const { riskKey, project, setSelectedTrackId, setSelectedClipRef, setSelectedClipRefs, setPlayheadBeat, setProject, setPerformanceMode, setLoopEnabled, effectiveTimelineBeats } = options
+
+  if (riskKey === 'cpu-overload') {
+    setPerformanceMode('on')
+    return
+  }
+
+  if (riskKey === 'muted-content-track') {
+    const track = project.tracks.find((item) => item.muted && (item.isDrumTrack || item.clips.length > 0))
+    if (!track) return
+    setSelectedTrackId(track.id)
+    setSelectedClipRef(null)
+    setSelectedClipRefs([])
+    setProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((item) => item.id === track.id ? { ...item, muted: false } : item),
+    }), { saveHistory: true })
+    return
+  }
+
+  if (riskKey === 'unnamed-marker') {
+    const marker = (project.markers ?? []).find((item) => !item.name.trim() || /^marker\s*\d*$/i.test(item.name.trim()))
+    if (!marker) return
+    setPlayheadBeat(Math.max(0, Math.min(TIMELINE_BEATS, marker.beat)))
+    const nextName = window.prompt('重命名未命名标记', marker.name.trim() || `Section ${Math.round(marker.beat)}`)
+    if (!nextName || !nextName.trim()) return
+    setProject((prev) => ({
+      ...prev,
+      markers: (prev.markers ?? []).map((item) => item.id === marker.id ? { ...item, name: nextName.trim() } : item),
+    }), { saveHistory: true })
+    return
+  }
+
+  if (riskKey === 'export-range-abnormal') {
+    setLoopEnabled(false)
+    setPlayheadBeat(Math.max(0, Math.min(TIMELINE_BEATS, effectiveTimelineBeats)))
+  }
+}
+
 function buildPreExportChecklist(input: PreExportChecklistInput): PreExportChecklistResult {
   const { project, masterVolume, loopEnabled, effectiveTimelineBeats, loudness } = input
   const hasAnyEmptyTrack = project.tracks.some((track) => track.clips.length === 0)
@@ -479,23 +662,6 @@ function confirmIgnoreChecklistFailures(failedItems: PreExportChecklistItem[], a
 function confirmLoudnessAdjust(loudness: ExportLoudnessReport, exportTargetLabel: string) {
   if (loudness.verdict !== 'adjust') return true
   return window.confirm(`导出前响度检查：\n峰值：${formatDbLabel(loudness.peakDb)}\n整体响度（RMS）：${formatDbLabel(loudness.rmsDb)}\n结论：建议调整后再发布。\n\n是否仍继续导出 ${exportTargetLabel}？`)
-}
-
-function runPreExportChecks(options: {
-  project: ProjectState
-  masterVolume: number
-  loopEnabled: boolean
-  effectiveTimelineBeats: number
-  loudness: ExportLoudnessReport
-  exportTargetLabel: string
-  setLastPreExportChecklistReport: (report: PreExportChecklistReport) => void
-}) {
-  const { report, failedItems } = buildPreExportChecklist(options)
-  options.setLastPreExportChecklistReport(report)
-  if (!confirmIgnoreChecklistFailures(failedItems, report.items, options.exportTargetLabel)) {
-    return false
-  }
-  return confirmLoudnessAdjust(options.loudness, options.exportTargetLabel)
 }
 
 interface ReferenceTrackState {
@@ -1191,6 +1357,8 @@ export interface DAWActions {
   autoMixAvailable: boolean
   autoMixPreviewMode: 'before' | 'after' | null
   autoMixCoverageReady: boolean
+  projectHealthReport: ProjectHealthReport
+  resolveProjectHealthRisk: (riskKey: ProjectHealthRiskKey) => void
   runAutoMixAssistant: () => void
   toggleAutoMixSuggestion: (suggestionId: string) => void
   previewAutoMixVersion: (mode: 'before' | 'after') => void
@@ -1240,6 +1408,7 @@ export function useDAWActions(): DAWActions {
   const masterPreset = useDAWStore((state) => state.masterPreset)
   const loopEnabled = useDAWStore((state) => state.loopEnabled)
   const loopLengthBeats = useDAWStore((state) => state.loopLengthBeats)
+  const performanceMode = useDAWStore((state) => state.performanceMode)
   const selectedTrackId = useDAWStore((state) => state.selectedTrackId)
   const selectedClipRef = useDAWStore((state) => state.selectedClipRef)
   const selectedClipRefs = useDAWStore((state) => state.selectedClipRefs)
@@ -1259,6 +1428,7 @@ export function useDAWActions(): DAWActions {
   const storeResetMasterPresetToBaseline = useDAWStore((state) => state.resetMasterPresetToBaseline)
   const storeSetLoopEnabled = useDAWStore((state) => state.setLoopEnabled)
   const storeSetLoopLengthBeats = useDAWStore((state) => state.setLoopLengthBeats)
+  const storeSetPerformanceMode = useDAWStore((state) => state.setPerformanceMode)
   const storeSetSelectedTrackId = useDAWStore((state) => state.setSelectedTrackId)
   const storeSetSelectedClipRef = useDAWStore((state) => state.setSelectedClipRef)
   const storeSetSelectedClipRefs = useDAWStore((state) => state.setSelectedClipRefs)
@@ -1275,6 +1445,13 @@ export function useDAWActions(): DAWActions {
   const [isRecording, setIsRecording] = React.useState(false)
   const [lastExportLoudnessReport, setLastExportLoudnessReport] = React.useState<ExportLoudnessReport | null>(null)
   const [lastPreExportChecklistReport, setLastPreExportChecklistReport] = React.useState<PreExportChecklistReport | null>(null)
+  const [projectHealthReport, setProjectHealthReport] = React.useState<ProjectHealthReport>(() => buildProjectHealthReport({
+    project,
+    loopEnabled,
+    effectiveTimelineBeats: loopEnabled ? loopLengthBeats : TIMELINE_BEATS,
+    timelineBeats: TIMELINE_BEATS,
+    performanceMode,
+  }))
   const exportVersionHistory = useMemo(() => (project.exportVersions ?? []).slice(0, 5), [project.exportVersions])
   const [monitorSource, setMonitorSource] = React.useState<MonitorSource>('project')
   const [referenceTrack, setReferenceTrack] = React.useState<ReferenceTrackState | null>(null)
@@ -1345,6 +1522,10 @@ export function useDAWActions(): DAWActions {
 
   const setLoopLengthBeats = (value: number) => {
     storeSetLoopLengthBeats(value)
+  }
+
+  const setPerformanceMode = (value: 'auto' | 'on' | 'off') => {
+    storeSetPerformanceMode(value)
   }
 
   const setSelectedTrackId = (value: string | null) => {
@@ -1525,6 +1706,42 @@ export function useDAWActions(): DAWActions {
 
   const autoMixAvailable = autoMixSuggestions.length > 0
   const autoMixCoverageReady = useMemo(() => hasAllAutoMixCategories(autoMixSuggestionItems), [autoMixSuggestionItems])
+
+  useEffect(() => {
+    const { healthReport } = buildUnifiedPreExportChecklist({
+      project,
+      masterVolume,
+      loopEnabled,
+      effectiveTimelineBeats,
+      timelineBeats: TIMELINE_BEATS,
+      performanceMode,
+      loudness: lastExportLoudnessReport ?? {
+        peakLinear: 0,
+        peakDb: -Infinity,
+        rmsLinear: 0,
+        rmsDb: -Infinity,
+        verdict: 'ready',
+        checkedAt: Date.now(),
+      },
+    })
+    setProjectHealthReport(healthReport)
+  }, [project, masterVolume, loopEnabled, effectiveTimelineBeats, performanceMode, lastExportLoudnessReport])
+
+  const resolveProjectHealthRisk = React.useCallback((riskKey: ProjectHealthRiskKey) => {
+    resolveHealthRiskAction({
+      riskKey,
+      project,
+      setSelectedTrackId,
+      setSelectedClipRef,
+      setSelectedClipRefs,
+      setPlayheadBeat,
+      setProject,
+      setPerformanceMode,
+      setLoopEnabled,
+      effectiveTimelineBeats,
+    })
+  }, [project, setSelectedTrackId, setSelectedClipRef, setSelectedClipRefs, setPlayheadBeat, setProject, setPerformanceMode, setLoopEnabled, effectiveTimelineBeats])
+
   const chorusLiftMarkerOptions = useMemo(
     () => buildChorusMarkerOptions(project, effectiveTimelineBeats),
     [project, effectiveTimelineBeats],
@@ -1805,9 +2022,12 @@ export function useDAWActions(): DAWActions {
         masterVolume,
         loopEnabled,
         effectiveTimelineBeats,
+        timelineBeats: TIMELINE_BEATS,
+        performanceMode,
         loudness,
         exportTargetLabel: 'WAV',
         setLastPreExportChecklistReport,
+        setProjectHealthReport,
       })
       if (!canContinue) return
 
@@ -1863,9 +2083,12 @@ export function useDAWActions(): DAWActions {
         masterVolume,
         loopEnabled,
         effectiveTimelineBeats,
+        timelineBeats: TIMELINE_BEATS,
+        performanceMode,
         loudness,
         exportTargetLabel: 'MP3',
         setLastPreExportChecklistReport,
+        setProjectHealthReport,
       })
       if (!canContinue) return
 
@@ -1912,9 +2135,12 @@ export function useDAWActions(): DAWActions {
         masterVolume,
         loopEnabled,
         effectiveTimelineBeats,
+        timelineBeats: TIMELINE_BEATS,
+        performanceMode,
         loudness,
         exportTargetLabel: '分轨 WAV',
         setLastPreExportChecklistReport,
+        setProjectHealthReport,
       })
       if (!canContinue) return
 
@@ -1984,9 +2210,12 @@ export function useDAWActions(): DAWActions {
         masterVolume,
         loopEnabled,
         effectiveTimelineBeats,
+        timelineBeats: TIMELINE_BEATS,
+        performanceMode,
         loudness,
         exportTargetLabel: '发布包',
         setLastPreExportChecklistReport,
+        setProjectHealthReport,
       })
       if (!canContinue) return
 
@@ -4591,6 +4820,8 @@ export function useDAWActions(): DAWActions {
     autoMixAvailable,
     autoMixPreviewMode,
     autoMixCoverageReady,
+    projectHealthReport,
+    resolveProjectHealthRisk,
     runAutoMixAssistant,
     toggleAutoMixSuggestion,
     previewAutoMixVersion,

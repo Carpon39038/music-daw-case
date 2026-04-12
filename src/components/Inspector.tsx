@@ -17,6 +17,7 @@ export function Inspector(d: DAWActions) {
     duplicateClip, splitClip, clipboard, previewClip,
     autoMixSuggestionItems, autoMixAvailable, autoMixPreviewMode, autoMixCoverageReady,
     runAutoMixAssistant, toggleAutoMixSuggestion, previewAutoMixVersion,
+    projectHealthReport, resolveProjectHealthRisk,
     chorusLiftMarkerOptions, selectedChorusLiftMarkerId, chorusLiftSettings,
     setSelectedChorusLiftMarkerId, toggleChorusLiftSetting, applyChorusLiftBuilder,
     enableVocalCleanChain,
@@ -390,6 +391,42 @@ export function Inspector(d: DAWActions) {
                   Magic Polish (Beginner Mix)
                 </button>
                 <p className="text-[10px] text-gray-500">Uses current Scale Key / Scale Type to create inspiration clips.</p>
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="project-health-panel">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-gray-500 block">Project Health Panel</label>
+                  <span className={`text-[10px] ${projectHealthReport.failedCount === 0 ? 'text-emerald-400' : 'text-amber-300'}`} data-testid="project-health-failed-count">
+                    {projectHealthReport.failedCount === 0 ? '风险 0' : `${projectHealthReport.failedCount} 项风险`}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-500" data-testid="project-health-checked-at">
+                  最近检查：{new Date(projectHealthReport.checkedAt).toLocaleTimeString()}
+                </p>
+                <div className="space-y-1" data-testid="project-health-risk-list">
+                  {projectHealthReport.items.map((item) => (
+                    <div
+                      key={item.key}
+                      className={`rounded border px-2 py-1 ${item.passed ? 'border-emerald-900/60 bg-emerald-950/20 text-emerald-200' : 'border-amber-800/70 bg-amber-950/30 text-amber-100'}`}
+                      data-testid={`project-health-risk-${item.key}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-medium">{item.passed ? '✅' : '⚠️'} {item.label}</span>
+                        <button
+                          type="button"
+                          data-testid={`project-health-fix-${item.key}`}
+                          onClick={() => resolveProjectHealthRisk(item.key)}
+                          disabled={item.passed || isPlaying}
+                          className="text-[10px] px-1.5 py-0.5 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-100 disabled:opacity-40"
+                        >
+                          {item.actionLabel}
+                        </button>
+                      </div>
+                      <p className="text-[10px] opacity-80">{item.detail}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-500">风险项与导出清单保持一致，可一键跳转并修复。</p>
               </div>
 
               <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="auto-mix-assistant-panel">
