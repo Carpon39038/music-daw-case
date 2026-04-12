@@ -150,6 +150,12 @@ export interface ExportTargetPreset {
   peakLimitDb: number
 }
 
+export interface BandProfile {
+  lowDb: number
+  midDb: number
+  highDb: number
+}
+
 export interface ExportVersionEntry {
   id: string
   name: string
@@ -164,6 +170,7 @@ export interface ExportVersionEntry {
   bitrateKbps?: number
   targetLoudnessDb?: number
   peakLimitDb?: number
+  bandProfile?: BandProfile
 }
 
 export interface ReleaseMetadata {
@@ -197,6 +204,25 @@ export interface MixReportEntry {
   suggestions: string[]
 }
 
+export interface ReferenceMatchSuggestion {
+  id: string
+  type: 'master-eq' | 'master-dynamics'
+  label: string
+  detail: string
+  from: number
+  to: number
+  applied: boolean
+}
+
+export interface ReferenceMatchReport {
+  targetType: 'export-version' | 'reference-track'
+  targetLabel: string
+  checkedAt: number
+  before: BandProfile
+  after: BandProfile
+  suggestions: ReferenceMatchSuggestion[]
+}
+
 export interface ProjectState {
   id?: string
   name?: string
@@ -212,6 +238,7 @@ export interface ProjectState {
   exportVersions?: ExportVersionEntry[]
   mixReports?: MixReportEntry[]
   releaseMetadata?: ReleaseMetadata
+  referenceMatchHistory?: ReferenceMatchReport[]
 }
 
 export interface MasterEQ {

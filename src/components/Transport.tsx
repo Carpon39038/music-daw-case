@@ -157,8 +157,11 @@ export function Transport({
   importReferenceTrack,
   clearReferenceTrack,
   toggleReferenceAB,
+  applyReferenceMatchMaster,
+  toggleReferenceMatchSuggestion,
   monitorSource,
   referenceTrack,
+  referenceMatchDraft,
   lastExportLoudnessReport,
   exportVersionHistory,
   renameExportVersion,
@@ -872,6 +875,60 @@ export function Transport({
             {referenceTrack
               ? `${referenceTrack.fileName} · 自动匹配 ${referenceTrack.matchedGainDb >= 0 ? '+' : ''}${referenceTrack.matchedGainDb.toFixed(1)} dB · 误差 ±${referenceTrack.matchedDeltaDb.toFixed(1)} dB`
               : '导入 1 首参考曲后可用 A/B 切听，音量将自动匹配到 ±1 dB 附近。'}
+          </div>
+          <div className="mt-2 rounded border border-gray-800/80 px-2 py-1" data-testid="reference-match-master-panel">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-emerald-300 font-semibold">Reference Match Master</span>
+              <span className="text-[10px] text-gray-500">同步到 Master EQ/动态</span>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              <button
+                type="button"
+                data-testid="reference-match-master-from-reference"
+                disabled={!referenceTrack}
+                onClick={() => applyReferenceMatchMaster({ type: 'reference-track' })}
+                className="px-2 py-0.5 text-[10px] bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded disabled:opacity-40"
+              >
+                用参考曲匹配
+              </button>
+              <button
+                type="button"
+                data-testid="reference-match-master-from-latest-export"
+                disabled={exportVersionHistory.length === 0}
+                onClick={() => {
+                  const latest = exportVersionHistory[0]
+                  if (!latest) return
+                  applyReferenceMatchMaster({ type: 'export-version', id: latest.id })
+                }}
+                className="px-2 py-0.5 text-[10px] bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded disabled:opacity-40"
+              >
+                用最近导出匹配
+              </button>
+            </div>
+            {referenceMatchDraft ? (
+              <div className="mt-1" data-testid="reference-match-master-suggestions">
+                <div className="text-[10px] text-gray-500">
+                  目标：{referenceMatchDraft.targetType === 'reference-track' ? 'Reference' : 'Export Version'} · {referenceMatchDraft.targetLabel}
+                </div>
+                <ul className="mt-1 space-y-1">
+                  {referenceMatchDraft.suggestions.map((item) => (
+                    <li key={item.id} className="flex items-center justify-between gap-2 text-[10px] text-gray-300">
+                      <span className="truncate">{item.label} · {item.detail}</span>
+                      <button
+                        type="button"
+                        data-testid={`reference-match-toggle-${item.id}`}
+                        onClick={() => toggleReferenceMatchSuggestion(item.id)}
+                        className={`px-1 py-0.5 rounded border ${item.applied ? 'border-emerald-700 text-emerald-300' : 'border-gray-700 text-gray-400'}`}
+                      >
+                        {item.applied ? '已应用' : '已撤销'}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="mt-1 text-[10px] text-gray-500">执行后会生成可逐条开关的建议（Master EQ + 动态）。</div>
+            )}
           </div>
           <div className="mt-2 text-[10px] text-gray-500" data-testid="export-loudness-status">
             导出响度检查：{loudnessVerdictLabel(lastExportLoudnessReport?.verdict)}

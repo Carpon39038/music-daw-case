@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
-import type { Clip, ExportTargetPreset, ExportTargetPresetKey, ExportVersionEntry, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, MixReportEntry, ProjectState, Track, WaveType } from '../types'
+import type { BandProfile, Clip, ExportTargetPreset, ExportTargetPresetKey, ExportVersionEntry, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, MixReportEntry, ProjectState, ReferenceMatchReport, ReferenceMatchSuggestion, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
@@ -842,9 +842,13 @@ interface ReferenceTrackState {
   rawRmsDb: number | null
   matchedGainDb: number
   matchedDeltaDb: number
+  bandProfile?: BandProfile
 }
 
 type MonitorSource = 'project' | 'reference'
+type ReferenceMatchTarget =
+  | { type: 'export-version'; id: string }
+  | { type: 'reference-track' }
 
 type AutoMixCategory = 'drum' | 'bass' | 'harmony'
 
@@ -1360,6 +1364,109 @@ function dbToLinear(db: number) {
   return 10 ** (db / 20)
 }
 
+function analyzeBandProfileFromAudioBuffer(buffer: AudioBuffer): BandProfile {
+  const sampleLength = buffer.length
+  const channelCount = buffer.numberOfChannels
+  if (sampleLength === 0 || channelCount === 0) {
+    return { lowDb: -60, midDb: -60, highDb: -60 }
+  }
+
+  let lowSum = 0
+  let midSum = 0
+  let highSum = 0
+  let total = 0
+
+  for (let ch = 0; ch < channelCount; ch++) {
+    const data = buffer.getChannelData(ch)
+    for (let i = 0; i < data.length; i++) {
+      const v = Math.abs(data[i])
+      total += v
+      if (i % 3 === 0) lowSum += v
+      else if (i % 3 === 1) midSum += v
+      else highSum += v
+    }
+  }
+
+  if (total <= 0) return { lowDb: -60, midDb: -60, highDb: -60 }
+
+  const toDb = (part: number) => {
+    const ratio = Math.max(1e-6, part / total)
+    return 20 * Math.log10(ratio)
+  }
+
+  return {
+    lowDb: toDb(lowSum),
+    midDb: toDb(midSum),
+    highDb: toDb(highSum),
+  }
+}
+
+function estimateProjectBandProfile(project: ProjectState): BandProfile {
+  const clips = project.tracks.flatMap((track) => track.clips.map((clip) => ({ clip, track })))
+  if (clips.length === 0) return { lowDb: -24, midDb: -18, highDb: -20 }
+
+  let low = 0
+  let mid = 0
+  let high = 0
+  clips.forEach(({ clip, track }) => {
+    const gain = (clip.gain ?? 1) * (track.volume ?? 1)
+    const wave = clip.wave || 'sine'
+    if (wave === 'sine' || wave === 'triangle') low += gain
+    else if (wave === 'sawtooth' || wave === 'square') high += gain
+    else mid += gain
+  })
+
+  const total = Math.max(1e-6, low + mid + high)
+  const toDb = (v: number) => 20 * Math.log10(Math.max(1e-6, v / total))
+  return { lowDb: toDb(low), midDb: toDb(mid), highDb: toDb(high) }
+}
+
+function suggestReferenceMatchAdjustments(before: BandProfile, target: BandProfile): ReferenceMatchSuggestion[] {
+  const lowDelta = Number((target.lowDb - before.lowDb).toFixed(2))
+  const midDelta = Number((target.midDb - before.midDb).toFixed(2))
+  const highDelta = Number((target.highDb - before.highDb).toFixed(2))
+  const dynamicsDelta = Number((((target.lowDb + target.midDb + target.highDb) - (before.lowDb + before.midDb + before.highDb)) / 3).toFixed(2))
+
+  return [
+    {
+      id: 'ref-master-low',
+      type: 'master-eq',
+      label: '低频 EQ 倾向',
+      detail: `LOW ${lowDelta >= 0 ? '+' : ''}${lowDelta} dB`,
+      from: 0,
+      to: Math.max(-6, Math.min(6, lowDelta)),
+      applied: true,
+    },
+    {
+      id: 'ref-master-mid',
+      type: 'master-eq',
+      label: '中频 EQ 倾向',
+      detail: `MID ${midDelta >= 0 ? '+' : ''}${midDelta} dB`,
+      from: 0,
+      to: Math.max(-6, Math.min(6, midDelta)),
+      applied: true,
+    },
+    {
+      id: 'ref-master-high',
+      type: 'master-eq',
+      label: '高频 EQ 倾向',
+      detail: `HIGH ${highDelta >= 0 ? '+' : ''}${highDelta} dB`,
+      from: 0,
+      to: Math.max(-6, Math.min(6, highDelta)),
+      applied: true,
+    },
+    {
+      id: 'ref-master-dynamics',
+      type: 'master-dynamics',
+      label: '动态范围建议',
+      detail: dynamicsDelta > 0 ? '建议略提升动态（减小压缩）' : '建议略收紧动态（增加压缩）',
+      from: 0,
+      to: Math.max(-0.12, Math.min(0.12, -dynamicsDelta / 40)),
+      applied: true,
+    },
+  ]
+}
+
 async function estimateAudioFileRmsDb(file: File): Promise<number | null> {
   try {
     const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
@@ -1654,8 +1761,11 @@ export interface DAWActions {
   importReferenceTrack: (file: File) => Promise<void>
   clearReferenceTrack: () => void
   toggleReferenceAB: () => void
+  applyReferenceMatchMaster: (target: ReferenceMatchTarget) => void
+  toggleReferenceMatchSuggestion: (suggestionId: string) => void
   monitorSource: MonitorSource
   referenceTrack: ReferenceTrackState | null
+  referenceMatchDraft: ReferenceMatchReport | null
   lastExportLoudnessReport: ExportLoudnessReport | null
   exportVersionHistory: ExportVersionEntry[]
   renameExportVersion: (id: string, name: string) => void
@@ -1777,6 +1887,7 @@ export function useDAWActions(): DAWActions {
   const previousMixReport = useMemo(() => (project.mixReports ?? [])[1] ?? null, [project.mixReports])
   const [monitorSource, setMonitorSource] = React.useState<MonitorSource>('project')
   const [referenceTrack, setReferenceTrack] = React.useState<ReferenceTrackState | null>(null)
+  const [referenceMatchDraft, setReferenceMatchDraft] = React.useState<ReferenceMatchReport | null>(null)
   const referenceAudioRef = React.useRef<HTMLAudioElement | null>(null)
   const [autoMixBaseProject, setAutoMixBaseProject] = React.useState<ProjectState | null>(null)
   const [autoMixSuggestions, setAutoMixSuggestions] = React.useState<AutoMixSuggestion[]>([])
@@ -2204,6 +2315,7 @@ export function useDAWActions(): DAWActions {
     }
     referenceAudioRef.current = null
     setReferenceTrack(null)
+    setReferenceMatchDraft(null)
     setMonitorSource('project')
   }, [referenceTrack])
 
@@ -2257,12 +2369,129 @@ export function useDAWActions(): DAWActions {
     })
   }, [project.exportVersions])
 
+  const applyReferenceMatchMaster = React.useCallback((target: ReferenceMatchTarget) => {
+    const before = estimateProjectBandProfile(project)
+
+    let targetProfile: BandProfile | null = null
+    let targetLabel = ''
+    let targetType: ReferenceMatchReport['targetType']
+
+    if (target.type === 'export-version') {
+      const exportTarget = (project.exportVersions ?? []).find((item) => item.id === target.id)
+      if (!exportTarget) {
+        window.alert('未找到目标导出版本。')
+        return
+      }
+      if (!exportTarget.bandProfile) {
+        window.alert('该历史导出缺少频谱摘要，暂时无法匹配。请先重新导出一个新版本。')
+        return
+      }
+      targetProfile = exportTarget.bandProfile
+      targetLabel = exportTarget.name
+      targetType = 'export-version'
+    } else {
+      if (!referenceTrack?.bandProfile) {
+        window.alert('参考曲缺少可用频谱信息，请重新导入参考曲后再试。')
+        return
+      }
+      targetProfile = referenceTrack.bandProfile
+      targetLabel = referenceTrack.fileName
+      targetType = 'reference-track'
+    }
+
+    if (!targetProfile) return
+
+    const suggestions = suggestReferenceMatchAdjustments(before, targetProfile)
+    const eqLow = suggestions.find((s) => s.id === 'ref-master-low')?.to ?? 0
+    const eqMid = suggestions.find((s) => s.id === 'ref-master-mid')?.to ?? 0
+    const eqHigh = suggestions.find((s) => s.id === 'ref-master-high')?.to ?? 0
+    const dynamicsDelta = suggestions.find((s) => s.id === 'ref-master-dynamics')?.to ?? 0
+
+    setMasterEQ((prevEq) => ({
+      low: Math.max(-12, Math.min(12, prevEq.low + eqLow)),
+      mid: Math.max(-12, Math.min(12, prevEq.mid + eqMid)),
+      high: Math.max(-12, Math.min(12, prevEq.high + eqHigh)),
+    }))
+    setMasterVolume(Math.max(0.2, Math.min(1, masterVolume + dynamicsDelta)))
+
+    setProject((prev) => ({
+      ...prev,
+      referenceMatchHistory: [
+        {
+          targetType,
+          targetLabel,
+          checkedAt: Date.now(),
+          before,
+          after: targetProfile,
+          suggestions,
+        },
+        ...(prev.referenceMatchHistory ?? []),
+      ].slice(0, 5),
+    }), { saveHistory: true })
+
+    setReferenceMatchDraft({
+      targetType,
+      targetLabel,
+      checkedAt: Date.now(),
+      before,
+      after: targetProfile,
+      suggestions,
+    })
+  }, [masterVolume, project, referenceTrack, setMasterEQ, setMasterVolume, setProject])
+
+  const toggleReferenceMatchSuggestion = React.useCallback((suggestionId: string) => {
+    setReferenceMatchDraft((prev) => {
+      if (!prev) return prev
+      const suggestion = prev.suggestions.find((item) => item.id === suggestionId)
+      if (!suggestion) return prev
+
+      const nextApplied = !suggestion.applied
+      const multiplier = nextApplied ? 1 : -1
+      if (suggestion.type === 'master-eq') {
+        const lowDelta = suggestion.id === 'ref-master-low' ? suggestion.to * multiplier : 0
+        const midDelta = suggestion.id === 'ref-master-mid' ? suggestion.to * multiplier : 0
+        const highDelta = suggestion.id === 'ref-master-high' ? suggestion.to * multiplier : 0
+        setMasterEQ((current) => ({
+          low: Math.max(-12, Math.min(12, current.low + lowDelta)),
+          mid: Math.max(-12, Math.min(12, current.mid + midDelta)),
+          high: Math.max(-12, Math.min(12, current.high + highDelta)),
+        }))
+      } else {
+        setMasterVolume(Math.max(0.2, Math.min(1, masterVolume + suggestion.to * multiplier)))
+      }
+
+      return {
+        ...prev,
+        suggestions: prev.suggestions.map((item) =>
+          item.id === suggestionId ? { ...item, applied: nextApplied } : item,
+        ),
+      }
+    })
+  }, [masterVolume, setMasterEQ, setMasterVolume])
+
   const importReferenceTrack = React.useCallback(async (file: File) => {
     const objectUrl = URL.createObjectURL(file)
     const rawRmsDb = await estimateAudioFileRmsDb(file)
     const projectRmsDb = lastExportLoudnessReport?.rmsDb ?? estimateProjectRmsDbForReference(project)
     const matchedGainDb = resolveReferenceMatchedGainDb(rawRmsDb, projectRmsDb)
     const matchedDeltaDb = rawRmsDb == null ? 0 : Math.abs(projectRmsDb - (rawRmsDb + matchedGainDb))
+
+    let bandProfile: BandProfile | undefined
+    try {
+      const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (AudioContextCtor) {
+        const ctx = new AudioContextCtor()
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const decoded = await ctx.decodeAudioData(arrayBuffer.slice(0))
+          bandProfile = analyzeBandProfileFromAudioBuffer(decoded)
+        } finally {
+          await ctx.close()
+        }
+      }
+    } catch {
+      bandProfile = undefined
+    }
 
     if (referenceTrack?.objectUrl) {
       URL.revokeObjectURL(referenceTrack.objectUrl)
@@ -2280,7 +2509,9 @@ export function useDAWActions(): DAWActions {
       rawRmsDb,
       matchedGainDb,
       matchedDeltaDb,
+      bandProfile,
     })
+    setReferenceMatchDraft(null)
     setMonitorSource('project')
   }, [lastExportLoudnessReport?.rmsDb, loopEnabled, project, referenceTrack?.objectUrl])
 
@@ -2493,6 +2724,7 @@ export function useDAWActions(): DAWActions {
           bitrateKbps: exportTargetPreset.bitrateKbps,
           targetLoudnessDb: exportTargetPreset.targetLoudnessDb,
           peakLimitDb: exportTargetPreset.peakLimitDb,
+          bandProfile: analyzeBandProfileFromAudioBuffer(audioBuffer),
         })
       }
       reader.readAsDataURL(blob)
@@ -2561,6 +2793,7 @@ export function useDAWActions(): DAWActions {
           bitrateKbps: exportTargetPreset.bitrateKbps,
           targetLoudnessDb: exportTargetPreset.targetLoudnessDb,
           peakLimitDb: exportTargetPreset.peakLimitDb,
+          bandProfile: analyzeBandProfileFromAudioBuffer(audioBuffer),
         })
       }
       reader.readAsDataURL(blob)
@@ -5375,8 +5608,11 @@ export function useDAWActions(): DAWActions {
     importReferenceTrack,
     clearReferenceTrack,
     toggleReferenceAB,
+    applyReferenceMatchMaster,
+    toggleReferenceMatchSuggestion,
     monitorSource,
     referenceTrack,
+    referenceMatchDraft,
     lastExportLoudnessReport,
     exportVersionHistory,
     renameExportVersion,
