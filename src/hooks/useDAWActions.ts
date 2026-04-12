@@ -5,7 +5,7 @@ import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
 import { audioBufferToWav } from '../utils/audioBufferToWav'
 import { getTimelineDurationSec, secondsToBeat } from '../utils/tempoCurve'
-import { buildSocialExportBaseName, createSocialCardBlob, createSocialPackageZipBlob, isReleaseMetadataReady, normalizeReleaseMetadata, parseReleaseTags, releaseTagsToText, triggerDownload } from '../utils/socialPublish'
+import { buildSocialExportBaseName, createSocialCardBlob, createSocialPackageZipBlob, isPublishTemplateReady, isReleaseMetadataReady, normalizePublishTemplate, normalizeReleaseMetadata, parseReleaseTags, releaseTagsToText, triggerDownload } from '../utils/socialPublish'
 import { zipSync, strToU8 } from 'fflate'
 import { analyzeChordSuggestions } from '../utils/chordSuggestion'
 import { hzToClosestNoteLabel } from '../utils/notes'
@@ -2972,49 +2972,129 @@ export function useDAWActions(): DAWActions {
   const ensureReleaseMetadata = React.useCallback(() => {
     const base = normalizeReleaseMetadata(project.releaseMetadata, project.name)
 
-    if (isReleaseMetadataReady(base)) return base
+    let nextMetadata = base
 
-    const titleInput = window.prompt('发布元信息（必填 1/4）：作品标题', base.title)
-    if (!titleInput || !titleInput.trim()) {
-      window.alert('未填写作品标题，已阻止进入分享卡片导出。')
-      return null
+    if (!isReleaseMetadataReady(base)) {
+      const titleInput = window.prompt('发布元信息（必填 1/4）：作品标题', base.title)
+      if (!titleInput || !titleInput.trim()) {
+        window.alert('未填写作品标题，已阻止进入分享卡片导出。')
+        return null
+      }
+
+      const authorInput = window.prompt('发布元信息（必填 2/4）：作者名', base.author)
+      if (!authorInput || !authorInput.trim()) {
+        window.alert('未填写作者名，已阻止进入分享卡片导出。')
+        return null
+      }
+
+      const coverInput = window.prompt('发布元信息（必填 3/4）：封面描述或路径', base.cover)
+      if (!coverInput || !coverInput.trim()) {
+        window.alert('未填写封面信息，已阻止进入分享卡片导出。')
+        return null
+      }
+
+      const tagsInput = window.prompt('发布元信息（必填 4/4）：风格标签（逗号分隔）', releaseTagsToText(base.tags))
+      const parsedTags = parseReleaseTags(tagsInput || '')
+      if (parsedTags.length === 0) {
+        window.alert('未填写风格标签，已阻止进入分享卡片导出。')
+        return null
+      }
+
+      nextMetadata = normalizeReleaseMetadata({
+        title: titleInput,
+        author: authorInput,
+        cover: coverInput,
+        tags: parsedTags,
+        updatedAt: Date.now(),
+      }, project.name)
     }
 
-    const authorInput = window.prompt('发布元信息（必填 2/4）：作者名', base.author)
-    if (!authorInput || !authorInput.trim()) {
-      window.alert('未填写作者名，已阻止进入分享卡片导出。')
-      return null
+    const existingTemplate = normalizePublishTemplate(project.publishWizardTemplate, project.name || nextMetadata.title, nextMetadata)
+
+    let nextTemplate = existingTemplate
+
+    if (!isPublishTemplateReady(project.publishWizardTemplate)) {
+      const titleCandidatesInput = window.prompt(
+        '发布向导 2.0（1/3）：标题备选（逗号分隔）',
+        existingTemplate.titleCandidates.join(', '),
+      )
+      if (!titleCandidatesInput || !titleCandidatesInput.trim()) {
+        window.alert('未填写标题备选，已阻止进入分享卡片导出。')
+        return null
+      }
+
+      const titleCandidates = titleCandidatesInput
+        .split(/[，,]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 5)
+      if (titleCandidates.length === 0) {
+        window.alert('标题备选至少需要 1 条，已阻止进入分享卡片导出。')
+        return null
+      }
+
+      const coverCopyInput = window.prompt('发布向导 2.0（2/3）：封面文案', existingTemplate.coverCopy)
+      if (!coverCopyInput || !coverCopyInput.trim()) {
+        window.alert('未填写封面文案，已阻止进入分享卡片导出。')
+        return null
+      }
+
+      const descriptionsDefault = [
+        `短视频：${existingTemplate.platformDescriptions.shortVideo}`,
+        `播客：${existingTemplate.platformDescriptions.podcast}`,
+        `音乐平台：${existingTemplate.platformDescriptions.musicPlatform}`,
+      ].join('\n')
+
+      const descriptionsInput = window.prompt(
+        '发布向导 2.0（3/3）：平台文案（按“短视频：...\n播客：...\n音乐平台：...”）',
+        descriptionsDefault,
+      )
+      if (!descriptionsInput || !descriptionsInput.trim()) {
+        window.alert('未填写平台文案，已阻止进入分享卡片导出。')
+        return null
+      }
+
+      const lines = descriptionsInput.split(/\n+/).map((line) => line.trim()).filter(Boolean)
+      const extractLine = (prefix: string) => lines.find((line) => line.startsWith(`${prefix}：`) || line.startsWith(`${prefix}:`))
+      const shortVideoLine = extractLine('短视频')
+      const podcastLine = extractLine('播客')
+      const musicPlatformLine = extractLine('音乐平台')
+
+      const shortVideo = (shortVideoLine ? shortVideoLine.replace(/^短视频[:：]/, '') : '').trim()
+      const podcast = (podcastLine ? podcastLine.replace(/^播客[:：]/, '') : '').trim()
+      const musicPlatform = (musicPlatformLine ? musicPlatformLine.replace(/^音乐平台[:：]/, '') : '').trim()
+
+      if (!shortVideo || !podcast || !musicPlatform) {
+        window.alert('平台文案需要同时包含“短视频/播客/音乐平台”三条，已阻止进入分享卡片导出。')
+        return null
+      }
+
+      nextTemplate = normalizePublishTemplate({
+        titleCandidates,
+        coverCopy: coverCopyInput,
+        platformDescriptions: {
+          shortVideo,
+          podcast,
+          musicPlatform,
+        },
+        updatedAt: Date.now(),
+      }, project.name || nextMetadata.title, nextMetadata)
     }
 
-    const coverInput = window.prompt('发布元信息（必填 3/4）：封面描述或路径', base.cover)
-    if (!coverInput || !coverInput.trim()) {
-      window.alert('未填写封面信息，已阻止进入分享卡片导出。')
-      return null
+    const metadataChanged = JSON.stringify(project.releaseMetadata ?? null) !== JSON.stringify(nextMetadata)
+    const templateChanged = JSON.stringify(project.publishWizardTemplate ?? null) !== JSON.stringify(nextTemplate)
+
+    if (metadataChanged || templateChanged) {
+      setProject((prev) => ({
+        ...prev,
+        releaseMetadata: nextMetadata,
+        publishWizardTemplate: nextTemplate,
+        name: prev.name || nextMetadata.title,
+      }), { saveHistory: true })
     }
-
-    const tagsInput = window.prompt('发布元信息（必填 4/4）：风格标签（逗号分隔）', releaseTagsToText(base.tags))
-    const parsedTags = parseReleaseTags(tagsInput || '')
-    if (parsedTags.length === 0) {
-      window.alert('未填写风格标签，已阻止进入分享卡片导出。')
-      return null
-    }
-
-    const nextMetadata = normalizeReleaseMetadata({
-      title: titleInput,
-      author: authorInput,
-      cover: coverInput,
-      tags: parsedTags,
-      updatedAt: Date.now(),
-    }, project.name)
-
-    setProject((prev) => ({
-      ...prev,
-      releaseMetadata: nextMetadata,
-      name: prev.name || nextMetadata.title,
-    }), { saveHistory: true })
 
     return nextMetadata
-  }, [project.name, project.releaseMetadata, setProject])
+  }, [project.name, project.publishWizardTemplate, project.releaseMetadata, setProject])
 
   const setExportTargetPresetKey = React.useCallback((key: ExportTargetPresetKey) => {
     const current = exportTargetPreset

@@ -187,6 +187,17 @@ export interface ReleaseMetadata {
   updatedAt: number
 }
 
+export interface PublishWizardTemplate {
+  titleCandidates: string[]
+  coverCopy: string
+  platformDescriptions: {
+    shortVideo: string
+    podcast: string
+    musicPlatform: string
+  }
+  updatedAt: number
+}
+
 export interface MixReportTrackSummary {
   trackId: string
   trackName: string
@@ -244,6 +255,7 @@ export interface ProjectState {
   exportVersions?: ExportVersionEntry[]
   mixReports?: MixReportEntry[]
   releaseMetadata?: ReleaseMetadata
+  publishWizardTemplate?: PublishWizardTemplate
   referenceMatchHistory?: ReferenceMatchReport[]
 }
 

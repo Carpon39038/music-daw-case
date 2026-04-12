@@ -1,21 +1,21 @@
 {
-  "generatedAt": "2026-04-12T11:17:52.038Z",
-  "total": 228,
-  "pass": 202,
-  "fail": 26,
+  "generatedAt": "2026-04-12T17:13:40.716Z",
+  "total": 232,
+  "pass": 205,
+  "fail": 27,
   "failedSteps": {
     "lint": 7,
     "unit": 1,
-    "e2e": 19,
+    "e2e": 20,
     "build": 1
   },
   "failureTaxonomy": {
     "R3_rules_missing": 7,
     "R4_toolchain_or_build": 1,
-    "R6_validation_gap": 20
+    "R6_validation_gap": 21
   },
   "scoreSummary": {
-    "count": 202,
+    "count": 205,
     "avgTotal": 24.94,
     "maxTotal": 25,
     "latestTotal": 25
@@ -1894,6 +1894,42 @@
       "totalScore": 25
     },
     {
+      "taskId": "daily-dev-2026-04-12-2004",
+      "verdict": "FAIL",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": true,
+      "buildFail": false,
+      "totalScore": null
+    },
+    {
+      "taskId": "daily-dev-2026-04-12-2214",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-12-2311",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
+      "taskId": "daily-dev-2026-04-13-0113",
+      "verdict": "PASS",
+      "lintFail": false,
+      "unitFail": false,
+      "e2eFail": false,
+      "buildFail": false,
+      "totalScore": 25
+    },
+    {
       "taskId": "daily-dev-distort",
       "verdict": "PASS",
       "lintFail": false,
@@ -2074,5 +2110,5 @@
       "totalScore": 25
     }
   ],
-  "passRate": 0.886
+  "passRate": 0.8836
 }

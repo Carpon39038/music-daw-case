@@ -222,6 +222,21 @@ function isValidProjectState(value: unknown): value is ProjectState {
     if (!Array.isArray(m.tags) || !m.tags.every((tag) => typeof tag === 'string')) return false
     if (typeof m.updatedAt !== 'number') return false
   }
+  if (p.publishWizardTemplate !== undefined && p.publishWizardTemplate !== null) {
+    if (typeof p.publishWizardTemplate !== 'object') return false
+    const t = p.publishWizardTemplate as {
+      titleCandidates?: unknown
+      coverCopy?: unknown
+      platformDescriptions?: unknown
+      updatedAt?: unknown
+    }
+    if (!Array.isArray(t.titleCandidates) || !t.titleCandidates.every((item) => typeof item === 'string')) return false
+    if (typeof t.coverCopy !== 'string') return false
+    if (!t.platformDescriptions || typeof t.platformDescriptions !== 'object') return false
+    const pd = t.platformDescriptions as { shortVideo?: unknown; podcast?: unknown; musicPlatform?: unknown }
+    if (typeof pd.shortVideo !== 'string' || typeof pd.podcast !== 'string' || typeof pd.musicPlatform !== 'string') return false
+    if (typeof t.updatedAt !== 'number') return false
+  }
   if (p.markers !== undefined) {
     const validMarkers = p.markers.every((m) => m && typeof m.id === 'string' && typeof m.name === 'string' && typeof m.beat === 'number')
     if (!validMarkers) return false
@@ -317,6 +332,22 @@ function normalizeProject(project: ProjectState): ProjectState {
             ? project.releaseMetadata.tags.map((tag) => String(tag)).filter(Boolean).slice(0, 8)
             : [],
           updatedAt: project.releaseMetadata.updatedAt,
+        }
+      : undefined,
+    publishWizardTemplate: project.publishWizardTemplate
+      ? {
+          titleCandidates: Array.isArray(project.publishWizardTemplate.titleCandidates)
+            ? project.publishWizardTemplate.titleCandidates.map((item) => String(item)).filter(Boolean).slice(0, 5)
+            : [],
+          coverCopy: String(project.publishWizardTemplate.coverCopy ?? ''),
+          platformDescriptions: {
+            shortVideo: String(project.publishWizardTemplate.platformDescriptions?.shortVideo ?? ''),
+            podcast: String(project.publishWizardTemplate.platformDescriptions?.podcast ?? ''),
+            musicPlatform: String(project.publishWizardTemplate.platformDescriptions?.musicPlatform ?? ''),
+          },
+          updatedAt: Number.isFinite(project.publishWizardTemplate.updatedAt)
+            ? Number(project.publishWizardTemplate.updatedAt)
+            : Date.now(),
         }
       : undefined,
     tracks: project.tracks.map((track) => ({

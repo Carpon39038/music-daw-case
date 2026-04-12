@@ -1,5 +1,5 @@
 import { zipSync } from 'fflate'
-import type { ProjectState, ReleaseMetadata } from '../types'
+import type { ProjectState, PublishWizardTemplate, ReleaseMetadata } from '../types'
 
 function sanitizeFileName(input: string) {
   const trimmed = input.trim()
@@ -43,6 +43,50 @@ export function releaseTagsToText(tags: string[]): string {
 export function isReleaseMetadataReady(metadata: Partial<ReleaseMetadata> | null | undefined): boolean {
   if (!metadata) return false
   return Boolean(metadata.title?.trim() && metadata.author?.trim() && metadata.cover?.trim() && metadata.tags && metadata.tags.length > 0)
+}
+
+function dedupeNonEmpty(values: string[]): string[] {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
+}
+
+export function isPublishTemplateReady(value: Partial<PublishWizardTemplate> | null | undefined): boolean {
+  return Boolean(
+    value
+    && Array.isArray(value.titleCandidates)
+    && value.titleCandidates.filter((item) => item && String(item).trim()).length > 0
+    && value.coverCopy
+    && value.coverCopy.trim()
+    && value.platformDescriptions?.shortVideo?.trim()
+    && value.platformDescriptions?.podcast?.trim()
+    && value.platformDescriptions?.musicPlatform?.trim(),
+  )
+}
+
+export function normalizePublishTemplate(
+  value: Partial<PublishWizardTemplate> | null | undefined,
+  projectName: string,
+  metadata: ReleaseMetadata,
+): PublishWizardTemplate {
+  const titleCandidates = dedupeNonEmpty([
+    ...(Array.isArray(value?.titleCandidates) ? value!.titleCandidates : []),
+    metadata.title,
+    `${metadata.title} (${new Date().getFullYear()})`,
+    `${projectName || metadata.title} Demo`,
+  ]).slice(0, 5)
+
+  const shortTag = metadata.tags.slice(0, 2).join(' / ') || '原创音乐'
+  const fallbackCoverCopy = `${metadata.title}｜${metadata.author} 的最新作品，欢迎收听。`
+
+  return {
+    titleCandidates: titleCandidates.length > 0 ? titleCandidates : [metadata.title],
+    coverCopy: (value?.coverCopy || fallbackCoverCopy).trim() || fallbackCoverCopy,
+    platformDescriptions: {
+      shortVideo: (value?.platformDescriptions?.shortVideo || `🎧 ${metadata.title} #${shortTag.replace(/\s+/g, '')}`).trim(),
+      podcast: (value?.platformDescriptions?.podcast || `本期分享原创作品《${metadata.title}》，作者 ${metadata.author}。风格：${metadata.tags.join('、') || '未标注'}。`).trim(),
+      musicPlatform: (value?.platformDescriptions?.musicPlatform || `单曲《${metadata.title}》已完成发布准备。关键词：${metadata.tags.join(' / ') || '原创'}`).trim(),
+    },
+    updatedAt: typeof value?.updatedAt === 'number' ? value.updatedAt : Date.now(),
+  }
 }
 
 function formatDuration(totalSeconds: number) {
