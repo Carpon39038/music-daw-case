@@ -18,8 +18,8 @@ export function Inspector(d: DAWActions) {
     autoMixSuggestionItems, autoMixAvailable, autoMixPreviewMode, autoMixCoverageReady,
     runAutoMixAssistant, toggleAutoMixSuggestion, previewAutoMixVersion,
     projectHealthReport, resolveProjectHealthRisk,
-    chorusLiftMarkerOptions, selectedChorusLiftMarkerId, chorusLiftSettings,
-    setSelectedChorusLiftMarkerId, toggleChorusLiftSetting, applyChorusLiftBuilder,
+    chorusLiftMarkerOptions, selectedChorusLiftMarkerId, chorusLiftSettings, chorusDoubleHarmonySettings,
+    setSelectedChorusLiftMarkerId, toggleChorusLiftSetting, toggleChorusDoubleHarmonySetting, applyChorusLiftBuilder, applyChorusDoubleHarmonyBuilder,
     enableVocalCleanChain,
     favoriteClips, favoriteClipSearchQuery, setFavoriteClipSearchQuery,
     saveFavoriteClipFromSelection, pasteFavoriteClipToTrack, deleteFavoriteClip,
@@ -249,6 +249,42 @@ export function Inspector(d: DAWActions) {
                       应用副歌增强
                     </button>
                     <p className="text-[10px] text-gray-500">仅处理所选副歌标记区段；支持逐项开关与 Undo 回退。</p>
+                  </>
+                )}
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-chorus-double-harmony-builder">
+                <label className="text-xs text-gray-500 block">Chorus Double & Harmony Builder</label>
+                {chorusLiftMarkerOptions.length === 0 ? (
+                  <p className="text-[10px] text-gray-500" data-testid="chorus-double-harmony-empty">暂无副歌标记（请先添加/生成名为 Chorus 或 副歌 的标记）</p>
+                ) : !selectedTrackId ? (
+                  <p className="text-[10px] text-gray-500" data-testid="chorus-double-harmony-no-track">请先选择一条主唱轨道</p>
+                ) : (
+                  <>
+                    <p className="text-[10px] text-gray-500" data-testid="chorus-double-harmony-source-track">
+                      源轨道：{project.tracks.find((t) => t.id === selectedTrackId)?.name || '未选择'}
+                    </p>
+                    <label className="inline-flex items-center gap-2 text-[10px] text-gray-300" data-testid="chorus-double-harmony-toggle-high-octave-label">
+                      <input
+                        type="checkbox"
+                        data-testid="chorus-double-harmony-toggle-high-octave"
+                        checked={chorusDoubleHarmonySettings.highOctaveHarmony}
+                        onChange={() => toggleChorusDoubleHarmonySetting('highOctaveHarmony')}
+                        disabled={isPlaying}
+                        className="accent-emerald-500"
+                      />
+                      Harmony 提高八度（+12 半音）
+                    </label>
+                    <button
+                      type="button"
+                      data-testid="chorus-double-harmony-apply-btn"
+                      onClick={() => applyChorusDoubleHarmonyBuilder()}
+                      disabled={isPlaying || !selectedChorusLiftMarkerId}
+                      className="w-full text-xs px-2 py-1 rounded bg-indigo-700 hover:bg-indigo-600 text-white disabled:opacity-40"
+                    >
+                      生成 Double + Harmony 轨
+                    </button>
+                    <p className="text-[10px] text-gray-500">在所选副歌区间复制主唱并自动生成为两条新轨道，便于快速堆叠。</p>
                   </>
                 )}
               </div>
