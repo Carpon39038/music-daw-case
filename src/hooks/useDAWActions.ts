@@ -95,6 +95,38 @@ function resolveScaleType(scaleType?: string): 'major' | 'minor' | 'chromatic' {
   return 'major'
 }
 
+function quantizeFrequencyToScale(
+  frequency: number,
+  scaleKey: string,
+  scaleType: 'major' | 'minor' | 'chromatic',
+): number {
+  if (!Number.isFinite(frequency) || frequency <= 0) return 440
+  if (scaleType === 'chromatic') return frequency
+
+  const midi = 69 + 12 * Math.log2(frequency / 440)
+  const roundedMidi = Math.round(midi)
+  const octave = Math.floor(roundedMidi / 12)
+  const root = resolveScaleSemitoneRoot(scaleKey)
+  const allowedDegrees = scaleType === 'minor' ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]
+
+  let bestMidi = roundedMidi
+  let bestDistance = Number.POSITIVE_INFINITY
+  for (let offset = -24; offset <= 24; offset++) {
+    const candidateMidi = roundedMidi + offset
+    const noteClass = ((candidateMidi % 12) + 12) % 12
+    const relative = (noteClass - root + 12) % 12
+    if (!allowedDegrees.includes(relative)) continue
+    const distance = Math.abs(candidateMidi - midi)
+    if (distance < bestDistance) {
+      bestDistance = distance
+      bestMidi = candidateMidi
+    }
+  }
+
+  const fallbackMidi = octave * 12 + root
+  return midiNoteToFrequency(Number.isFinite(bestMidi) ? bestMidi : fallbackMidi)
+}
+
 function buildChordFrequencies(
   preset: ChordPreset,
   scaleKey: string,
@@ -1411,6 +1443,9 @@ export interface DAWActions {
   alignAudioClipToProjectBpm: (trackId: string, clipId: string, mode: 'preservePitch' | 'preserveDuration') => void
   alignVocalClipTiming: (trackId: string, clipId: string, mode: 'grid' | 'barStretch') => void
   resetVocalClipTimingAlign: (trackId: string, clipId: string) => void
+  applyVocalPitchAssist: (trackId: string, clipId: string, style: 'natural' | 'pop') => void
+  setVocalPitchDryWet: (trackId: string, clipId: string, dryWet: number) => void
+  toggleVocalPitchAssist: (trackId: string, clipId: string, enabled: boolean) => void
   quantizeClip: (trackId: string, clipId: string, gridBeats: number) => void
   insertChordPreset: (trackId: string, preset?: 'I-V-vi-IV' | 'vi-IV-I-V' | 'I-vi-IV-V', startBeat?: number, chordLengthBeats?: number) => void
   generateMelody: (trackId: string, options?: { startBeat?: number; noteCount?: number; stepBeats?: number }) => void
@@ -3825,6 +3860,97 @@ export function useDAWActions(): DAWActions {
     }))
   }
 
+  const applyVocalPitchAssist = (trackId: string, clipId: string, style: 'natural' | 'pop') => {
+    if (isPlaying) return
+
+    setProject((prev) => {
+      const safeScaleType = resolveScaleType(prev.scaleType)
+      return {
+        ...prev,
+        tracks: prev.tracks.map((t) => {
+          if (t.id !== trackId || t.locked) return t
+          return {
+            ...t,
+            clips: t.clips.map((c) => {
+              if (c.id !== clipId || !c.audioData) return c
+              const sourceTranspose = c.vocalPitchEnabled
+                ? (c.vocalPitchOriginalTransposeSemitones ?? c.transposeSemitones ?? 0)
+                : (c.transposeSemitones ?? 0)
+              const baseFrequency = c.noteHz * semitoneToRatio(sourceTranspose)
+              const correctedFrequency = quantizeFrequencyToScale(baseFrequency, prev.scaleKey ?? 'C', safeScaleType)
+              const correctedSemitones = 12 * Math.log2(correctedFrequency / Math.max(1e-6, c.noteHz))
+              return {
+                ...c,
+                transposeSemitones: correctedSemitones,
+                vocalPitchEnabled: true,
+                vocalPitchStyle: style,
+                vocalPitchDryWet: style === 'pop' ? 1 : 0.6,
+                vocalPitchOriginalTransposeSemitones: sourceTranspose,
+                vocalPitchCorrectedTransposeSemitones: correctedSemitones,
+              }
+            }),
+          }
+        }),
+      }
+    })
+  }
+
+  const setVocalPitchDryWet = (trackId: string, clipId: string, dryWet: number) => {
+    const normalized = Math.max(0, Math.min(1, Number.isFinite(dryWet) ? dryWet : 1))
+    setProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) => {
+            if (c.id !== clipId || !c.vocalPitchEnabled) return c
+            const original = c.vocalPitchOriginalTransposeSemitones ?? c.transposeSemitones ?? 0
+            const corrected = c.vocalPitchCorrectedTransposeSemitones ?? c.transposeSemitones ?? original
+            const mixed = original + (corrected - original) * normalized
+            return {
+              ...c,
+              vocalPitchDryWet: normalized,
+              transposeSemitones: mixed,
+            }
+          }),
+        }
+      }),
+    }))
+  }
+
+  const toggleVocalPitchAssist = (trackId: string, clipId: string, enabled: boolean) => {
+    setProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) => {
+            if (c.id !== clipId) return c
+            if (!enabled) {
+              const restored = c.vocalPitchOriginalTransposeSemitones ?? c.transposeSemitones ?? 0
+              return {
+                ...c,
+                transposeSemitones: restored,
+                vocalPitchEnabled: false,
+              }
+            }
+            if (!c.vocalPitchEnabled) {
+              return {
+                ...c,
+                vocalPitchEnabled: true,
+                vocalPitchStyle: c.vocalPitchStyle ?? 'natural',
+                vocalPitchDryWet: c.vocalPitchDryWet ?? 1,
+              }
+            }
+            return c
+          }),
+        }
+      }),
+    }))
+  }
+
   const quantizeClip = (trackId: string, clipId: string, gridBeats: number) => {
     applyProjectUpdate((prev) => {
       const track = prev.tracks.find((t) => t.id === trackId)
@@ -4903,6 +5029,9 @@ export function useDAWActions(): DAWActions {
     alignAudioClipToProjectBpm,
     alignVocalClipTiming,
     resetVocalClipTimingAlign,
+    applyVocalPitchAssist,
+    setVocalPitchDryWet,
+    toggleVocalPitchAssist,
     quantizeClip,
     insertChordPreset,
     generateMelody,

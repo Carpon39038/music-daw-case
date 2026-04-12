@@ -12,7 +12,7 @@ export function Inspector(d: DAWActions) {
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
     updateClipEnvelopePoint, resetClipEnvelope,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, alignAudioClipToProjectBpm, alignVocalClipTiming, resetVocalClipTimingAlign, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, generateSongArrangement, continueTrackIdea,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, alignAudioClipToProjectBpm, alignVocalClipTiming, resetVocalClipTimingAlign, applyVocalPitchAssist, setVocalPitchDryWet, toggleVocalPitchAssist, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, generateSongArrangement, continueTrackIdea,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
     autoMixSuggestionItems, autoMixAvailable, autoMixPreviewMode, autoMixCoverageReady,
@@ -1064,6 +1064,59 @@ export function Inspector(d: DAWActions) {
                     >
                       回退当前片段
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {selectedClipData.clip.audioData && (
+                <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="vocal-pitch-assist-panel">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-gray-500">Vocal Pitch Assist</label>
+                    <label className="inline-flex items-center gap-1 text-[10px] text-gray-400">
+                      <input
+                        data-testid="vocal-pitch-enable-toggle"
+                        type="checkbox"
+                        checked={selectedClipData.clip.vocalPitchEnabled ?? false}
+                        onChange={(e) => toggleVocalPitchAssist(selectedClipData.track.id, selectedClipData.clip.id, e.target.checked)}
+                        disabled={isPlaying || selectedClipData.track.locked}
+                      />
+                      实时开关
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      data-testid="vocal-pitch-natural-btn"
+                      onClick={() => applyVocalPitchAssist(selectedClipData.track.id, selectedClipData.clip.id, 'natural')}
+                      disabled={isPlaying || selectedClipData.track.locked}
+                      className={`px-2 py-1 text-xs border rounded ${selectedClipData.clip.vocalPitchEnabled && selectedClipData.clip.vocalPitchStyle === 'natural' ? 'bg-violet-500/20 border-violet-500 text-violet-300' : 'bg-[#1a1a1a] border-gray-800 text-gray-300 hover:bg-gray-800'}`}
+                    >
+                      轻度自然
+                    </button>
+                    <button
+                      data-testid="vocal-pitch-pop-btn"
+                      onClick={() => applyVocalPitchAssist(selectedClipData.track.id, selectedClipData.clip.id, 'pop')}
+                      disabled={isPlaying || selectedClipData.track.locked}
+                      className={`px-2 py-1 text-xs border rounded ${selectedClipData.clip.vocalPitchEnabled && selectedClipData.clip.vocalPitchStyle === 'pop' ? 'bg-violet-500/20 border-violet-500 text-violet-300' : 'bg-[#1a1a1a] border-gray-800 text-gray-300 hover:bg-gray-800'}`}
+                    >
+                      流行明显
+                    </button>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-500 flex justify-between mb-1">
+                      <span>Dry / Wet</span>
+                      <span data-testid="vocal-pitch-dry-wet-value">{Math.round((selectedClipData.clip.vocalPitchDryWet ?? 1) * 100)}%</span>
+                    </label>
+                    <input
+                      data-testid="vocal-pitch-dry-wet"
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={Math.round((selectedClipData.clip.vocalPitchDryWet ?? 1) * 100)}
+                      onChange={(e) => setVocalPitchDryWet(selectedClipData.track.id, selectedClipData.clip.id, Number(e.target.value) / 100)}
+                      disabled={isPlaying || selectedClipData.track.locked || !(selectedClipData.clip.vocalPitchEnabled ?? false)}
+                      className="w-full"
+                    />
                   </div>
                 </div>
               )}

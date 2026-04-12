@@ -25,6 +25,11 @@ export interface Clip {
   vocalTimingEnabled?: boolean
   vocalTimingOriginalStartBeat?: number
   vocalTimingOriginalLengthBeats?: number
+  vocalPitchEnabled?: boolean
+  vocalPitchStyle?: 'natural' | 'pop'
+  vocalPitchDryWet?: number
+  vocalPitchOriginalTransposeSemitones?: number
+  vocalPitchCorrectedTransposeSemitones?: number
   envelope?: ClipEnvelopePoint[]
 }
 
