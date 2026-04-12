@@ -531,6 +531,108 @@ interface AutoMixSuggestionItem extends AutoMixSuggestion {
   applied: boolean
 }
 
+type ChorusLiftToggleKey = 'drumDensity' | 'harmonyThicken' | 'gainLift'
+
+interface ChorusLiftSettings {
+  drumDensity: boolean
+  harmonyThicken: boolean
+  gainLift: boolean
+}
+
+interface ChorusLiftMarkerOption {
+  id: string
+  name: string
+  startBeat: number
+  endBeat: number
+}
+
+const DEFAULT_CHORUS_LIFT_SETTINGS: ChorusLiftSettings = {
+  drumDensity: true,
+  harmonyThicken: true,
+  gainLift: true,
+}
+
+function isChorusMarkerName(name: string) {
+  return /chorus|副歌/i.test(name)
+}
+
+function buildChorusMarkerOptions(project: ProjectState, timelineBeats: number): ChorusLiftMarkerOption[] {
+  const markers = [...(project.markers ?? [])].sort((a, b) => a.beat - b.beat)
+  return markers
+    .map((marker, index) => {
+      const nextMarker = markers[index + 1]
+      return {
+        id: marker.id,
+        name: marker.name,
+        startBeat: Math.max(0, marker.beat),
+        endBeat: Math.max(marker.beat + 0.25, Math.min(timelineBeats, nextMarker?.beat ?? timelineBeats)),
+      }
+    })
+    .filter((marker) => isChorusMarkerName(marker.name) && marker.endBeat > marker.startBeat)
+}
+
+function applyChorusLiftBuilder(
+  baseProject: ProjectState,
+  marker: ChorusLiftMarkerOption,
+  settings: ChorusLiftSettings,
+): ProjectState {
+  const next = structuredClone(baseProject)
+  const { drumTrack, harmonyTrack } = chooseCategoryTracks(next)
+  const inRange = (clip: Clip) => clip.startBeat < marker.endBeat && (clip.startBeat + clip.lengthBeats) > marker.startBeat
+
+  if (settings.gainLift) {
+    const gainFactor = dbToLinear(1.5)
+    next.tracks.forEach((track) => {
+      if (track.locked) return
+      track.clips = track.clips.map((clip) => (
+        inRange(clip)
+          ? { ...clip, gain: Math.min(2, (clip.gain ?? 1) * gainFactor) }
+          : clip
+      ))
+    })
+  }
+
+  if (settings.harmonyThicken && harmonyTrack && !harmonyTrack.locked) {
+    const targetTrack = next.tracks.find((t) => t.id === harmonyTrack.id)
+    if (targetTrack) {
+      const sourceClips = targetTrack.clips.filter(inRange)
+      const overlays = sourceClips.map((clip, index) => ({
+        ...clip,
+        id: `${clip.id}-chorus-lift-h-${index}`,
+        transposeSemitones: (clip.transposeSemitones ?? 0) + 7,
+        gain: Math.min(1.6, (clip.gain ?? 1) * 0.8),
+        name: `${clip.name || 'Clip'} · Lift Harmony`,
+      }))
+      targetTrack.clips = [...targetTrack.clips, ...overlays]
+    }
+  }
+
+  if (settings.drumDensity && drumTrack && !drumTrack.locked) {
+    const targetTrack = next.tracks.find((t) => t.id === drumTrack.id)
+    if (targetTrack && !targetTrack.isDrumTrack) {
+      const template = targetTrack.clips.find(inRange) ?? targetTrack.clips[0]
+      if (template) {
+        const overlays: Clip[] = []
+        for (let beat = Math.floor(marker.startBeat); beat < marker.endBeat; beat += 1) {
+          const startBeat = beat + 0.5
+          if (startBeat >= marker.endBeat) continue
+          overlays.push({
+            ...template,
+            id: `${template.id}-chorus-lift-d-${beat}`,
+            startBeat,
+            lengthBeats: Math.min(0.5, marker.endBeat - startBeat),
+            gain: Math.min(1.4, (template.gain ?? 1) * 0.75),
+            name: `${template.name || 'Clip'} · Lift Drum`,
+          })
+        }
+        targetTrack.clips = [...targetTrack.clips, ...overlays]
+      }
+    }
+  }
+
+  return next
+}
+
 function averageClipNoteHz(track: Track) {
   if (!track.clips.length) return 440
   const total = track.clips.reduce((sum, clip) => sum + clip.noteHz, 0)
@@ -1092,6 +1194,12 @@ export interface DAWActions {
   runAutoMixAssistant: () => void
   toggleAutoMixSuggestion: (suggestionId: string) => void
   previewAutoMixVersion: (mode: 'before' | 'after') => void
+  chorusLiftMarkerOptions: ChorusLiftMarkerOption[]
+  selectedChorusLiftMarkerId: string | null
+  chorusLiftSettings: ChorusLiftSettings
+  setSelectedChorusLiftMarkerId: (markerId: string | null) => void
+  toggleChorusLiftSetting: (key: ChorusLiftToggleKey) => void
+  applyChorusLiftBuilder: () => void
   enableVocalCleanChain: (trackId: string) => void
   handleSocialPublish: () => Promise<void>
   handleExportProjectCard: () => Promise<void>
@@ -1175,6 +1283,8 @@ export function useDAWActions(): DAWActions {
   const [autoMixSuggestions, setAutoMixSuggestions] = React.useState<AutoMixSuggestion[]>([])
   const [autoMixAppliedSuggestionIds, setAutoMixAppliedSuggestionIds] = React.useState<string[]>([])
   const [autoMixPreviewMode, setAutoMixPreviewMode] = React.useState<'before' | 'after' | null>(null)
+  const [selectedChorusLiftMarkerId, setSelectedChorusLiftMarkerId] = React.useState<string | null>(null)
+  const [chorusLiftSettings, setChorusLiftSettings] = React.useState<ChorusLiftSettings>(DEFAULT_CHORUS_LIFT_SETTINGS)
   const resetProjectState = useDAWStore((state) => state.resetProject)
   const tapTempoRef = useRef<number[]>([])
   useEffect(() => {
@@ -1415,6 +1525,42 @@ export function useDAWActions(): DAWActions {
 
   const autoMixAvailable = autoMixSuggestions.length > 0
   const autoMixCoverageReady = useMemo(() => hasAllAutoMixCategories(autoMixSuggestionItems), [autoMixSuggestionItems])
+  const chorusLiftMarkerOptions = useMemo(
+    () => buildChorusMarkerOptions(project, effectiveTimelineBeats),
+    [project, effectiveTimelineBeats],
+  )
+
+  useEffect(() => {
+    if (chorusLiftMarkerOptions.length === 0) {
+      if (selectedChorusLiftMarkerId !== null) setSelectedChorusLiftMarkerId(null)
+      return
+    }
+
+    if (!selectedChorusLiftMarkerId) {
+      setSelectedChorusLiftMarkerId(chorusLiftMarkerOptions[0].id)
+      return
+    }
+
+    const exists = chorusLiftMarkerOptions.some((marker) => marker.id === selectedChorusLiftMarkerId)
+    if (!exists) setSelectedChorusLiftMarkerId(chorusLiftMarkerOptions[0].id)
+  }, [chorusLiftMarkerOptions, selectedChorusLiftMarkerId])
+
+  const toggleChorusLiftSetting = (key: ChorusLiftToggleKey) => {
+    setChorusLiftSettings((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
+  }
+
+  const runChorusLiftBuilder = () => {
+    if (isPlaying) return
+    const marker = chorusLiftMarkerOptions.find((item) => item.id === selectedChorusLiftMarkerId)
+    if (!marker) return
+    const hasEnabledSetting = Object.values(chorusLiftSettings).some(Boolean)
+    if (!hasEnabledSetting) return
+
+    applyProjectUpdate((prev) => applyChorusLiftBuilder(prev, marker, chorusLiftSettings))
+  }
 
   const runAutoMixAssistant = () => {
     if (isPlaying) return
@@ -4448,6 +4594,12 @@ export function useDAWActions(): DAWActions {
     runAutoMixAssistant,
     toggleAutoMixSuggestion,
     previewAutoMixVersion,
+    chorusLiftMarkerOptions,
+    selectedChorusLiftMarkerId,
+    chorusLiftSettings,
+    setSelectedChorusLiftMarkerId,
+    toggleChorusLiftSetting,
+    applyChorusLiftBuilder: runChorusLiftBuilder,
     enableVocalCleanChain,
     handleSocialPublish,
     handleExportProjectCard,

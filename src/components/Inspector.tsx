@@ -17,6 +17,8 @@ export function Inspector(d: DAWActions) {
     duplicateClip, splitClip, clipboard, previewClip,
     autoMixSuggestionItems, autoMixAvailable, autoMixPreviewMode, autoMixCoverageReady,
     runAutoMixAssistant, toggleAutoMixSuggestion, previewAutoMixVersion,
+    chorusLiftMarkerOptions, selectedChorusLiftMarkerId, chorusLiftSettings,
+    setSelectedChorusLiftMarkerId, toggleChorusLiftSetting, applyChorusLiftBuilder,
     enableVocalCleanChain,
     favoriteClips, favoriteClipSearchQuery, setFavoriteClipSearchQuery,
     saveFavoriteClipFromSelection, pasteFavoriteClipToTrack, deleteFavoriteClip,
@@ -179,6 +181,75 @@ export function Inspector(d: DAWActions) {
                   </button>
                 </div>
                 <p className="text-[10px] text-gray-500">按 Intro/Verse/Chorus/Drop 自动编排并覆盖段落标记；支持 Undo 一键撤销。</p>
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-chorus-lift-builder">
+                <label className="text-xs text-gray-500 block">Chorus Lift Builder</label>
+                {chorusLiftMarkerOptions.length === 0 ? (
+                  <p className="text-[10px] text-gray-500" data-testid="chorus-lift-empty">暂无副歌标记（请先添加/生成名为 Chorus 或 副歌 的标记）</p>
+                ) : (
+                  <>
+                    <label className="text-[10px] text-gray-500 block">目标副歌段落</label>
+                    <select
+                      data-testid="chorus-lift-marker-select"
+                      value={selectedChorusLiftMarkerId ?? ''}
+                      onChange={(e) => setSelectedChorusLiftMarkerId(e.target.value || null)}
+                      disabled={isPlaying}
+                      className="w-full bg-[#1a1a1a] border border-gray-800 rounded px-2 py-1 text-xs text-gray-200"
+                    >
+                      {chorusLiftMarkerOptions.map((marker) => (
+                        <option key={marker.id} value={marker.id}>
+                          {marker.name} · {Math.round(marker.startBeat / 4) + 1}-{Math.round(marker.endBeat / 4) + 1} 小节
+                        </option>
+                      ))}
+                    </select>
+                    <div className="grid grid-cols-1 gap-1 text-[10px] text-gray-300">
+                      <label className="inline-flex items-center gap-2" data-testid="chorus-lift-toggle-drumDensity-label">
+                        <input
+                          type="checkbox"
+                          data-testid="chorus-lift-toggle-drumDensity"
+                          checked={chorusLiftSettings.drumDensity}
+                          onChange={() => toggleChorusLiftSetting('drumDensity')}
+                          disabled={isPlaying}
+                          className="accent-emerald-500"
+                        />
+                        鼓层加密（副歌区间增加半拍层）
+                      </label>
+                      <label className="inline-flex items-center gap-2" data-testid="chorus-lift-toggle-harmonyThicken-label">
+                        <input
+                          type="checkbox"
+                          data-testid="chorus-lift-toggle-harmonyThicken"
+                          checked={chorusLiftSettings.harmonyThicken}
+                          onChange={() => toggleChorusLiftSetting('harmonyThicken')}
+                          disabled={isPlaying}
+                          className="accent-emerald-500"
+                        />
+                        和声加厚（+7 半音叠层）
+                      </label>
+                      <label className="inline-flex items-center gap-2" data-testid="chorus-lift-toggle-gainLift-label">
+                        <input
+                          type="checkbox"
+                          data-testid="chorus-lift-toggle-gainLift"
+                          checked={chorusLiftSettings.gainLift}
+                          onChange={() => toggleChorusLiftSetting('gainLift')}
+                          disabled={isPlaying}
+                          className="accent-emerald-500"
+                        />
+                        自动增益上扬（约 +1.5 dB）
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      data-testid="chorus-lift-apply-btn"
+                      onClick={() => applyChorusLiftBuilder()}
+                      disabled={isPlaying || !selectedChorusLiftMarkerId || (!chorusLiftSettings.drumDensity && !chorusLiftSettings.harmonyThicken && !chorusLiftSettings.gainLift)}
+                      className="w-full text-xs px-2 py-1 rounded bg-[#0f766e] hover:bg-[#115e59] text-white disabled:opacity-40"
+                    >
+                      应用副歌增强
+                    </button>
+                    <p className="text-[10px] text-gray-500">仅处理所选副歌标记区段；支持逐项开关与 Undo 回退。</p>
+                  </>
+                )}
               </div>
 
               <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="inspector-mood-presets">
