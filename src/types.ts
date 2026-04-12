@@ -21,6 +21,10 @@ export interface Clip {
   audioData?: string
   audioAlignMode?: 'preservePitch' | 'preserveDuration'
   audioStretchRatio?: number
+  vocalTimingMode?: 'grid' | 'barStretch'
+  vocalTimingEnabled?: boolean
+  vocalTimingOriginalStartBeat?: number
+  vocalTimingOriginalLengthBeats?: number
   envelope?: ClipEnvelopePoint[]
 }
 

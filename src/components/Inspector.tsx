@@ -12,7 +12,7 @@ export function Inspector(d: DAWActions) {
     duplicateTrack, moveTrack, deleteTrack,
     setClipName, setClipColor, setSelectedClipWave, updateClipGain,
     updateClipEnvelopePoint, resetClipEnvelope,
-    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, alignAudioClipToProjectBpm, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, generateSongArrangement, continueTrackIdea,
+    updateClipTranspose, setSelectedClipNote, updateClipLengthBeats, alignAudioClipToProjectBpm, alignVocalClipTiming, resetVocalClipTimingAlign, quantizeClip, insertChordPreset, generateMelody, normalizeClipGains, applyMagicPolish, applyMoodPreset, generateStyleStarter, generateSongArrangement, continueTrackIdea,
     updateClipFades, toggleClipMute, deleteClip, copyClip, pasteClip,
     duplicateClip, splitClip, clipboard, previewClip,
     autoMixSuggestionItems, autoMixAvailable, autoMixPreviewMode, autoMixCoverageReady,
@@ -909,6 +909,52 @@ export function Inspector(d: DAWActions) {
                       className={`px-2 py-1 text-xs border rounded ${selectedClipData.clip.audioAlignMode === 'preserveDuration' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' : 'bg-[#1a1a1a] border-gray-800 text-gray-300 hover:bg-gray-800'}`}
                     >
                       保持时长
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {selectedClipData.clip.audioData && (
+                <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="vocal-timing-align-panel">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-gray-500">Vocal Timing Align</label>
+                    <span className="text-[10px] text-gray-500" data-testid="vocal-timing-align-mode">
+                      {selectedClipData.clip.vocalTimingEnabled
+                        ? selectedClipData.clip.vocalTimingMode === 'barStretch'
+                          ? 'Bar Stretch'
+                          : 'Grid Snap'
+                        : 'Off'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      data-testid="vocal-align-grid-btn"
+                      onClick={() => alignVocalClipTiming(selectedClipData.track.id, selectedClipData.clip.id, 'grid')}
+                      disabled={isPlaying || selectedClipData.track.locked}
+                      className={`px-2 py-1 text-xs border rounded ${selectedClipData.clip.vocalTimingEnabled && selectedClipData.clip.vocalTimingMode === 'grid' ? 'bg-sky-500/20 border-sky-500 text-sky-300' : 'bg-[#1a1a1a] border-gray-800 text-gray-300 hover:bg-gray-800'}`}
+                    >
+                      一键贴合网格
+                    </button>
+                    <button
+                      data-testid="vocal-align-bar-stretch-btn"
+                      onClick={() => alignVocalClipTiming(selectedClipData.track.id, selectedClipData.clip.id, 'barStretch')}
+                      disabled={isPlaying || selectedClipData.track.locked}
+                      className={`px-2 py-1 text-xs border rounded ${selectedClipData.clip.vocalTimingEnabled && selectedClipData.clip.vocalTimingMode === 'barStretch' ? 'bg-sky-500/20 border-sky-500 text-sky-300' : 'bg-[#1a1a1a] border-gray-800 text-gray-300 hover:bg-gray-800'}`}
+                    >
+                      按小节轻度拉伸
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[10px] text-gray-500" data-testid="vocal-align-ab-status">
+                      A/B：{selectedClipData.clip.vocalTimingEnabled ? 'B=对齐后（A=回退前）' : 'A=原始'}
+                    </div>
+                    <button
+                      data-testid="vocal-align-reset-btn"
+                      onClick={() => resetVocalClipTimingAlign(selectedClipData.track.id, selectedClipData.clip.id)}
+                      disabled={isPlaying || selectedClipData.track.locked || !selectedClipData.clip.vocalTimingEnabled}
+                      className="px-2 py-0.5 text-[10px] bg-[#1a1a1a] hover:bg-gray-800 border border-gray-800 rounded text-gray-300 disabled:opacity-40"
+                    >
+                      回退当前片段
                     </button>
                   </div>
                 </div>

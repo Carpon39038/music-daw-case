@@ -1056,6 +1056,8 @@ export interface DAWActions {
   updateClipTranspose: (trackId: string, clipId: string, transposeSemitones: number) => void
   updateClipLengthBeats: (trackId: string, clipId: string, lengthBeats: number) => void
   alignAudioClipToProjectBpm: (trackId: string, clipId: string, mode: 'preservePitch' | 'preserveDuration') => void
+  alignVocalClipTiming: (trackId: string, clipId: string, mode: 'grid' | 'barStretch') => void
+  resetVocalClipTimingAlign: (trackId: string, clipId: string) => void
   quantizeClip: (trackId: string, clipId: string, gridBeats: number) => void
   insertChordPreset: (trackId: string, preset?: 'I-V-vi-IV' | 'vi-IV-I-V' | 'I-vi-IV-V', startBeat?: number, chordLengthBeats?: number) => void
   generateMelody: (trackId: string, options?: { startBeat?: number; noteCount?: number; stepBeats?: number }) => void
@@ -3264,6 +3266,80 @@ export function useDAWActions(): DAWActions {
     }))
   }
 
+  const alignVocalClipTiming = (trackId: string, clipId: string, mode: 'grid' | 'barStretch') => {
+    setProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) => {
+            if (c.id !== clipId) return c
+            const safeLength = Math.max(0.5, Math.min(TIMELINE_BEATS, c.lengthBeats))
+            const originalStartBeat = c.vocalTimingEnabled ? (c.vocalTimingOriginalStartBeat ?? c.startBeat) : c.startBeat
+            const originalLengthBeats = c.vocalTimingEnabled ? (c.vocalTimingOriginalLengthBeats ?? c.lengthBeats) : c.lengthBeats
+
+            if (mode === 'grid') {
+              const snappedStart = Math.max(0, Math.min(TIMELINE_BEATS - safeLength, Math.round(c.startBeat / 0.25) * 0.25))
+              return {
+                ...c,
+                startBeat: snappedStart,
+                vocalTimingMode: 'grid',
+                vocalTimingEnabled: true,
+                vocalTimingOriginalStartBeat: originalStartBeat,
+                vocalTimingOriginalLengthBeats: originalLengthBeats,
+              }
+            }
+
+            const barSize = 4
+            const targetBarCount = Math.max(1, Math.round(c.lengthBeats / barSize))
+            const targetLength = Math.max(0.5, Math.min(TIMELINE_BEATS, targetBarCount * barSize))
+            const safeStart = Math.min(c.startBeat, TIMELINE_BEATS - targetLength)
+            const snappedBarStart = Math.max(0, Math.round(safeStart / barSize) * barSize)
+            const finalStart = Math.min(snappedBarStart, TIMELINE_BEATS - targetLength)
+            return {
+              ...c,
+              startBeat: finalStart,
+              lengthBeats: targetLength,
+              vocalTimingMode: 'barStretch',
+              vocalTimingEnabled: true,
+              vocalTimingOriginalStartBeat: originalStartBeat,
+              vocalTimingOriginalLengthBeats: originalLengthBeats,
+              audioAlignMode: 'preserveDuration',
+              audioStretchRatio: c.lengthBeats > 0 ? targetLength / c.lengthBeats : 1,
+            }
+          }),
+        }
+      }),
+    }))
+  }
+
+  const resetVocalClipTimingAlign = (trackId: string, clipId: string) => {
+    setProject((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) => {
+        if (t.id !== trackId || t.locked) return t
+        return {
+          ...t,
+          clips: t.clips.map((c) => {
+            if (c.id !== clipId || !c.vocalTimingEnabled) return c
+            const restoredStart = Math.max(0, Math.min(TIMELINE_BEATS - 0.5, c.vocalTimingOriginalStartBeat ?? c.startBeat))
+            const restoredLength = Math.max(0.5, Math.min(TIMELINE_BEATS, c.vocalTimingOriginalLengthBeats ?? c.lengthBeats))
+            return {
+              ...c,
+              startBeat: restoredStart,
+              lengthBeats: restoredLength,
+              vocalTimingEnabled: false,
+              vocalTimingMode: undefined,
+              vocalTimingOriginalStartBeat: undefined,
+              vocalTimingOriginalLengthBeats: undefined,
+            }
+          }),
+        }
+      }),
+    }))
+  }
+
   const quantizeClip = (trackId: string, clipId: string, gridBeats: number) => {
     applyProjectUpdate((prev) => {
       const track = prev.tracks.find((t) => t.id === trackId)
@@ -4340,6 +4416,8 @@ export function useDAWActions(): DAWActions {
     updateClipTranspose,
     updateClipLengthBeats,
     alignAudioClipToProjectBpm,
+    alignVocalClipTiming,
+    resetVocalClipTimingAlign,
     quantizeClip,
     insertChordPreset,
     generateMelody,
