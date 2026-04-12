@@ -233,14 +233,15 @@ export class AudioEngine {
     tempoCurveType: TempoCurveType = 'constant',
     tempoCurveTargetBpm?: number,
     masterEQ?: MasterEQ,
+    sampleRate = 44100,
   ): Promise<AudioBuffer> {
     const durationSec = getTimelineDurationSec(timelineBeats, {
       bpm,
       curveType: tempoCurveType,
       targetBpm: tempoCurveTargetBpm,
     });
-    const sampleRate = 44100;
-    const offlineCtx = new OfflineAudioContext(2, Math.ceil(sampleRate * durationSec), sampleRate);
+    const normalizedSampleRate = Math.max(22050, Math.min(96000, Math.round(sampleRate)));
+    const offlineCtx = new OfflineAudioContext(2, Math.ceil(normalizedSampleRate * durationSec), normalizedSampleRate);
     
     const masterGain = offlineCtx.createGain();
     masterGain.gain.value = 1.0;
@@ -270,13 +271,14 @@ export class AudioEngine {
     tempoCurveType: TempoCurveType = 'constant',
     tempoCurveTargetBpm?: number,
     masterEQ?: MasterEQ,
+    sampleRate = 44100,
   ): Promise<ArrayBuffer> {
-    const renderedBuffer = await this.renderBuffer(tracks, bpm, timelineBeats, tempoCurveType, tempoCurveTargetBpm, masterEQ);
+    const renderedBuffer = await this.renderBuffer(tracks, bpm, timelineBeats, tempoCurveType, tempoCurveTargetBpm, masterEQ, sampleRate);
     
     const numChannels = renderedBuffer.numberOfChannels;
     const format = 1;
     const bitDepth = 16;
-    const sampleRate = renderedBuffer.sampleRate;
+    const renderedSampleRate = renderedBuffer.sampleRate;
     
     const result = new Float32Array(renderedBuffer.length * numChannels);
     for (let channel = 0; channel < numChannels; channel++) {
@@ -303,8 +305,8 @@ export class AudioEngine {
     view.setUint32(16, 16, true);
     view.setUint16(20, format, true);
     view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
+    view.setUint32(24, renderedSampleRate, true);
+    view.setUint32(28, renderedSampleRate * numChannels * (bitDepth / 8), true);
     view.setUint16(32, numChannels * (bitDepth / 8), true);
     view.setUint16(34, bitDepth, true);
     writeString(view, 36, 'data');

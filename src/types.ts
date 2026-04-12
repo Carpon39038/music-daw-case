@@ -140,6 +140,16 @@ export interface Marker {
   beat: number
 }
 
+export type ExportTargetPresetKey = 'short-video' | 'podcast' | 'music-platform' | 'general' | 'custom'
+
+export interface ExportTargetPreset {
+  key: ExportTargetPresetKey
+  sampleRate: number
+  bitrateKbps: number
+  targetLoudnessDb: number
+  peakLimitDb: number
+}
+
 export interface ExportVersionEntry {
   id: string
   name: string
@@ -149,6 +159,11 @@ export interface ExportVersionEntry {
   peakDb: number
   rmsDb: number
   audioDataUrl?: string
+  exportTargetPresetKey?: ExportTargetPresetKey
+  sampleRate?: number
+  bitrateKbps?: number
+  targetLoudnessDb?: number
+  peakLimitDb?: number
 }
 
 export interface ReleaseMetadata {
@@ -186,6 +201,7 @@ export interface ProjectState {
   id?: string
   name?: string
   lastSavedAt?: number
+  exportTargetPreset?: ExportTargetPreset
   bpm: number
   tempoCurveType?: 'constant' | 'accelerando' | 'ritardando'
   tempoCurveTargetBpm?: number

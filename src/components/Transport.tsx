@@ -144,6 +144,9 @@ export function Transport({
   clearHistory,
   handleMIDIImport,
   handleMIDIExport,
+  exportTargetPreset,
+  setExportTargetPresetKey,
+  resetExportTargetPresetToCustom,
   handleAudioExport,
   handleMp3Export,
   handleStemExport,
@@ -539,6 +542,78 @@ export function Transport({
         >
           <Download size={18} />
         </button>
+        <div className="flex items-center gap-1" data-testid="export-target-preset-controls">
+          <label className="text-[10px] text-gray-400" htmlFor="export-target-preset-select">导出目标</label>
+          <select
+            id="export-target-preset-select"
+            data-testid="export-target-preset-select"
+            value={exportTargetPreset.key}
+            onChange={(event) => setExportTargetPresetKey(event.target.value as 'short-video' | 'podcast' | 'music-platform' | 'general' | 'custom')}
+            disabled={isPlaying}
+            className="text-[11px] bg-[#141414] border border-gray-800 rounded px-1.5 py-1 text-gray-200"
+          >
+            <option value="short-video">短视频</option>
+            <option value="podcast">播客</option>
+            <option value="music-platform">音乐平台</option>
+            <option value="general">通用</option>
+            <option value="custom">自定义</option>
+          </select>
+          <span className="text-[10px] text-gray-500" data-testid="export-target-preset-summary">
+            {exportTargetPreset.sampleRate}Hz / {exportTargetPreset.bitrateKbps}kbps / {exportTargetPreset.targetLoudnessDb}dB / 峰值{exportTargetPreset.peakLimitDb}dB
+          </span>
+        </div>
+        {exportTargetPreset.key === 'custom' ? (
+          <div className="flex items-center gap-1" data-testid="export-target-custom-controls">
+            <label className="text-[10px] text-gray-500">SR</label>
+            <input
+              data-testid="export-target-custom-sample-rate"
+              type="number"
+              min={22050}
+              max={96000}
+              step={50}
+              value={exportTargetPreset.sampleRate}
+              onChange={(event) => {
+                const sampleRate = Number(event.target.value)
+                if (!Number.isFinite(sampleRate)) return
+                resetExportTargetPresetToCustom()
+                setProject((prev) => ({
+                  ...prev,
+                  exportTargetPreset: {
+                    ...exportTargetPreset,
+                    key: 'custom',
+                    sampleRate,
+                  },
+                }), { saveHistory: true })
+              }}
+              disabled={isPlaying}
+              className="w-20 text-[11px] bg-[#141414] border border-gray-800 rounded px-1 py-0.5 text-gray-200"
+            />
+            <label className="text-[10px] text-gray-500">kbps</label>
+            <input
+              data-testid="export-target-custom-bitrate"
+              type="number"
+              min={64}
+              max={320}
+              step={1}
+              value={exportTargetPreset.bitrateKbps}
+              onChange={(event) => {
+                const bitrateKbps = Number(event.target.value)
+                if (!Number.isFinite(bitrateKbps)) return
+                resetExportTargetPresetToCustom()
+                setProject((prev) => ({
+                  ...prev,
+                  exportTargetPreset: {
+                    ...exportTargetPreset,
+                    key: 'custom',
+                    bitrateKbps,
+                  },
+                }), { saveHistory: true })
+              }}
+              disabled={isPlaying}
+              className="w-14 text-[11px] bg-[#141414] border border-gray-800 rounded px-1 py-0.5 text-gray-200"
+            />
+          </div>
+        ) : null}
         <button
           onClick={async () => {
             await handleAudioExport()

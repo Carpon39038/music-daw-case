@@ -1,9 +1,9 @@
 import { Mp3Encoder } from 'lamejs';
 
-export function audioBufferToMp3(buffer: AudioBuffer): ArrayBuffer {
+export function audioBufferToMp3(buffer: AudioBuffer, options?: { kbps?: number }): ArrayBuffer {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
-  const kbps = 128;
+  const kbps = Math.max(64, Math.min(320, Math.round(options?.kbps ?? 128)));
   const encoder = new Mp3Encoder(numChannels, sampleRate, kbps);
   
   const mp3Data: Int8Array[] = [];

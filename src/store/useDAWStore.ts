@@ -143,6 +143,13 @@ function createInitialProject(): ProjectState {
     id: crypto.randomUUID(),
     name: 'Untitled Project',
     lastSavedAt: Date.now(),
+    exportTargetPreset: {
+      key: 'general',
+      sampleRate: 44100,
+      bitrateKbps: 192,
+      targetLoudnessDb: -14,
+      peakLimitDb: -1,
+    },
     bpm: 120,
     tempoCurveType: 'constant',
     tempoCurveTargetBpm: 120,
@@ -263,6 +270,17 @@ function normalizeProject(project: ProjectState): ProjectState {
     id: project.id ?? crypto.randomUUID(),
     name: project.name ?? 'Untitled Project',
     lastSavedAt: project.lastSavedAt ?? Date.now(),
+    exportTargetPreset: {
+      key: project.exportTargetPreset?.key ?? 'general',
+      sampleRate: Math.max(22050, Math.min(96000, Math.round(project.exportTargetPreset?.sampleRate ?? 44100))),
+      bitrateKbps: Math.max(64, Math.min(320, Math.round(project.exportTargetPreset?.bitrateKbps ?? 192))),
+      targetLoudnessDb: Number.isFinite(project.exportTargetPreset?.targetLoudnessDb)
+        ? Number(project.exportTargetPreset?.targetLoudnessDb)
+        : -14,
+      peakLimitDb: Number.isFinite(project.exportTargetPreset?.peakLimitDb)
+        ? Number(project.exportTargetPreset?.peakLimitDb)
+        : -1,
+    },
     tempoCurveType: project.tempoCurveType ?? 'constant',
     tempoCurveTargetBpm: project.tempoCurveTargetBpm ?? project.bpm,
     scaleKey: project.scaleKey ?? 'C',

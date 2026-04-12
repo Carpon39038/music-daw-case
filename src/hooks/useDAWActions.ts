@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
-import type { Clip, ExportVersionEntry, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, MixReportEntry, ProjectState, Track, WaveType } from '../types'
+import type { Clip, ExportTargetPreset, ExportTargetPresetKey, ExportVersionEntry, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, MixReportEntry, ProjectState, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
@@ -11,6 +11,61 @@ import { analyzeChordSuggestions } from '../utils/chordSuggestion'
 import { hzToClosestNoteLabel } from '../utils/notes'
 
 export const TIMELINE_BEATS = 16
+
+const EXPORT_TARGET_PRESETS: Record<Exclude<ExportTargetPresetKey, 'custom'>, ExportTargetPreset> = {
+  'short-video': {
+    key: 'short-video',
+    sampleRate: 44100,
+    bitrateKbps: 192,
+    targetLoudnessDb: -14,
+    peakLimitDb: -1,
+  },
+  podcast: {
+    key: 'podcast',
+    sampleRate: 44100,
+    bitrateKbps: 128,
+    targetLoudnessDb: -16,
+    peakLimitDb: -1,
+  },
+  'music-platform': {
+    key: 'music-platform',
+    sampleRate: 48000,
+    bitrateKbps: 256,
+    targetLoudnessDb: -14,
+    peakLimitDb: -1,
+  },
+  general: {
+    key: 'general',
+    sampleRate: 44100,
+    bitrateKbps: 192,
+    targetLoudnessDb: -14,
+    peakLimitDb: -1,
+  },
+}
+
+const DEFAULT_EXPORT_TARGET_PRESET: ExportTargetPreset = EXPORT_TARGET_PRESETS.general
+
+function normalizeExportTargetPreset(input: Partial<ExportTargetPreset> | null | undefined): ExportTargetPreset {
+  const key = input?.key
+  if (!key || key === 'custom') {
+    return {
+      key: key ?? DEFAULT_EXPORT_TARGET_PRESET.key,
+      sampleRate: Number.isFinite(input?.sampleRate) ? Math.max(22050, Math.min(96000, Math.round(input!.sampleRate!))) : DEFAULT_EXPORT_TARGET_PRESET.sampleRate,
+      bitrateKbps: Number.isFinite(input?.bitrateKbps) ? Math.max(64, Math.min(320, Math.round(input!.bitrateKbps!))) : DEFAULT_EXPORT_TARGET_PRESET.bitrateKbps,
+      targetLoudnessDb: Number.isFinite(input?.targetLoudnessDb) ? Number(input!.targetLoudnessDb) : DEFAULT_EXPORT_TARGET_PRESET.targetLoudnessDb,
+      peakLimitDb: Number.isFinite(input?.peakLimitDb) ? Number(input!.peakLimitDb) : DEFAULT_EXPORT_TARGET_PRESET.peakLimitDb,
+    }
+  }
+  return EXPORT_TARGET_PRESETS[key]
+}
+
+function exportPresetLabel(key: ExportTargetPresetKey) {
+  if (key === 'short-video') return '短视频平台'
+  if (key === 'podcast') return '播客'
+  if (key === 'music-platform') return '音乐平台'
+  if (key === 'general') return '通用'
+  return '自定义'
+}
 
 export function semitoneToRatio(semitones: number) {
   return 2 ** (semitones / 12)
@@ -1398,6 +1453,10 @@ declare global {
       lastExportPeakDb: number | null
       lastExportRmsDb: number | null
       lastExportLoudnessVerdict: 'ready' | 'adjust' | 'clipping-risk' | null
+      exportTargetPreset: ExportTargetPreset
+      latestExportVersionPresetKey: ExportTargetPresetKey | null
+      latestExportVersionSampleRate: number | null
+      latestExportVersionBitrateKbps: number | null
       audioContextState: AudioContextState | 'uninitialized'
       beatDurationSec: number
       timelineDurationSec: number
@@ -1575,6 +1634,9 @@ export interface DAWActions {
   ) => void
   handleMIDIImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMIDIExport: () => void
+  exportTargetPreset: ExportTargetPreset
+  setExportTargetPresetKey: (key: ExportTargetPresetKey) => void
+  resetExportTargetPresetToCustom: () => void
   handleAudioExport: () => Promise<void>
   handleMp3Export: () => Promise<void>
   handleStemExport: () => Promise<void>
@@ -1692,6 +1754,10 @@ export function useDAWActions(): DAWActions {
     timelineBeats: TIMELINE_BEATS,
     performanceMode,
   }))
+  const exportTargetPreset = useMemo(
+    () => normalizeExportTargetPreset(project.exportTargetPreset),
+    [project.exportTargetPreset],
+  )
   const exportVersionHistory = useMemo(() => (project.exportVersions ?? []).slice(0, 5), [project.exportVersions])
   const latestMixReport = useMemo(() => (project.mixReports ?? [])[0] ?? null, [project.mixReports])
   const previousMixReport = useMemo(() => (project.mixReports ?? [])[1] ?? null, [project.mixReports])
@@ -2280,6 +2346,36 @@ export function useDAWActions(): DAWActions {
     return nextMetadata
   }, [project.name, project.releaseMetadata, setProject])
 
+  const setExportTargetPresetKey = React.useCallback((key: ExportTargetPresetKey) => {
+    const current = exportTargetPreset
+    const next = key === 'custom' ? { ...current, key: 'custom' as const } : EXPORT_TARGET_PRESETS[key]
+
+    const diffLines: string[] = []
+    if (current.sampleRate !== next.sampleRate) diffLines.push(`采样率：${current.sampleRate} → ${next.sampleRate} Hz`)
+    if (current.bitrateKbps !== next.bitrateKbps) diffLines.push(`码率：${current.bitrateKbps} → ${next.bitrateKbps} kbps`)
+    if (current.targetLoudnessDb !== next.targetLoudnessDb) diffLines.push(`响度目标：${current.targetLoudnessDb} → ${next.targetLoudnessDb} dB`)
+    if (current.peakLimitDb !== next.peakLimitDb) diffLines.push(`峰值上限：${current.peakLimitDb} → ${next.peakLimitDb} dB`)
+
+    setProject((prev) => ({
+      ...prev,
+      exportTargetPreset: next,
+    }), { saveHistory: true })
+
+    if (diffLines.length > 0) {
+      window.alert(`导出目标预设：${exportPresetLabel(next.key)}\n\n与当前设置差异：\n${diffLines.join('\n')}`)
+    }
+  }, [exportTargetPreset, setProject])
+
+  const resetExportTargetPresetToCustom = React.useCallback(() => {
+    setProject((prev) => ({
+      ...prev,
+      exportTargetPreset: {
+        ...normalizeExportTargetPreset(prev.exportTargetPreset),
+        key: 'custom',
+      },
+    }), { saveHistory: true })
+  }, [setProject])
+
   const handleAudioExport = async () => {
     try {
       const audioBuffer = await audioEngine.renderBuffer(
@@ -2289,6 +2385,7 @@ export function useDAWActions(): DAWActions {
         tempoCurveType,
         tempoCurveTargetBpm,
         masterEQ,
+        exportTargetPreset.sampleRate,
       )
       const loudness = analyzeBufferLoudness(audioBuffer)
       setLastExportLoudnessReport(loudness)
@@ -2314,6 +2411,7 @@ export function useDAWActions(): DAWActions {
         tempoCurveType,
         tempoCurveTargetBpm,
         masterEQ,
+        exportTargetPreset.sampleRate,
       )
       const mixReport = buildMixReportFromExport({
         project,
@@ -2332,6 +2430,11 @@ export function useDAWActions(): DAWActions {
           peakDb: loudness.peakDb,
           rmsDb: loudness.rmsDb,
           audioDataUrl: typeof reader.result === 'string' ? reader.result : undefined,
+          exportTargetPresetKey: exportTargetPreset.key,
+          sampleRate: exportTargetPreset.sampleRate,
+          bitrateKbps: exportTargetPreset.bitrateKbps,
+          targetLoudnessDb: exportTargetPreset.targetLoudnessDb,
+          peakLimitDb: exportTargetPreset.peakLimitDb,
         })
       }
       reader.readAsDataURL(blob)
@@ -2357,6 +2460,7 @@ export function useDAWActions(): DAWActions {
         tempoCurveType,
         tempoCurveTargetBpm,
         masterEQ,
+        exportTargetPreset.sampleRate,
       )
       const loudness = analyzeBufferLoudness(audioBuffer)
       setLastExportLoudnessReport(loudness)
@@ -2375,7 +2479,7 @@ export function useDAWActions(): DAWActions {
       })
       if (!canContinue) return
 
-      const mp3Data = audioBufferToMp3(audioBuffer)
+      const mp3Data = audioBufferToMp3(audioBuffer, { kbps: exportTargetPreset.bitrateKbps })
       const mixReport = buildMixReportFromExport({
         project,
         exportFormat: 'mp3',
@@ -2393,6 +2497,11 @@ export function useDAWActions(): DAWActions {
           peakDb: loudness.peakDb,
           rmsDb: loudness.rmsDb,
           audioDataUrl: typeof reader.result === 'string' ? reader.result : undefined,
+          exportTargetPresetKey: exportTargetPreset.key,
+          sampleRate: exportTargetPreset.sampleRate,
+          bitrateKbps: exportTargetPreset.bitrateKbps,
+          targetLoudnessDb: exportTargetPreset.targetLoudnessDb,
+          peakLimitDb: exportTargetPreset.peakLimitDb,
         })
       }
       reader.readAsDataURL(blob)
@@ -2491,6 +2600,7 @@ export function useDAWActions(): DAWActions {
         tempoCurveType,
         tempoCurveTargetBpm,
         masterEQ,
+        exportTargetPreset.sampleRate,
       )
       const loudness = analyzeBufferLoudness(audioBuffer)
       setLastExportLoudnessReport(loudness)
@@ -2509,7 +2619,7 @@ export function useDAWActions(): DAWActions {
       })
       if (!canContinue) return
 
-      const mp3Data = audioBufferToMp3(audioBuffer)
+      const mp3Data = audioBufferToMp3(audioBuffer, { kbps: exportTargetPreset.bitrateKbps })
       const mp3Blob = new Blob([mp3Data], { type: 'audio/mp3' })
       const cardBlob = await createSocialCardBlob(project, totalDurationSec, releaseMetadata)
       const baseName = buildSocialExportBaseName(project.name)
@@ -2842,6 +2952,10 @@ export function useDAWActions(): DAWActions {
       lastExportPeakDb: lastExportLoudnessReport?.peakDb ?? null,
       lastExportRmsDb: lastExportLoudnessReport?.rmsDb ?? null,
       lastExportLoudnessVerdict: lastExportLoudnessReport?.verdict ?? null,
+      exportTargetPreset,
+      latestExportVersionPresetKey: exportVersionHistory[0]?.exportTargetPresetKey ?? null,
+      latestExportVersionSampleRate: exportVersionHistory[0]?.sampleRate ?? null,
+      latestExportVersionBitrateKbps: exportVersionHistory[0]?.bitrateKbps ?? null,
       audioContextState: audioEngine.ctx?.state ?? 'uninitialized',
       beatDurationSec: beatDuration,
       timelineDurationSec: totalDurationSec,
@@ -5187,6 +5301,9 @@ export function useDAWActions(): DAWActions {
     continueTrackIdea,
     handleMIDIImport,
     handleMIDIExport,
+    exportTargetPreset,
+    setExportTargetPresetKey,
+    resetExportTargetPresetToCustom,
     handleAudioExport,
     handleMp3Export,
     handleStemExport,
