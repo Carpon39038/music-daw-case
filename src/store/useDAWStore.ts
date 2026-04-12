@@ -16,6 +16,14 @@ export interface Checkpoint {
   project: ProjectState;
 }
 
+export interface RecoverySnapshot {
+  id: string
+  timestamp: number
+  name: string
+  source: 'autosave' | 'pre-export'
+  project: ProjectState
+}
+
 export interface ClipDragState {
   isDragging: boolean
   trackId: string
@@ -77,6 +85,7 @@ interface PersistedDAWState {
   loopLengthBeats: number
   metronomeEnabled: boolean
   checkpoints: Checkpoint[]
+  recoverySnapshots: RecoverySnapshot[]
   performanceMode: 'auto' | 'on' | 'off'
   projectTemplates: ProjectTemplate[]
   galleryProjects: GalleryProject[]
@@ -126,6 +135,8 @@ interface DAWState extends PersistedDAWState {
   resetProject: () => void
   saveCheckpoint: (name: string) => void
   restoreCheckpoint: (id: string) => void
+  saveRecoverySnapshot: (snapshot: Omit<RecoverySnapshot, 'id' | 'timestamp'> & { id?: string; timestamp?: number }) => void
+  deleteRecoverySnapshot: (id: string) => void
   saveProjectTemplate: (name: string) => void
   loadProjectTemplate: (id: string) => void
   saveProjectToGallery: () => void
@@ -358,6 +369,7 @@ function getDefaultPersistedState(): PersistedDAWState {
     loopLengthBeats: 8,
     metronomeEnabled: false,
     checkpoints: [],
+    recoverySnapshots: [],
     performanceMode: 'auto',
     projectTemplates: [],
     galleryProjects: [],
@@ -447,23 +459,34 @@ export const useDAWStore = create<DAWState>()(
           if (JSON.stringify(nextProject) === JSON.stringify(state.project)) return state
           const saveHistory = options?.saveHistory ?? false
           let checkpoints = state.checkpoints || [];
+          let recoverySnapshots = state.recoverySnapshots || []
           if (saveHistory) {
              const lastCp = checkpoints[0];
              if (!lastCp || Date.now() - lastCp.timestamp > 60 * 1000) {
+                const now = Date.now()
                 const newCheckpoint: Checkpoint = {
                   id: crypto.randomUUID(),
-                  timestamp: Date.now(),
+                  timestamp: now,
                   name: "Auto-save",
                   project: cloneProject(nextProject)
                 };
                 checkpoints = [newCheckpoint, ...checkpoints].slice(0, 20);
+                const newRecoverySnapshot: RecoverySnapshot = {
+                  id: crypto.randomUUID(),
+                  timestamp: now,
+                  name: 'Auto-save',
+                  source: 'autosave',
+                  project: cloneProject(nextProject),
+                }
+                recoverySnapshots = [newRecoverySnapshot, ...recoverySnapshots].slice(0, 5)
              }
           }
           return {
             project: nextProject,
             past: saveHistory ? [...state.past, cloneProject(state.project)].slice(-100) : state.past,
             future: saveHistory ? [] : state.future,
-            checkpoints
+            checkpoints,
+            recoverySnapshots,
           }
         }),
       updateProject: (updater, options) =>
@@ -472,23 +495,34 @@ export const useDAWStore = create<DAWState>()(
           if (nextProject === state.project) return state
           const saveHistory = options?.saveHistory ?? false
           let checkpoints = state.checkpoints || [];
+          let recoverySnapshots = state.recoverySnapshots || []
           if (saveHistory) {
              const lastCp = checkpoints.find(c => c.name === "Auto-save");
              if (!lastCp || Date.now() - lastCp.timestamp > 60 * 1000) {
+                const now = Date.now()
                 const newCheckpoint: Checkpoint = {
                   id: crypto.randomUUID(),
-                  timestamp: Date.now(),
+                  timestamp: now,
                   name: "Auto-save",
                   project: cloneProject(nextProject)
                 };
                 checkpoints = [newCheckpoint, ...checkpoints].slice(0, 20);
+                const newRecoverySnapshot: RecoverySnapshot = {
+                  id: crypto.randomUUID(),
+                  timestamp: now,
+                  name: 'Auto-save',
+                  source: 'autosave',
+                  project: cloneProject(nextProject),
+                }
+                recoverySnapshots = [newRecoverySnapshot, ...recoverySnapshots].slice(0, 5)
              }
           }
           return {
             project: nextProject,
             past: saveHistory ? [...state.past, cloneProject(state.project)].slice(-100) : state.past,
             future: saveHistory ? [] : state.future,
-            checkpoints
+            checkpoints,
+            recoverySnapshots,
           }
         }),
       setIsPlaying: (value) => set({ isPlaying: value }),
@@ -625,6 +659,23 @@ export const useDAWStore = create<DAWState>()(
             future: [],
           };
         }),
+      saveRecoverySnapshot: (snapshot) =>
+        set((state) => {
+          const nextSnapshot: RecoverySnapshot = {
+            id: snapshot.id ?? crypto.randomUUID(),
+            timestamp: snapshot.timestamp ?? Date.now(),
+            name: snapshot.name,
+            source: snapshot.source,
+            project: cloneProject(snapshot.project),
+          }
+          return {
+            recoverySnapshots: [nextSnapshot, ...(state.recoverySnapshots || [])].slice(0, 5),
+          }
+        }),
+      deleteRecoverySnapshot: (id) =>
+        set((state) => ({
+          recoverySnapshots: (state.recoverySnapshots || []).filter((item) => item.id !== id),
+        })),
       saveProjectTemplate: (name) =>
         set((state) => {
           const trimmedName = name.trim()
@@ -721,6 +772,7 @@ export const useDAWStore = create<DAWState>()(
         loopLengthBeats: state.loopLengthBeats,
         metronomeEnabled: state.metronomeEnabled,
         checkpoints: state.checkpoints || [],
+        recoverySnapshots: state.recoverySnapshots || [],
         performanceMode: state.performanceMode,
         projectTemplates: state.projectTemplates || [],
         galleryProjects: state.galleryProjects || [],

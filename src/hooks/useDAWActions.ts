@@ -902,7 +902,8 @@ function applyChorusDoubleHarmony(
   if (!sourceTrack) return { project: baseProject, createdTrackIds: [] }
 
   const inRange = (clip: Clip) => clip.startBeat < marker.endBeat && (clip.startBeat + clip.lengthBeats) > marker.startBeat
-  const sourceClips = sourceTrack.clips.filter(inRange)
+  const clipsInMarker = sourceTrack.clips.filter(inRange)
+  const sourceClips = clipsInMarker.length > 0 ? clipsInMarker : sourceTrack.clips
   if (sourceClips.length === 0) return { project: baseProject, createdTrackIds: [] }
 
   const clipIntersects = (clip: Clip) => {
@@ -1640,6 +1641,16 @@ export interface DAWActions {
   handleAudioExport: () => Promise<void>
   handleMp3Export: () => Promise<void>
   handleStemExport: () => Promise<void>
+  recoverySnapshots: {
+    id: string
+    timestamp: number
+    name: string
+    source: 'autosave' | 'pre-export'
+    project: ProjectState
+  }[]
+  restoreRecoverySnapshotAsCopy: (id: string) => void
+  previewRecoverySnapshot: (id: string) => void
+  deleteRecoverySnapshot: (id: string) => void
   importReferenceTrack: (file: File) => Promise<void>
   clearReferenceTrack: () => void
   toggleReferenceAB: () => void
@@ -1740,6 +1751,9 @@ export function useDAWActions(): DAWActions {
   const storeSetFavoriteClipSearchQuery = useDAWStore((state) => state.setFavoriteClipSearchQuery)
   const storeSaveFavoriteClip = useDAWStore((state) => state.saveFavoriteClip)
   const storeDeleteFavoriteClip = useDAWStore((state) => state.deleteFavoriteClip)
+  const recoverySnapshots = useDAWStore((state) => state.recoverySnapshots || [])
+  const storeSaveRecoverySnapshot = useDAWStore((state) => state.saveRecoverySnapshot)
+  const storeDeleteRecoverySnapshot = useDAWStore((state) => state.deleteRecoverySnapshot)
   const pushHistory = useDAWStore((state) => state.pushHistory)
   const clearHistory = useDAWStore((state) => state.clearHistory)
   const undo = useDAWStore((state) => state.undo)
@@ -2097,7 +2111,7 @@ export function useDAWActions(): DAWActions {
 
   const runChorusDoubleHarmonyBuilder = () => {
     if (isPlaying || !selectedTrackId) return
-    const marker = chorusLiftMarkerOptions.find((item) => item.id === selectedChorusLiftMarkerId)
+    const marker = chorusLiftMarkerOptions.find((item) => item.id === selectedChorusLiftMarkerId) ?? chorusLiftMarkerOptions[0]
     if (!marker) return
 
     let createdTrackIds: string[] = []
@@ -2376,6 +2390,49 @@ export function useDAWActions(): DAWActions {
     }), { saveHistory: true })
   }, [setProject])
 
+  const savePreExportRecoverySnapshot = React.useCallback((name: string) => {
+    storeSaveRecoverySnapshot({
+      name,
+      source: 'pre-export',
+      project,
+    })
+  }, [project, storeSaveRecoverySnapshot])
+
+  const previewRecoverySnapshot = React.useCallback((id: string) => {
+    const snapshot = recoverySnapshots.find((item) => item.id === id)
+    if (!snapshot) return
+
+    const summary = [
+      `快照：${snapshot.name}`,
+      `时间：${new Date(snapshot.timestamp).toLocaleString()}`,
+      `BPM：${Math.round(snapshot.project.bpm)}`,
+      `轨道数：${snapshot.project.tracks.length}`,
+      `Clip 数：${snapshot.project.tracks.reduce((sum, track) => sum + track.clips.length, 0)}`,
+      `来源：${snapshot.source === 'pre-export' ? '导出前' : '自动保存'}`,
+    ].join('\n')
+
+    window.alert(summary)
+  }, [recoverySnapshots])
+
+  const restoreRecoverySnapshotAsCopy = React.useCallback((id: string) => {
+    const snapshot = recoverySnapshots.find((item) => item.id === id)
+    if (!snapshot) return
+
+    setProject((prev) => {
+      const restored = structuredClone(snapshot.project)
+      return {
+        ...restored,
+        id: crypto.randomUUID(),
+        name: `${restored.name || prev.name || 'Untitled Project'} (Recovered ${new Date(snapshot.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+        lastSavedAt: Date.now(),
+      }
+    }, { saveHistory: true })
+  }, [recoverySnapshots, setProject])
+
+  const deleteRecoverySnapshot = React.useCallback((id: string) => {
+    storeDeleteRecoverySnapshot(id)
+  }, [storeDeleteRecoverySnapshot])
+
   const handleAudioExport = async () => {
     try {
       const audioBuffer = await audioEngine.renderBuffer(
@@ -2390,6 +2447,7 @@ export function useDAWActions(): DAWActions {
       const loudness = analyzeBufferLoudness(audioBuffer)
       setLastExportLoudnessReport(loudness)
 
+      savePreExportRecoverySnapshot('WAV Export')
       const canContinue = runPreExportChecks({
         project,
         masterVolume,
@@ -2465,6 +2523,7 @@ export function useDAWActions(): DAWActions {
       const loudness = analyzeBufferLoudness(audioBuffer)
       setLastExportLoudnessReport(loudness)
 
+      savePreExportRecoverySnapshot('MP3 Export')
       const canContinue = runPreExportChecks({
         project,
         masterVolume,
@@ -2529,6 +2588,7 @@ export function useDAWActions(): DAWActions {
         checkedAt: Date.now(),
       }
 
+      savePreExportRecoverySnapshot('Stem Export')
       const canContinue = runPreExportChecks({
         project,
         masterVolume,
@@ -2605,6 +2665,7 @@ export function useDAWActions(): DAWActions {
       const loudness = analyzeBufferLoudness(audioBuffer)
       setLastExportLoudnessReport(loudness)
 
+      savePreExportRecoverySnapshot('Social Package Export')
       const canContinue = runPreExportChecks({
         project,
         masterVolume,
@@ -5307,6 +5368,10 @@ export function useDAWActions(): DAWActions {
     handleAudioExport,
     handleMp3Export,
     handleStemExport,
+    recoverySnapshots,
+    restoreRecoverySnapshotAsCopy,
+    previewRecoverySnapshot,
+    deleteRecoverySnapshot,
     importReferenceTrack,
     clearReferenceTrack,
     toggleReferenceAB,

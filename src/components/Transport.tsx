@@ -150,6 +150,10 @@ export function Transport({
   handleAudioExport,
   handleMp3Export,
   handleStemExport,
+  recoverySnapshots,
+  restoreRecoverySnapshotAsCopy,
+  previewRecoverySnapshot,
+  deleteRecoverySnapshot,
   importReferenceTrack,
   clearReferenceTrack,
   toggleReferenceAB,
@@ -738,6 +742,54 @@ export function Transport({
             <option key={cp.id} value={cp.id}>{new Date(cp.timestamp).toLocaleTimeString()} - {cp.name}</option>
           ))}
         </select>
+
+        <div className="px-2 py-1 text-xs border border-gray-800 rounded bg-[#121212] min-w-[260px]" data-testid="recovery-center-panel">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-emerald-300 font-semibold text-[11px]">Recovery Center</span>
+            <span className="text-[10px] text-gray-500">最近 {recoverySnapshots.length}/5</span>
+          </div>
+          {recoverySnapshots.length === 0 ? (
+            <div className="mt-1 text-[10px] text-gray-500">暂无可恢复快照（自动保存或导出前会生成）</div>
+          ) : (
+            <ul className="mt-1 space-y-1" data-testid="recovery-center-list">
+              {recoverySnapshots.map((snapshot) => (
+                <li key={snapshot.id} className="border border-gray-800/80 rounded px-2 py-1 text-[10px] text-gray-300">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate" title={snapshot.name}>{snapshot.name}</span>
+                    <span className="text-gray-500 shrink-0">{snapshot.source === 'pre-export' ? '导出前' : '自动保存'}</span>
+                  </div>
+                  <div className="mt-1 text-gray-500 truncate">{new Date(snapshot.timestamp).toLocaleString()}</div>
+                  <div className="mt-1 flex items-center gap-1">
+                    <button
+                      type="button"
+                      data-testid={`recovery-preview-${snapshot.id}`}
+                      onClick={() => previewRecoverySnapshot(snapshot.id)}
+                      className="px-1 py-0.5 rounded border border-gray-700 text-gray-400 hover:text-gray-200"
+                    >
+                      预听
+                    </button>
+                    <button
+                      type="button"
+                      data-testid={`recovery-restore-copy-${snapshot.id}`}
+                      onClick={() => restoreRecoverySnapshotAsCopy(snapshot.id)}
+                      className="px-1 py-0.5 rounded border border-emerald-700 text-emerald-300 hover:text-emerald-200"
+                    >
+                      恢复为副本
+                    </button>
+                    <button
+                      type="button"
+                      data-testid={`recovery-delete-${snapshot.id}`}
+                      onClick={() => deleteRecoverySnapshot(snapshot.id)}
+                      className="px-1 py-0.5 rounded border border-gray-700 text-gray-500 hover:text-gray-300"
+                    >
+                      删除
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         
         <select
           disabled={isPlaying}
