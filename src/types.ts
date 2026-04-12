@@ -154,6 +154,29 @@ export interface ReleaseMetadata {
   updatedAt: number
 }
 
+export interface MixReportTrackSummary {
+  trackId: string
+  trackName: string
+  peakDb: number
+  rmsDb: number
+}
+
+export interface MixReportEntry {
+  id: string
+  createdAt: number
+  exportFormat: 'wav' | 'mp3'
+  durationSec: number
+  projectPeakDb: number
+  projectRmsDb: number
+  loudnessDistribution: {
+    quiet: number
+    balanced: number
+    hot: number
+  }
+  trackSummaries: MixReportTrackSummary[]
+  suggestions: string[]
+}
+
 export interface ProjectState {
   id?: string
   name?: string
@@ -166,6 +189,7 @@ export interface ProjectState {
   tracks: Track[]
   markers?: Marker[]
   exportVersions?: ExportVersionEntry[]
+  mixReports?: MixReportEntry[]
   releaseMetadata?: ReleaseMetadata
 }
 

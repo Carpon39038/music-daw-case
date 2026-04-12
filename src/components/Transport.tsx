@@ -157,6 +157,8 @@ export function Transport({
   renameExportVersion,
   previewExportVersion,
   lastPreExportChecklistReport,
+  latestMixReport,
+  previousMixReport,
   handleSocialPublish,
   handleExportProjectCard,
   generateStyleStarter,
@@ -790,6 +792,40 @@ export function Transport({
                   </li>
                 ))}
               </ul>
+            )}
+          </div>
+
+          <div className="mt-2 border-t border-gray-800 pt-2" data-testid="mix-report-panel">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-emerald-300 font-semibold">新手混音报告</span>
+              <span className="text-[10px] text-gray-500">历史 {(latestMixReport ? 1 : 0) + (previousMixReport ? 1 : 0)}/2</span>
+            </div>
+            {!latestMixReport ? (
+              <div className="mt-1 text-[10px] text-gray-500">导出后自动生成报告（含轨道峰值/响度分布/优化建议）</div>
+            ) : (
+              <div className="mt-1 space-y-1 text-[10px]" data-testid="mix-report-content">
+                <div className="rounded border border-gray-800/80 px-2 py-1 text-gray-300">
+                  <div data-testid="mix-report-summary">本次 {latestMixReport.exportFormat.toUpperCase()}：峰值 {formatLoudnessDb(latestMixReport.projectPeakDb)} / RMS {formatLoudnessDb(latestMixReport.projectRmsDb)}</div>
+                  <div className="text-gray-500" data-testid="mix-report-distribution">响度分布：偏低 {latestMixReport.loudnessDistribution.quiet} · 均衡 {latestMixReport.loudnessDistribution.balanced} · 偏高 {latestMixReport.loudnessDistribution.hot}</div>
+                  <div className="mt-1 text-gray-400" data-testid="mix-report-top-track">最响轨道：{latestMixReport.trackSummaries[0]?.trackName || '无'}（峰值 {formatLoudnessDb(latestMixReport.trackSummaries[0]?.peakDb ?? -Infinity)}）</div>
+                </div>
+                <ul className="space-y-1" data-testid="mix-report-suggestions">
+                  {latestMixReport.suggestions.map((tip, idx) => (
+                    <li key={idx} className="rounded border border-gray-800/80 px-2 py-1 text-gray-300">• {tip}</li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  data-testid="mix-report-next-step-btn"
+                  className="w-full text-[10px] px-2 py-1 rounded bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800"
+                  onClick={() => {
+                    const tip = latestMixReport.suggestions[0] || '建议先做一次导出 A/B 对比并微调最响轨道。'
+                    window.alert(`下一步优化建议：\n${tip}`)
+                  }}
+                >
+                  下一步优化
+                </button>
+              </div>
             )}
           </div>
         </div>

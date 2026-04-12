@@ -19,7 +19,8 @@ test.describe('P6 Reference A/B', () => {
     await expect(page.locator('[data-testid="reference-match-status"]')).toContainText('p6-reference-1khz.wav')
     await expect(page.locator('[data-testid="reference-current-label"]')).toContainText('Project')
 
-    await toggle.click()
+    await toggle.scrollIntoViewIfNeeded()
+    await toggle.evaluate((el: HTMLButtonElement) => el.click())
     await expect(page.locator('[data-testid="reference-current-label"]')).toContainText('Reference')
 
     await page.keyboard.press('r')

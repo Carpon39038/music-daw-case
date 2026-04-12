@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
-import type { Clip, ExportVersionEntry, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, ProjectState, Track, WaveType } from '../types'
+import type { Clip, ExportVersionEntry, FavoriteClip, FrozenTrackSnapshot, MasterEQ, MasterPreset, MixReportEntry, ProjectState, Track, WaveType } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
 import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
@@ -378,6 +378,91 @@ interface ExportLoudnessReport {
   rmsDb: number
   verdict: 'ready' | 'adjust' | 'clipping-risk'
   checkedAt: number
+}
+
+function buildMixReportSuggestions(input: {
+  peakDb: number
+  rmsDb: number
+  loudnessDistribution: { quiet: number; balanced: number; hot: number }
+  topTrack: { name: string; peakDb: number } | null
+}): string[] {
+  const suggestions: string[] = []
+  if (input.peakDb > -1) {
+    suggestions.push('主输出峰值接近 0 dB，建议先下调 Master 或最响轨道约 1-2 dB。')
+  }
+  if (input.rmsDb < -24) {
+    suggestions.push('整体响度偏低，建议提升鼓组/主旋律电平后再导出。')
+  } else if (input.rmsDb > -10) {
+    suggestions.push('整体响度偏高，建议降低压缩或总线增益，避免听感疲劳。')
+  }
+  if (input.loudnessDistribution.hot >= Math.max(1, input.loudnessDistribution.balanced + input.loudnessDistribution.quiet)) {
+    suggestions.push('高响度轨道占比偏多，可优先对和声或铺底轨做 -1 dB 微调，留出主唱/主旋律空间。')
+  }
+  if (input.topTrack && input.topTrack.peakDb > -1.5) {
+    suggestions.push(`当前最响轨道是「${input.topTrack.name}」，建议优先检查该轨道瞬态与限幅。`)
+  }
+  if (suggestions.length === 0) {
+    suggestions.push('当前混音处于可发布区间，下一步可尝试 A/B 对比最近导出版本做微调。')
+  }
+  return suggestions.slice(0, 3)
+}
+
+function buildMixReportFromExport(input: {
+  project: ProjectState
+  exportFormat: 'wav' | 'mp3'
+  durationSec: number
+  loudness: ExportLoudnessReport
+}): MixReportEntry {
+  const trackSummaries = input.project.tracks
+    .filter((track) => track.isDrumTrack || track.clips.length > 0)
+    .map((track) => {
+      const peaks = track.clips.map((clip) => {
+        const gain = Math.max(0.0001, clip.gain ?? 1)
+        return 20 * Math.log10(gain * Math.max(0.0001, track.volume || 1))
+      })
+      const peakDb = peaks.length > 0 ? Math.max(...peaks) : -Infinity
+      const rmsDb = peaks.length > 0
+        ? peaks.reduce((sum, v) => sum + v, 0) / peaks.length - 6
+        : -Infinity
+      return {
+        trackId: track.id,
+        trackName: track.name,
+        peakDb,
+        rmsDb,
+      }
+    })
+    .sort((a, b) => b.peakDb - a.peakDb)
+
+  const loudnessDistribution = trackSummaries.reduce(
+    (acc, track) => {
+      if (track.rmsDb < -24) acc.quiet += 1
+      else if (track.rmsDb > -12) acc.hot += 1
+      else acc.balanced += 1
+      return acc
+    },
+    { quiet: 0, balanced: 0, hot: 0 },
+  )
+
+  const topTrack = trackSummaries.length > 0
+    ? trackSummaries.reduce((max, item) => (item.peakDb > max.peakDb ? item : max), trackSummaries[0])
+    : null
+
+  return {
+    id: crypto.randomUUID(),
+    createdAt: Date.now(),
+    exportFormat: input.exportFormat,
+    durationSec: input.durationSec,
+    projectPeakDb: input.loudness.peakDb,
+    projectRmsDb: input.loudness.rmsDb,
+    loudnessDistribution,
+    trackSummaries,
+    suggestions: buildMixReportSuggestions({
+      peakDb: input.loudness.peakDb,
+      rmsDb: input.loudness.rmsDb,
+      loudnessDistribution,
+      topTrack: topTrack ? { name: topTrack.trackName, peakDb: topTrack.peakDb } : null,
+    }),
+  }
 }
 
 function sanitizeExportVersionName(name: string, fallbackIndex = 1) {
@@ -1353,6 +1438,8 @@ export interface DAWActions {
   renameExportVersion: (id: string, name: string) => void
   previewExportVersion: (id: string) => void
   lastPreExportChecklistReport: PreExportChecklistReport | null
+  latestMixReport: MixReportEntry | null
+  previousMixReport: MixReportEntry | null
   autoMixSuggestionItems: AutoMixSuggestionItem[]
   autoMixAvailable: boolean
   autoMixPreviewMode: 'before' | 'after' | null
@@ -1453,6 +1540,8 @@ export function useDAWActions(): DAWActions {
     performanceMode,
   }))
   const exportVersionHistory = useMemo(() => (project.exportVersions ?? []).slice(0, 5), [project.exportVersions])
+  const latestMixReport = useMemo(() => (project.mixReports ?? [])[0] ?? null, [project.mixReports])
+  const previousMixReport = useMemo(() => (project.mixReports ?? [])[1] ?? null, [project.mixReports])
   const [monitorSource, setMonitorSource] = React.useState<MonitorSource>('project')
   const [referenceTrack, setReferenceTrack] = React.useState<ReferenceTrackState | null>(null)
   const referenceAudioRef = React.useRef<HTMLAudioElement | null>(null)
@@ -1875,6 +1964,13 @@ export function useDAWActions(): DAWActions {
     })
   }, [setProject])
 
+  const rememberMixReport = React.useCallback((entry: MixReportEntry) => {
+    setProject((prev) => ({
+      ...prev,
+      mixReports: [entry, ...(prev.mixReports ?? [])].slice(0, 10),
+    }))
+  }, [setProject])
+
   const renameExportVersion = React.useCallback((id: string, name: string) => {
     const normalized = sanitizeExportVersionName(name)
     setProject((prev) => {
@@ -2039,6 +2135,13 @@ export function useDAWActions(): DAWActions {
         tempoCurveTargetBpm,
         masterEQ,
       )
+      const mixReport = buildMixReportFromExport({
+        project,
+        exportFormat: 'wav',
+        durationSec: totalDurationSec,
+        loudness,
+      })
+      rememberMixReport(mixReport)
       const blob = new Blob([wavData], { type: 'audio/wav' })
       const url = URL.createObjectURL(blob)
       const reader = new FileReader()
@@ -2093,6 +2196,13 @@ export function useDAWActions(): DAWActions {
       if (!canContinue) return
 
       const mp3Data = audioBufferToMp3(audioBuffer)
+      const mixReport = buildMixReportFromExport({
+        project,
+        exportFormat: 'mp3',
+        durationSec: totalDurationSec,
+        loudness,
+      })
+      rememberMixReport(mixReport)
       const blob = new Blob([mp3Data], { type: 'audio/mp3' })
       const url = URL.createObjectURL(blob)
       const reader = new FileReader()
@@ -4816,6 +4926,8 @@ export function useDAWActions(): DAWActions {
     renameExportVersion,
     previewExportVersion,
     lastPreExportChecklistReport,
+    latestMixReport,
+    previousMixReport,
     autoMixSuggestionItems,
     autoMixAvailable,
     autoMixPreviewMode,
