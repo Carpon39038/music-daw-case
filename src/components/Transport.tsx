@@ -145,6 +145,9 @@ export function Transport({
   handleMIDIImport,
   handleMIDIExport,
   exportTargetPreset,
+  exportNamingTemplate,
+  setExportNamingTemplate,
+  exportNamingPreview,
   setExportTargetPresetKey,
   resetExportTargetPresetToCustom,
   handleMp3Export,
@@ -625,6 +628,20 @@ export function Transport({
             />
           </div>
         ) : null}
+        <div className="flex items-center gap-1" data-testid="export-naming-template-controls">
+          <label className="text-[10px] text-gray-400" htmlFor="export-naming-template-input">命名模板</label>
+          <input
+            id="export-naming-template-input"
+            data-testid="export-naming-template-input"
+            type="text"
+            value={exportNamingTemplate}
+            onChange={(event) => setExportNamingTemplate(event.target.value)}
+            disabled={isPlaying}
+            className="w-56 text-[11px] bg-[#141414] border border-gray-800 rounded px-1.5 py-1 text-gray-200"
+            placeholder="{project}_{bpm}_{date}_{version}"
+          />
+          <span className="text-[10px] text-gray-500" data-testid="export-naming-template-preview-wav">WAV: {exportNamingPreview.wav}</span>
+        </div>
         <button
           onClick={() => {
             enqueueExportTask('wav')

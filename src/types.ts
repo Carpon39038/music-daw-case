@@ -282,6 +282,7 @@ export interface ProjectState {
   name?: string
   lastSavedAt?: number
   exportTargetPreset?: ExportTargetPreset
+  exportNamingTemplate?: string
   bpm: number
   tempoCurveType?: 'constant' | 'accelerando' | 'ritardando'
   tempoCurveTargetBpm?: number

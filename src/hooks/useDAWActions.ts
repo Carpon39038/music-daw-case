@@ -5,7 +5,7 @@ import { audioEngine } from '../audio/AudioEngine'
 import { audioBufferToMp3 } from '../utils/audioBufferToMp3'
 import { audioBufferToWav } from '../utils/audioBufferToWav'
 import { getTimelineDurationSec, secondsToBeat } from '../utils/tempoCurve'
-import { buildSocialExportBaseName, createSocialCardBlob, createSocialPackageZipBlob, isPublishTemplateReady, isReleaseMetadataReady, normalizePublishTemplate, normalizeReleaseMetadata, parseReleaseTags, releaseTagsToText, triggerDownload } from '../utils/socialPublish'
+import { createSocialCardBlob, createSocialPackageZipBlob, isPublishTemplateReady, isReleaseMetadataReady, normalizePublishTemplate, normalizeReleaseMetadata, parseReleaseTags, releaseTagsToText, triggerDownload } from '../utils/socialPublish'
 import { zipSync, strToU8 } from 'fflate'
 import { analyzeChordSuggestions } from '../utils/chordSuggestion'
 import { hzToClosestNoteLabel } from '../utils/notes'
@@ -65,6 +65,57 @@ function exportPresetLabel(key: ExportTargetPresetKey) {
   if (key === 'music-platform') return '音乐平台'
   if (key === 'general') return '通用'
   return '自定义'
+}
+
+const DEFAULT_EXPORT_NAMING_TEMPLATE = '{project}_{bpm}_{date}_{version}'
+
+function sanitizeExportFileNamePart(value: string) {
+  return value
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/-+/g, '-')
+    .replace(/^[-_.]+|[-_.]+$/g, '')
+}
+
+function sanitizeExportNamingTemplate(input: string) {
+  const trimmed = input.trim()
+  if (!trimmed) return DEFAULT_EXPORT_NAMING_TEMPLATE
+  const limited = trimmed.slice(0, 120)
+  return limited.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '_')
+}
+
+function formatExportDateToken(date: Date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}${m}${d}`
+}
+
+function resolveExportFileName(options: {
+  template: string
+  projectName: string
+  bpm: number
+  version: number
+  serial?: number
+  extension: string
+  date?: Date
+}) {
+  const date = options.date ?? new Date()
+  const serialSuffix = Number.isFinite(options.serial) && (options.serial ?? 0) > 0
+    ? `-${Math.max(1, Math.round(options.serial ?? 1))}`
+    : ''
+  const tokens: Record<string, string> = {
+    project: sanitizeExportFileNamePart(options.projectName.trim() || 'untitled_project') || 'untitled_project',
+    bpm: String(Math.max(1, Math.round(options.bpm))),
+    date: `${formatExportDateToken(date)}${serialSuffix}`,
+    version: `v${Math.max(1, Math.round(options.version))}`,
+  }
+
+  const filled = options.template.replace(/\{(project|bpm|date|version)\}/g, (_, key: keyof typeof tokens) => tokens[key])
+  const cleaned = sanitizeExportFileNamePart(filled) || `${tokens.project}_${tokens.date}_${tokens.version}`
+  const ext = options.extension.startsWith('.') ? options.extension.slice(1) : options.extension
+  return `${cleaned}.${ext}`
 }
 
 export function semitoneToRatio(semitones: number) {
@@ -969,6 +1020,134 @@ interface ProjectHealthReport {
   checkedAt: number
   failedCount: number
   items: ProjectHealthRisk[]
+}
+
+interface ProjectCleanupItem {
+  kind: 'unused-clip' | 'empty-track' | 'invalid-resource-ref'
+  id: string
+  label: string
+  detail: string
+}
+
+interface ProjectCleanupReport {
+  generatedAt: number
+  totalCount: number
+  items: ProjectCleanupItem[]
+}
+
+function isLikelyAudioDataUrl(value: string | undefined): boolean {
+  if (!value) return false
+  return /^data:audio\//.test(value) || /^data:application\//.test(value)
+}
+
+function buildProjectCleanupReport(project: ProjectState, effectiveTimelineBeats: number): ProjectCleanupReport {
+  const items: ProjectCleanupItem[] = []
+
+  project.tracks.forEach((track) => {
+    if (track.clips.length === 0) {
+      items.push({
+        kind: 'empty-track',
+        id: `empty-track:${track.id}`,
+        label: `空轨道：${track.name}`,
+        detail: '该轨道没有任何 Clip，可清理以减少工程复杂度。',
+      })
+    }
+
+    track.clips.forEach((clip) => {
+      const outOfRange = clip.startBeat >= effectiveTimelineBeats || clip.startBeat + clip.lengthBeats <= 0
+      const invalidLength = !Number.isFinite(clip.lengthBeats) || clip.lengthBeats <= 0
+      if (clip.muted || outOfRange || invalidLength) {
+        items.push({
+          kind: 'unused-clip',
+          id: `unused-clip:${track.id}:${clip.id}`,
+          label: `未使用 Clip：${clip.name || clip.id}`,
+          detail: clip.muted
+            ? `位于轨道 ${track.name}（已静音）。`
+            : outOfRange
+              ? `位于轨道 ${track.name}（超出当前工程有效区间）。`
+              : `位于轨道 ${track.name}（时值无效）。`,
+        })
+      }
+
+      if (clip.audioData && !isLikelyAudioDataUrl(clip.audioData)) {
+        items.push({
+          kind: 'invalid-resource-ref',
+          id: `invalid-resource:clip-audio:${track.id}:${clip.id}`,
+          label: `失效素材引用：${clip.name || clip.id}`,
+          detail: `轨道 ${track.name} 中的音频数据引用格式异常，将在清理时移除无效引用。`,
+        })
+      }
+    })
+
+    if (track.freezeAudioData && !isLikelyAudioDataUrl(track.freezeAudioData)) {
+      items.push({
+        kind: 'invalid-resource-ref',
+        id: `invalid-resource:freeze:${track.id}`,
+        label: `失效冻结素材：${track.name}`,
+        detail: '冻结音频引用格式异常，将在清理时移除并保留原始可编辑数据。',
+      })
+    }
+  })
+
+  ;(project.exportVersions ?? []).forEach((entry) => {
+    if (entry.audioDataUrl && !isLikelyAudioDataUrl(entry.audioDataUrl)) {
+      items.push({
+        kind: 'invalid-resource-ref',
+        id: `invalid-resource:export:${entry.id}`,
+        label: `失效导出预览：${entry.name}`,
+        detail: '导出记录中的预览音频引用无效，将在清理时移除该预览引用。',
+      })
+    }
+  })
+
+  return {
+    generatedAt: Date.now(),
+    totalCount: items.length,
+    items,
+  }
+}
+
+function applyProjectCleanup(project: ProjectState, effectiveTimelineBeats: number): ProjectState {
+  const nextTracks: Track[] = []
+
+  project.tracks.forEach((track) => {
+    const cleanedClips = track.clips.filter((clip) => {
+      const outOfRange = clip.startBeat >= effectiveTimelineBeats || clip.startBeat + clip.lengthBeats <= 0
+      const invalidLength = !Number.isFinite(clip.lengthBeats) || clip.lengthBeats <= 0
+      return !(clip.muted || outOfRange || invalidLength)
+    }).map((clip) => {
+      if (clip.audioData && !isLikelyAudioDataUrl(clip.audioData)) {
+        const cleanedClip = { ...clip }
+        delete cleanedClip.audioData
+        return cleanedClip
+      }
+      return clip
+    })
+
+    if (cleanedClips.length === 0) return
+
+    const nextTrack: Track = { ...track, clips: cleanedClips }
+    if (nextTrack.freezeAudioData && !isLikelyAudioDataUrl(nextTrack.freezeAudioData)) {
+      delete nextTrack.freezeAudioData
+    }
+
+    nextTracks.push(nextTrack)
+  })
+
+  const nextExportVersions = (project.exportVersions ?? []).map((entry) => {
+    if (entry.audioDataUrl && !isLikelyAudioDataUrl(entry.audioDataUrl)) {
+      const cleanedEntry = { ...entry }
+      delete cleanedEntry.audioDataUrl
+      return cleanedEntry
+    }
+    return entry
+  })
+
+  return {
+    ...project,
+    tracks: nextTracks,
+    exportVersions: nextExportVersions,
+  }
 }
 
 function buildProjectHealthReport(input: {
@@ -2042,6 +2221,14 @@ declare global {
       latestExportVersionPresetKey: ExportTargetPresetKey | null
       latestExportVersionSampleRate: number | null
       latestExportVersionBitrateKbps: number | null
+      exportNamingTemplate: string
+      exportNamingPreview: {
+        wav: string
+        mp3: string
+        stemsZip: string
+        socialZip: string
+        projectCard: string
+      }
       audioContextState: AudioContextState | 'uninitialized'
       beatDurationSec: number
       timelineDurationSec: number
@@ -2237,6 +2424,15 @@ export interface DAWActions {
   handleMIDIImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMIDIExport: () => void
   exportTargetPreset: ExportTargetPreset
+  exportNamingTemplate: string
+  setExportNamingTemplate: (template: string) => void
+  exportNamingPreview: {
+    wav: string
+    mp3: string
+    stemsZip: string
+    socialZip: string
+    projectCard: string
+  }
   setExportTargetPresetKey: (key: ExportTargetPresetKey) => void
   resetExportTargetPresetToCustom: () => void
   handleAudioExport: () => Promise<{ ok: boolean; message: string }>
@@ -2285,6 +2481,10 @@ export interface DAWActions {
   autoMixPreviewMode: 'before' | 'after' | null
   autoMixCoverageReady: boolean
   projectHealthReport: ProjectHealthReport
+  projectCleanupReport: ProjectCleanupReport
+  runProjectCleanupScan: () => void
+  applyProjectCleanupFromReport: () => void
+  restoreProjectCleanupUndo: () => void
   resolveProjectHealthRisk: (riskKey: ProjectHealthRiskKey) => void
   runAutoMixAssistant: () => void
   toggleAutoMixSuggestion: (suggestionId: string) => void
@@ -2399,9 +2599,17 @@ export function useDAWActions(): DAWActions {
     timelineBeats: TIMELINE_BEATS,
     performanceMode,
   }))
+  const [projectCleanupReport, setProjectCleanupReport] = React.useState<ProjectCleanupReport>(() =>
+    buildProjectCleanupReport(project, loopEnabled ? loopLengthBeats : TIMELINE_BEATS),
+  )
+  const projectCleanupUndoRef = React.useRef<ProjectState | null>(null)
   const exportTargetPreset = useMemo(
     () => normalizeExportTargetPreset(project.exportTargetPreset),
     [project.exportTargetPreset],
+  )
+  const exportNamingTemplate = useMemo(
+    () => sanitizeExportNamingTemplate(project.exportNamingTemplate ?? DEFAULT_EXPORT_NAMING_TEMPLATE),
+    [project.exportNamingTemplate],
   )
   const exportVersionHistory = useMemo(() => (project.exportVersions ?? []).slice(0, 5), [project.exportVersions])
   const latestMixReport = useMemo(() => (project.mixReports ?? [])[0] ?? null, [project.mixReports])
@@ -2429,6 +2637,7 @@ export function useDAWActions(): DAWActions {
   }[]>([])
   const resetProjectState = useDAWStore((state) => state.resetProject)
   const tapTempoRef = useRef<number[]>([])
+  const exportFileSerialRef = useRef(0)
   useEffect(() => {
     project.tracks.forEach((track) => {
       track.clips.forEach((clip) => {
@@ -2690,7 +2899,29 @@ export function useDAWActions(): DAWActions {
       },
     })
     setProjectHealthReport(healthReport)
+    setProjectCleanupReport(buildProjectCleanupReport(project, effectiveTimelineBeats))
   }, [project, masterVolume, loopEnabled, effectiveTimelineBeats, performanceMode, lastExportLoudnessReport])
+
+  const runProjectCleanupScan = React.useCallback(() => {
+    setProjectCleanupReport(buildProjectCleanupReport(project, effectiveTimelineBeats))
+  }, [project, effectiveTimelineBeats])
+
+  const applyProjectCleanupFromReport = React.useCallback(() => {
+    const report = buildProjectCleanupReport(project, effectiveTimelineBeats)
+    if (report.totalCount <= 0) {
+      setProjectCleanupReport(report)
+      return
+    }
+    projectCleanupUndoRef.current = structuredClone(project)
+    setProject((prev) => applyProjectCleanup(prev, effectiveTimelineBeats), { saveHistory: true })
+  }, [project, effectiveTimelineBeats, setProject])
+
+  const restoreProjectCleanupUndo = React.useCallback(() => {
+    if (!projectCleanupUndoRef.current) return
+    const previous = structuredClone(projectCleanupUndoRef.current)
+    setProject(previous)
+    projectCleanupUndoRef.current = null
+  }, [setProject])
 
   const resolveProjectHealthRisk = React.useCallback((riskKey: ProjectHealthRiskKey) => {
     resolveHealthRiskAction({
@@ -3316,6 +3547,52 @@ export function useDAWActions(): DAWActions {
     }), { saveHistory: true })
   }, [setProject])
 
+  const setExportNamingTemplate = React.useCallback((template: string) => {
+    const normalized = sanitizeExportNamingTemplate(template)
+    setProject((prev) => ({
+      ...prev,
+      exportNamingTemplate: normalized,
+    }), { saveHistory: true })
+  }, [setProject])
+
+  const exportNamingPreview = useMemo(() => ({
+    wav: resolveExportFileName({
+      template: exportNamingTemplate,
+      projectName: project.name || 'Untitled Project',
+      bpm: project.bpm,
+      version: (project.exportVersions?.length ?? 0) + 1,
+      extension: 'wav',
+    }),
+    mp3: resolveExportFileName({
+      template: exportNamingTemplate,
+      projectName: project.name || 'Untitled Project',
+      bpm: project.bpm,
+      version: (project.exportVersions?.length ?? 0) + 1,
+      extension: 'mp3',
+    }),
+    stemsZip: resolveExportFileName({
+      template: exportNamingTemplate,
+      projectName: project.name || 'Untitled Project',
+      bpm: project.bpm,
+      version: (project.exportVersions?.length ?? 0) + 1,
+      extension: 'zip',
+    }),
+    socialZip: resolveExportFileName({
+      template: exportNamingTemplate,
+      projectName: project.name || 'Untitled Project',
+      bpm: project.bpm,
+      version: (project.exportVersions?.length ?? 0) + 1,
+      extension: 'zip',
+    }),
+    projectCard: resolveExportFileName({
+      template: exportNamingTemplate,
+      projectName: project.name || 'Untitled Project',
+      bpm: project.bpm,
+      version: (project.exportVersions?.length ?? 0) + 1,
+      extension: 'png',
+    }),
+  }), [exportNamingTemplate, project.bpm, project.exportVersions?.length, project.name])
+
   const savePreExportRecoverySnapshot = React.useCallback((name: string) => {
     storeSaveRecoverySnapshot({
       name,
@@ -3409,7 +3686,6 @@ export function useDAWActions(): DAWActions {
       })
       rememberMixReport(mixReport)
       const blob = new Blob([wavData], { type: 'audio/wav' })
-      const url = URL.createObjectURL(blob)
       const reader = new FileReader()
       reader.onloadend = () => {
         rememberExportVersion({
@@ -3428,13 +3704,15 @@ export function useDAWActions(): DAWActions {
       }
       reader.readAsDataURL(blob)
 
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `project-${Date.now()}.wav`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const exportSerial = ++exportFileSerialRef.current
+      triggerDownload(blob, resolveExportFileName({
+        template: exportNamingTemplate,
+        projectName: project.name || 'Untitled Project',
+        bpm: project.bpm,
+        version: (project.exportVersions?.length ?? 0) + 1,
+        serial: exportSerial,
+        extension: 'wav',
+      }))
       return { ok: true, message: 'WAV 导出完成' }
     } catch (error) {
       console.error('Failed to export audio:', error)
@@ -3484,7 +3762,6 @@ export function useDAWActions(): DAWActions {
       })
       rememberMixReport(mixReport)
       const blob = new Blob([mp3Data], { type: 'audio/mp3' })
-      const url = URL.createObjectURL(blob)
       const reader = new FileReader()
       reader.onloadend = () => {
         rememberExportVersion({
@@ -3503,13 +3780,15 @@ export function useDAWActions(): DAWActions {
       }
       reader.readAsDataURL(blob)
 
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `project-${Date.now()}.mp3`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const exportSerial = ++exportFileSerialRef.current
+      triggerDownload(blob, resolveExportFileName({
+        template: exportNamingTemplate,
+        projectName: project.name || 'Untitled Project',
+        bpm: project.bpm,
+        version: (project.exportVersions?.length ?? 0) + 1,
+        serial: exportSerial,
+        extension: 'mp3',
+      }))
       return { ok: true, message: 'MP3 导出完成' }
     } catch (error) {
       console.error('Failed to export MP3:', error)
@@ -3586,8 +3865,16 @@ export function useDAWActions(): DAWActions {
       new Uint8Array(zipBuffer).set(zipData)
       const blob = new Blob([zipBuffer], { type: 'application/zip' })
 
-      const baseName = buildSocialExportBaseName(project.name)
-      triggerDownload(blob, `${baseName}-${bpmLabel}BPM-stems.zip`)
+      const exportSerial = ++exportFileSerialRef.current
+      const stemFileName = resolveExportFileName({
+        template: exportNamingTemplate,
+        projectName: project.name || 'Untitled Project',
+        bpm: project.bpm,
+        version: (project.exportVersions?.length ?? 0) + 1,
+        serial: exportSerial,
+        extension: 'zip',
+      })
+      triggerDownload(blob, stemFileName)
       return { ok: true, message: '分轨导出完成' }
     } catch (error) {
       console.error('Failed to export stems:', error)
@@ -3690,10 +3977,18 @@ export function useDAWActions(): DAWActions {
       const mp3Data = audioBufferToMp3(audioBuffer, { kbps: exportTargetPreset.bitrateKbps })
       const mp3Blob = new Blob([mp3Data], { type: 'audio/mp3' })
       const cardBlob = await createSocialCardBlob(project, totalDurationSec, releaseMetadata)
-      const baseName = buildSocialExportBaseName(project.name)
-      const zipBlob = await createSocialPackageZipBlob(baseName, mp3Blob, cardBlob)
+      const zipBaseName = `${(project.name || 'Untitled Project').trim() || 'Untitled Project'}-social-package`
+      const zipBlob = await createSocialPackageZipBlob(zipBaseName, mp3Blob, cardBlob)
 
-      triggerDownload(zipBlob, `${baseName}-social-package.zip`)
+      const exportSerial = ++exportFileSerialRef.current
+      triggerDownload(zipBlob, resolveExportFileName({
+        template: exportNamingTemplate,
+        projectName: project.name || 'Untitled Project',
+        bpm: project.bpm,
+        version: (project.exportVersions?.length ?? 0) + 1,
+        serial: exportSerial,
+        extension: 'zip',
+      }))
     } catch (error) {
       console.error('Failed to publish social package:', error)
     }
@@ -3705,8 +4000,15 @@ export function useDAWActions(): DAWActions {
 
     try {
       const cardBlob = await createSocialCardBlob(project, totalDurationSec, releaseMetadata)
-      const baseName = buildSocialExportBaseName(project.name)
-      triggerDownload(cardBlob, `${baseName}-project-card.png`)
+      const exportSerial = ++exportFileSerialRef.current
+      triggerDownload(cardBlob, resolveExportFileName({
+        template: exportNamingTemplate,
+        projectName: project.name || 'Untitled Project',
+        bpm: project.bpm,
+        version: (project.exportVersions?.length ?? 0) + 1,
+        serial: exportSerial,
+        extension: 'png',
+      }))
     } catch (error) {
       console.error('Failed to export project card:', error)
     }
@@ -4079,6 +4381,8 @@ export function useDAWActions(): DAWActions {
       latestExportVersionPresetKey: exportVersionHistory[0]?.exportTargetPresetKey ?? null,
       latestExportVersionSampleRate: exportVersionHistory[0]?.sampleRate ?? null,
       latestExportVersionBitrateKbps: exportVersionHistory[0]?.bitrateKbps ?? null,
+      exportNamingTemplate,
+      exportNamingPreview,
       exportQueue,
       audioContextState: audioEngine.ctx?.state ?? 'uninitialized',
       beatDurationSec: beatDuration,
@@ -6571,6 +6875,9 @@ export function useDAWActions(): DAWActions {
     handleMIDIImport,
     handleMIDIExport,
     exportTargetPreset,
+    exportNamingTemplate,
+    setExportNamingTemplate,
+    exportNamingPreview,
     setExportTargetPresetKey,
     resetExportTargetPresetToCustom,
     handleAudioExport,
@@ -6606,6 +6913,10 @@ export function useDAWActions(): DAWActions {
     autoMixPreviewMode,
     autoMixCoverageReady,
     projectHealthReport,
+    projectCleanupReport,
+    runProjectCleanupScan,
+    applyProjectCleanupFromReport,
+    restoreProjectCleanupUndo,
     resolveProjectHealthRisk,
     runAutoMixAssistant,
     toggleAutoMixSuggestion,

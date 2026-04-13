@@ -192,6 +192,11 @@ export function triggerDownload(blob: Blob, fileName: string) {
   const a = document.createElement('a')
   a.href = url
   a.download = fileName
+  const win = window as typeof window & { __TEST_DOWNLOADS__?: string[] }
+  if (!Array.isArray(win.__TEST_DOWNLOADS__)) {
+    win.__TEST_DOWNLOADS__ = []
+  }
+  win.__TEST_DOWNLOADS__.push(fileName)
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

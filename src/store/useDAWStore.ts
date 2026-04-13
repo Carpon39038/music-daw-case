@@ -220,6 +220,7 @@ function createInitialProject(): ProjectState {
       targetLoudnessDb: -14,
       peakLimitDb: -1,
     },
+    exportNamingTemplate: '{project}_{bpm}_{date}_{version}',
     bpm: 120,
     tempoCurveType: 'constant',
     tempoCurveTargetBpm: 120,
@@ -411,6 +412,7 @@ function normalizeProject(project: ProjectState): ProjectState {
         ? Number(project.exportTargetPreset?.peakLimitDb)
         : -1,
     },
+    exportNamingTemplate: typeof project.exportNamingTemplate === 'string' ? project.exportNamingTemplate : '{project}_{bpm}_{date}_{version}',
     tempoCurveType: project.tempoCurveType ?? 'constant',
     tempoCurveTargetBpm: project.tempoCurveTargetBpm ?? project.bpm,
     scaleKey: project.scaleKey ?? 'C',
