@@ -46,7 +46,7 @@ export function Mixer({
   const meterHeight = Math.max(0, Math.min(100, (db + 60) * (100 / 60)))
 
   return (
-    <section className="meter h-48 bg-[#111] border-t border-gray-800 flex p-4 gap-8 flex-shrink-0" data-testid="mixer">
+    <section className="meter h-48 bg-[#111] border-t border-gray-800 flex p-4 gap-8 flex-shrink-0 overflow-x-auto" data-testid="mixer">
       {/* Master Volume */}
       <div className="flex flex-col items-center w-24">
         <span className="text-xs text-gray-500 font-medium mb-2">MASTER</span>

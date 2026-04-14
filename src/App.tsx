@@ -40,7 +40,7 @@ function App() {
 
   return (
     <div
-      className="daw-root flex flex-col h-screen min-w-[1366px] overflow-x-auto bg-[#0a0a0a] text-gray-200 font-sans select-none"
+      className="daw-root flex flex-col h-screen overflow-hidden bg-[#0a0a0a] text-gray-200 font-sans select-none"
       data-testid="daw-root"
     >
       <h1 className="daw-title sr-only">Music DAW Case</h1>

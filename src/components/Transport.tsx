@@ -315,8 +315,8 @@ export function Transport({
   }
 
   return (
-    <section className="transport h-16 bg-[#111] border-b border-gray-800 flex items-center px-4 justify-between flex-shrink-0" data-testid="transport">
-      <div className="transport-primary flex items-center gap-4">
+    <section className="transport bg-[#111] border-b border-gray-800 flex items-center px-4 gap-4 h-auto min-h-[3rem] py-2 flex-shrink-0 overflow-x-auto overflow-y-hidden" data-testid="transport">
+      <div className="transport-primary flex items-center gap-4 flex-shrink-0">
         <div className="flex items-center gap-2 bg-[#1a1a1a] p-1 rounded-md">
           <button
             className="p-2 hover:bg-gray-800 rounded text-gray-400 hover:text-white"

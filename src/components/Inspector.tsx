@@ -52,7 +52,7 @@ export function Inspector(d: DAWActions) {
   const variationBundle = project.arrangementVariationBundle
 
   return (
-    <section className="inspector w-80 bg-[#111] border-l border-gray-800 flex flex-col overflow-y-auto flex-shrink-0" data-testid="inspector-panel">
+    <section className="inspector w-72 max-w-xs bg-[#111] border-l border-gray-800 flex flex-col overflow-y-auto flex-shrink-0" data-testid="inspector-panel">
       <div className="h-8 border-b border-gray-800 flex items-center px-4 bg-[#0a0a0a] sticky top-0 z-10">
         <span className="text-xs text-gray-500 font-medium">INSPECTOR</span>
       </div>
