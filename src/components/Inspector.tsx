@@ -17,7 +17,7 @@ export function Inspector(d: DAWActions) {
     duplicateClip, splitClip, clipboard, previewClip,
     autoMixSuggestionItems, autoMixAvailable, autoMixPreviewMode, autoMixCoverageReady,
     runAutoMixAssistant, toggleAutoMixSuggestion, previewAutoMixVersion,
-    projectHealthReport, resolveProjectHealthRisk,
+    projectHealthReport, projectCleanupReport, runProjectCleanupScan, applyProjectCleanupFromReport, restoreProjectCleanupUndo, resolveProjectHealthRisk,
     chorusLiftMarkerOptions, selectedChorusLiftMarkerId, chorusLiftSettings, chorusDoubleHarmonySettings,
     setSelectedChorusLiftMarkerId, toggleChorusLiftSetting, toggleChorusDoubleHarmonySetting, applyChorusLiftBuilder, applyChorusDoubleHarmonyBuilder,
     sectionEnergyOptions, selectedSectionEnergyIds, toggleSectionEnergySelection, applySectionEnergyAutomation, resetSectionEnergyAutomation,
@@ -572,6 +572,58 @@ export function Inspector(d: DAWActions) {
                   ))}
                 </div>
                 <p className="text-[10px] text-gray-500">风险项与导出清单保持一致，可一键跳转并修复。</p>
+              </div>
+
+              <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="project-cleanup-panel">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-gray-500 block">Project Cleanup</label>
+                  <span className={`text-[10px] ${projectCleanupReport.totalCount === 0 ? 'text-emerald-400' : 'text-amber-300'}`} data-testid="project-cleanup-count">
+                    {projectCleanupReport.totalCount === 0 ? '可清理项 0' : `${projectCleanupReport.totalCount} 项待清理`}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-500" data-testid="project-cleanup-checked-at">
+                  最近扫描：{new Date(projectCleanupReport.generatedAt).toLocaleTimeString()}
+                </p>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    data-testid="project-cleanup-scan-btn"
+                    onClick={runProjectCleanupScan}
+                    disabled={isPlaying}
+                    className="text-[10px] px-2 py-1 rounded bg-[#1f2937] hover:bg-[#374151] text-gray-100 disabled:opacity-40"
+                  >
+                    扫描
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="project-cleanup-apply-btn"
+                    onClick={applyProjectCleanupFromReport}
+                    disabled={isPlaying || projectCleanupReport.totalCount === 0}
+                    className="text-[10px] px-2 py-1 rounded bg-[#0f766e] hover:bg-[#115e59] text-white disabled:opacity-40"
+                  >
+                    一键清理
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="project-cleanup-undo-btn"
+                    onClick={restoreProjectCleanupUndo}
+                    disabled={isPlaying}
+                    className="text-[10px] px-2 py-1 rounded bg-[#374151] hover:bg-[#4b5563] text-gray-100 disabled:opacity-40"
+                  >
+                    撤销清理
+                  </button>
+                </div>
+                <div className="space-y-1 max-h-28 overflow-auto" data-testid="project-cleanup-item-list">
+                  {projectCleanupReport.items.slice(0, 12).map((item) => (
+                    <div key={item.id} className="rounded border border-gray-700 bg-[#111] px-2 py-1 text-[10px] text-gray-300" data-testid={`project-cleanup-item-${item.id}`}>
+                      <div className="font-medium">{item.label}</div>
+                      <div className="text-gray-500">{item.detail}</div>
+                    </div>
+                  ))}
+                  {projectCleanupReport.totalCount === 0 && (
+                    <div className="text-[10px] text-gray-500">暂无可清理项（未使用 Clip / 空轨道 / 失效素材引用）</div>
+                  )}
+                </div>
               </div>
 
               <div className="rounded border border-gray-800 bg-[#151515] p-2 space-y-2" data-testid="auto-mix-assistant-panel">
