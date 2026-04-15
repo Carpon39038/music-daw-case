@@ -1,4 +1,4 @@
-import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2, FileAudio, Mic, Shield, GitCompare, Zap } from 'lucide-react'
+import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2, FileAudio, Mic, Shield, GitCompare, Zap, SlidersHorizontal } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { formatTime } from '../utils/formatTime'
@@ -198,6 +198,7 @@ export function Transport({
   const unlockAchievement = useDAWStore(s => s.unlockAchievement)
 
   const [challengeOpen, setChallengeOpen] = useState(false)
+  const [transportSettingsOpen, setTransportSettingsOpen] = useState(false)
   const [exportPanelOpen, setExportPanelOpen] = useState(false)
   const [recoveryPanelOpen, setRecoveryPanelOpen] = useState(false)
   const [referencePanelOpen, setReferencePanelOpen] = useState(false)
@@ -394,7 +395,7 @@ export function Transport({
         </div>
       </div>
 
-      <div className="min-w-0 flex-1 flex items-center justify-end flex-wrap gap-3 content-center">
+      <div className={`${transportSettingsOpen ? 'flex' : 'hidden'} min-w-0 flex-1 items-center justify-end flex-wrap gap-3 content-center`}>
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500 uppercase tracking-wider">BPM</span>
           <input
@@ -560,7 +561,7 @@ export function Transport({
         >
           <Download size={18} />
         </button>
-        <div className="flex items-center gap-1" data-testid="export-target-preset-controls">
+        <div className={`${exportPanelOpen ? 'flex' : 'hidden'} items-center gap-1`} data-testid="export-target-preset-controls">
           <label className="text-[10px] text-gray-400" htmlFor="export-target-preset-select">导出目标</label>
           <select
             id="export-target-preset-select"
@@ -580,7 +581,7 @@ export function Transport({
             {exportTargetPreset.sampleRate}Hz / {exportTargetPreset.bitrateKbps}kbps / {exportTargetPreset.targetLoudnessDb}dB / 峰值{exportTargetPreset.peakLimitDb}dB
           </span>
         </div>
-        {exportTargetPreset.key === 'custom' ? (
+        {exportPanelOpen && exportTargetPreset.key === 'custom' ? (
           <div className="flex items-center gap-1" data-testid="export-target-custom-controls">
             <label className="text-[10px] text-gray-500">SR</label>
             <input
@@ -632,7 +633,7 @@ export function Transport({
             />
           </div>
         ) : null}
-        <div className="flex items-center gap-1" data-testid="export-naming-template-controls">
+        <div className={`${exportPanelOpen ? 'flex' : 'hidden'} items-center gap-1`} data-testid="export-naming-template-controls">
           <label className="text-[10px] text-gray-400" htmlFor="export-naming-template-input">命名模板</label>
           <input
             id="export-naming-template-input"
@@ -653,7 +654,7 @@ export function Transport({
           }}
           disabled={isPlaying}
           data-testid="audio-export-btn"
-          className="p-2 text-gray-500 hover:text-gray-300"
+          className={`${exportPanelOpen ? '' : 'hidden '}p-2 text-gray-500 hover:text-gray-300`}
           title="Queue WAV Export"
         >
           <FileAudio size={18} />
@@ -665,7 +666,7 @@ export function Transport({
           }}
           disabled={isPlaying}
           data-testid="mp3-export-btn"
-          className="p-2 text-gray-500 hover:text-gray-300"
+          className={`${exportPanelOpen ? '' : 'hidden '}p-2 text-gray-500 hover:text-gray-300`}
           title="Queue MP3 Export"
         >
           <span className="text-xs font-bold">MP3</span>
@@ -677,7 +678,7 @@ export function Transport({
           }}
           disabled={isPlaying}
           data-testid="stem-export-btn"
-          className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded"
+          className={`${exportPanelOpen ? '' : 'hidden '}px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded`}
           title="Queue per-track WAV stems (.zip)"
         >
           Stems
@@ -689,7 +690,7 @@ export function Transport({
           }}
           disabled={isPlaying}
           data-testid="social-publish-btn"
-          className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded"
+          className={`${exportPanelOpen ? '' : 'hidden '}px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded`}
           title="Export social package ZIP (MP3 + cover card)"
         >
           Publish
@@ -701,7 +702,7 @@ export function Transport({
           }}
           disabled={isPlaying}
           data-testid="project-card-export-btn"
-          className="px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded"
+          className={`${exportPanelOpen ? '' : 'hidden '}px-2 py-1 text-xs bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 border border-gray-800 rounded`}
           title="Export local project cover card as PNG"
         >
           Card
@@ -780,6 +781,14 @@ export function Transport({
             <Zap size={16} />
           </button>
           <button
+            type="button"
+            onClick={() => setTransportSettingsOpen((v) => !v)}
+            className={`p-1.5 rounded hover:bg-gray-800 ${transportSettingsOpen ? 'text-cyan-400 bg-cyan-900/20' : 'text-gray-500 hover:text-cyan-400'}`}
+            title="Transport Settings"
+          >
+            <SlidersHorizontal size={16} />
+          </button>
+          <button
             onClick={() => setChallengeOpen((prev) => !prev)}
             disabled={isPlaying}
             data-testid="challenge-mode-toggle"
@@ -790,7 +799,7 @@ export function Transport({
           </button>
         </div>
 
-        <div className="flex items-center gap-1" data-testid="achievement-status-row">
+        <div className={`${workflowPanelOpen ? 'flex' : 'hidden'} items-center gap-1`} data-testid="achievement-status-row">
           {Object.entries(ACHIEVEMENT_META).map(([key, meta]) => {
             const unlocked = achievements[key as keyof typeof ACHIEVEMENT_META]?.unlocked
             return (
