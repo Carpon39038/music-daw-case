@@ -395,7 +395,7 @@ export function Transport({
         </div>
       </div>
 
-      <div className={`${transportSettingsOpen ? 'flex' : 'hidden'} min-w-0 flex-1 items-center justify-end flex-wrap gap-3 content-center`}>
+      <div className={`${transportSettingsOpen ? 'flex' : 'hidden'} fixed top-20 right-4 z-50 w-[560px] max-w-[calc(100vw-2rem)] items-center justify-start flex-wrap gap-3 content-center rounded-lg border border-gray-800 bg-[#111]/95 backdrop-blur p-3 shadow-2xl`}>
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500 uppercase tracking-wider">BPM</span>
           <input
@@ -534,7 +534,7 @@ export function Transport({
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className={`${exportPanelOpen || recoveryPanelOpen || referencePanelOpen || workflowPanelOpen ? 'fixed top-20 right-4 z-50 w-[640px] max-w-[calc(100vw-2rem)] flex flex-wrap items-start gap-2 rounded-lg border border-gray-800 bg-[#111]/95 backdrop-blur p-3 shadow-2xl' : 'flex items-center gap-2'}`}>
         <input
           data-testid="midi-import-input"
           type="file"
