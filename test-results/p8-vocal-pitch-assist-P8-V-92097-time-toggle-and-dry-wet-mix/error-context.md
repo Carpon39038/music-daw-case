@@ -1,0 +1,491 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - heading "Music DAW Case" [level=1] [ref=e4]
+  - button "?" [ref=e5]
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - button "Reset" [ref=e9]:
+          - img [ref=e10]
+        - button "Pause" [disabled] [ref=e13]:
+          - img [ref=e14]
+        - button "Play (Space)" [ref=e16]:
+          - img [ref=e17]
+        - button "Record (Mic)" [ref=e19]:
+          - img [ref=e20]
+      - generic [ref=e23]:
+        - generic [ref=e24]: 00:00.00 (B0)
+        - generic [ref=e25]: SPACE TO PLAY
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - textbox "Project Name" [ref=e28]: Untitled Project
+          - button "Clone" [ref=e29]
+        - generic [ref=e30]: Saved 03:05 AM
+    - generic [ref=e31]:
+      - generic [ref=e32]:
+        - generic [ref=e33]: BPM
+        - spinbutton [ref=e34]: "120"
+        - button "Tap Tempo" [ref=e35]
+        - combobox [ref=e36]:
+          - option "Constant" [selected]
+          - option "Accelerando"
+          - option "Ritardando"
+        - spinbutton [disabled] [ref=e37]: "120"
+      - generic [ref=e38]:
+        - combobox [ref=e39] [cursor=pointer]:
+          - option "C" [selected]
+          - option "C#"
+          - option "D"
+          - option "D#"
+          - option "E"
+          - option "F"
+          - option "F#"
+          - option "G"
+          - option "G#"
+          - option "A"
+          - option "A#"
+          - option "B"
+        - combobox [ref=e40] [cursor=pointer]:
+          - option "Chromatic"
+          - option "Major" [selected]
+          - option "Minor"
+          - option "Major Pentatonic"
+          - option "Minor Pentatonic"
+      - generic [ref=e41]:
+        - 'button "Perf: AUTO" [ref=e42]'
+        - 'button "Metronome: OFF" [ref=e43]'
+        - generic [ref=e44]:
+          - button "LOOP" [ref=e45]
+          - combobox [disabled] [ref=e46] [cursor=pointer]:
+            - option "4 Bars"
+            - option "8 Bars" [selected]
+            - option "12 Bars"
+            - option "16 Bars"
+    - generic [ref=e47]:
+      - button "Import MIDI" [ref=e48]:
+        - img [ref=e49]
+      - button "Export MIDI" [ref=e52]:
+        - img [ref=e53]
+      - generic [ref=e56]:
+        - generic [ref=e57]: 导出目标
+        - combobox "导出目标" [ref=e58]:
+          - option "短视频"
+          - option "播客"
+          - option "音乐平台"
+          - option "通用" [selected]
+          - option "自定义"
+        - generic [ref=e59]: 44100Hz / 192kbps / -14dB / 峰值-1dB
+      - generic [ref=e60]:
+        - generic [ref=e61]: 命名模板
+        - textbox "命名模板" [ref=e62]:
+          - /placeholder: "{project}_{bpm}_{date}_{version}"
+          - text: "{project}_{bpm}_{date}_{version}"
+        - generic [ref=e63]: "WAV: Untitled_Project_120_20260415_v1.wav"
+      - button "Queue WAV Export" [ref=e64]:
+        - img [ref=e65]
+      - button "MP3" [ref=e69]
+      - button "Stems" [ref=e70]
+      - button "Publish" [ref=e71]
+      - button "Card" [ref=e72]
+      - button "30s Challenge" [ref=e73]
+      - generic [ref=e74]:
+        - generic "首次导出：第一次导出作品" [ref=e75]: ⬜ 首次导出
+        - generic "首次用和弦：第一次使用和弦功能" [ref=e76]: ⬜ 首次用和弦
+        - generic "16 小节完成：时间轴覆盖到 16 小节" [ref=e77]: ⬜ 16 小节完成
+      - generic [ref=e78]:
+        - generic [ref=e79]:
+          - generic [ref=e80]: Offline Export Queue
+          - button "清理已完成" [ref=e81]
+        - generic [ref=e82]: 暂无任务。可连续添加 WAV/MP3/Stems 导出。
+      - button "Ctrl+Z" [ref=e83]:
+        - img [ref=e84]
+        - generic [ref=e87]: Ctrl+Z
+      - button "Redo (Ctrl/Cmd+Shift+Z)" [disabled] [ref=e88]:
+        - img [ref=e89]
+      - button "Share" [ref=e92]:
+        - img [ref=e93]
+        - text: Share
+      - combobox [ref=e96]:
+        - option "Checkpoints" [disabled] [selected]
+        - option "3:05:42 AM - Auto-save"
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - generic [ref=e99]: Recovery Center
+          - generic [ref=e100]: 最近 1/5
+        - list [ref=e101]:
+          - listitem [ref=e102]:
+            - generic [ref=e103]:
+              - generic "Auto-save" [ref=e104]
+              - generic [ref=e105]: 自动保存
+            - generic [ref=e106]: 4/15/2026, 3:05:42 AM
+            - generic [ref=e107]:
+              - button "预听" [ref=e108]
+              - button "恢复为副本" [ref=e109]
+              - button "删除" [ref=e110]
+      - combobox [ref=e111]:
+        - option "Load Demo..." [disabled] [selected]
+        - option "基础：鼓点节奏"
+        - option "基础：简单旋律"
+        - option "风格：Lo-Fi 氛围"
+        - option "风格：Synthwave"
+        - option "风格：Trap/Hip-Hop"
+        - option "风格：古典弦乐"
+      - button "Save Template" [ref=e112]
+      - button "Gallery (0)" [ref=e114]
+      - generic [ref=e115]:
+        - generic [ref=e116]:
+          - generic [ref=e117]: Reference A/B
+          - generic [ref=e118]: 当前：Project
+        - generic [ref=e119]:
+          - button "导入参考曲" [ref=e120]
+          - 'button "A/B: PROJECT (R)" [disabled] [ref=e121]'
+          - button "清除" [disabled] [ref=e122]
+        - generic [ref=e123]: 导入 1 首参考曲后可用 A/B 切听，音量将自动匹配到 ±1 dB 附近。
+        - generic [ref=e124]:
+          - generic [ref=e125]:
+            - generic [ref=e126]: Reference Match Master
+            - generic [ref=e127]: 同步到 Master EQ/动态
+          - generic [ref=e128]:
+            - button "用参考曲匹配" [disabled] [ref=e129]
+            - button "用最近导出匹配" [disabled] [ref=e130]
+          - generic [ref=e131]: 执行后会生成可逐条开关的建议（Master EQ + 动态）。
+        - generic [ref=e132]: 导出响度检查：未检查
+        - generic [ref=e133]: 导出清单：未检查
+        - generic [ref=e134]:
+          - generic [ref=e135]:
+            - generic [ref=e136]: 导出前缺失项修复器
+            - button "自动修复" [ref=e137]
+          - generic [ref=e138]: 尚未执行自动修复。点击后会处理：未命名项目 / 导出区间与 Loop 不一致 / 主总线过载保护。
+        - generic [ref=e139]:
+          - generic [ref=e140]:
+            - generic [ref=e141]: 导出版本对比
+            - generic [ref=e142]: 最近 0/5
+          - generic [ref=e143]: 暂无导出记录（先导出 WAV/MP3）
+        - generic [ref=e144]:
+          - generic [ref=e145]:
+            - generic [ref=e146]: 新手混音报告
+            - generic [ref=e147]: 历史 0/2
+          - generic [ref=e148]: 导出后自动生成报告（含轨道峰值/响度分布/优化建议）
+      - combobox [disabled] [ref=e149]:
+        - option "No Templates" [disabled] [selected]
+      - button "Reset" [ref=e150]
+  - generic [ref=e151]:
+    - generic [ref=e152]:
+      - generic:
+        - generic:
+          - generic [ref=e153]:
+            - generic [ref=e154]: TRACKS
+            - button "+ DRUM" [ref=e155]
+            - button "Add Track" [ref=e156]:
+              - img [ref=e157]
+              - text: Add Track
+          - button "Select Track 1 track" [ref=e158] [cursor=pointer]:
+            - generic [ref=e159]:
+              - generic [ref=e160]:
+                - generic [ref=e161]:
+                  - textbox [ref=e162]: "#6366f1"
+                  - generic [ref=e163]: Track 1
+                - generic [ref=e164]:
+                  - button "Move Up" [disabled] [ref=e165]:
+                    - img [ref=e166]
+                  - button "Move Down" [ref=e168]:
+                    - img [ref=e169]
+                  - button "Duplicate Track" [ref=e171]:
+                    - img [ref=e172]
+                  - button "Freeze Track" [ref=e175]:
+                    - img [ref=e176]
+                  - button "Lock Track" [ref=e189]:
+                    - img [ref=e190]
+                  - button "Delete Track" [ref=e193]:
+                    - img [ref=e194]
+              - generic [ref=e197]:
+                - button "M" [ref=e198]
+                - button "S" [ref=e199]
+                - button "+" [ref=e200]
+                - generic [ref=e201]:
+                  - img [ref=e202]
+                  - slider [ref=e206]: "0.7"
+              - generic [ref=e207]:
+                - generic [ref=e208]: BUS
+                - combobox [ref=e209]:
+                  - option "None"
+                  - option "Drum" [selected]
+                  - option "Bass"
+                  - option "Music"
+                  - option "FX"
+              - group [ref=e210]:
+                - generic "More Params" [ref=e211]
+          - button "Select Track 2 track" [ref=e212] [cursor=pointer]:
+            - generic [ref=e213]:
+              - generic [ref=e214]:
+                - generic [ref=e215]:
+                  - textbox [ref=e216]: "#6366f1"
+                  - generic [ref=e217]: Track 2
+                - generic [ref=e218]:
+                  - button "Move Up" [ref=e219]:
+                    - img [ref=e220]
+                  - button "Move Down" [ref=e222]:
+                    - img [ref=e223]
+                  - button "Duplicate Track" [ref=e225]:
+                    - img [ref=e226]
+                  - button "Freeze Track" [ref=e229]:
+                    - img [ref=e230]
+                  - button "Lock Track" [ref=e243]:
+                    - img [ref=e244]
+                  - button "Delete Track" [ref=e247]:
+                    - img [ref=e248]
+              - generic [ref=e251]:
+                - button "M" [ref=e252]
+                - button "S" [ref=e253]
+                - button "+" [ref=e254]
+                - generic [ref=e255]:
+                  - img [ref=e256]
+                  - slider [ref=e260]: "0.7"
+              - generic [ref=e261]:
+                - generic [ref=e262]: BUS
+                - combobox [ref=e263]:
+                  - option "None"
+                  - option "Drum"
+                  - option "Bass" [selected]
+                  - option "Music"
+                  - option "FX"
+              - group [ref=e264]:
+                - generic "More Params" [ref=e265]
+          - button "Select Track 3 track" [ref=e266] [cursor=pointer]:
+            - generic [ref=e267]:
+              - generic [ref=e268]:
+                - generic [ref=e269]:
+                  - textbox [ref=e270]: "#6366f1"
+                  - generic [ref=e271]: Track 3
+                - generic [ref=e272]:
+                  - button "Move Up" [ref=e273]:
+                    - img [ref=e274]
+                  - button "Move Down" [ref=e276]:
+                    - img [ref=e277]
+                  - button "Duplicate Track" [ref=e279]:
+                    - img [ref=e280]
+                  - button "Freeze Track" [ref=e283]:
+                    - img [ref=e284]
+                  - button "Lock Track" [ref=e297]:
+                    - img [ref=e298]
+                  - button "Delete Track" [ref=e301]:
+                    - img [ref=e302]
+              - generic [ref=e305]:
+                - button "M" [ref=e306]
+                - button "S" [ref=e307]
+                - button "+" [ref=e308]
+                - generic [ref=e309]:
+                  - img [ref=e310]
+                  - slider [ref=e314]: "0.7"
+              - generic [ref=e315]:
+                - generic [ref=e316]: BUS
+                - combobox [ref=e317]:
+                  - option "None"
+                  - option "Drum"
+                  - option "Bass"
+                  - option "Music" [selected]
+                  - option "FX"
+              - group [ref=e318]:
+                - generic "More Params" [ref=e319]
+          - button "Select Track 4 track" [ref=e320] [cursor=pointer]:
+            - generic [ref=e321]:
+              - generic [ref=e322]:
+                - generic [ref=e323]:
+                  - textbox [ref=e324]: "#6366f1"
+                  - generic [ref=e325]: Track 4
+                - generic [ref=e326]:
+                  - button "Move Up" [ref=e327]:
+                    - img [ref=e328]
+                  - button "Move Down" [disabled] [ref=e330]:
+                    - img [ref=e331]
+                  - button "Duplicate Track" [ref=e333]:
+                    - img [ref=e334]
+                  - button "Freeze Track" [ref=e337]:
+                    - img [ref=e338]
+                  - button "Lock Track" [ref=e351]:
+                    - img [ref=e352]
+                  - button "Delete Track" [ref=e355]:
+                    - img [ref=e356]
+              - generic [ref=e359]:
+                - button "M" [ref=e360]
+                - button "S" [ref=e361]
+                - button "+" [ref=e362]
+                - generic [ref=e363]:
+                  - img [ref=e364]
+                  - slider [ref=e368]: "0.7"
+              - generic [ref=e369]:
+                - generic [ref=e370]: BUS
+                - combobox [ref=e371]:
+                  - option "None"
+                  - option "Drum"
+                  - option "Bass"
+                  - option "Music" [selected]
+                  - option "FX"
+              - group [ref=e372]:
+                - generic "More Params" [ref=e373]
+        - generic:
+          - generic [ref=e374]:
+            - generic [ref=e375] [cursor=pointer]:
+              - generic [ref=e376]: "1"
+              - generic [ref=e380]: "2"
+              - generic [ref=e384]: "3"
+              - generic [ref=e388]: "4"
+            - button "+ Marker" [ref=e393]
+          - generic [ref=e394]:
+            - generic [ref=e397]:
+              - button "sine 262Hz sine 262Hz 2" [ref=e414]:
+                - generic [ref=e416]: sine 262Hz
+                - img
+                - generic [ref=e417]: sine 262Hz
+                - slider "Resize Track 1 clip" [ref=e418]
+              - button "test-vocal-pitch.wav test-vocal-pitch.wav 4" [ref=e419]:
+                - generic [ref=e421]: test-vocal-pitch.wav
+                - img
+                - generic [ref=e422]: test-vocal-pitch.wav
+                - slider "Resize Track 1 clip" [ref=e423]
+            - button "square 330Hz square 330Hz 2" [ref=e443]:
+              - generic [ref=e445]: square 330Hz
+              - img
+              - generic [ref=e446]: square 330Hz
+              - slider "Resize Track 2 clip" [ref=e447]
+            - button "sine 392Hz sine 392Hz 2" [ref=e467]:
+              - generic [ref=e469]: sine 392Hz
+              - img
+              - generic [ref=e470]: sine 392Hz
+              - slider "Resize Track 3 clip" [ref=e471]
+            - button "square 523Hz square 523Hz 2" [ref=e491]:
+              - generic [ref=e493]: square 523Hz
+              - img
+              - generic [ref=e494]: square 523Hz
+              - slider "Resize Track 4 clip" [ref=e495]
+      - generic [ref=e496]:
+        - generic [ref=e497]:
+          - generic [ref=e498]: MASTER
+          - slider [ref=e500]: "0.8"
+          - generic [ref=e503]: 80%
+        - generic [ref=e504]:
+          - generic [ref=e505]: BUS GROUPS
+          - generic [ref=e506]:
+            - generic [ref=e507]:
+              - generic [ref=e508]:
+                - generic [ref=e509]: Drum
+                - generic [ref=e510]:
+                  - button "M" [ref=e511]
+                  - button "S" [ref=e512]
+              - generic [ref=e513]:
+                - generic [ref=e514]: VOL
+                - slider [ref=e515] [cursor=pointer]: "1"
+                - generic [ref=e516]: 100%
+              - generic [ref=e517]:
+                - generic [ref=e518]:
+                  - checkbox "EQ" [ref=e519]
+                  - text: EQ
+                - slider [ref=e520] [cursor=pointer]: "0"
+                - slider [ref=e521] [cursor=pointer]: "0"
+                - slider [ref=e522] [cursor=pointer]: "0"
+              - generic [ref=e523]:
+                - generic [ref=e524]:
+                  - checkbox "COMP" [ref=e525]
+                  - text: COMP
+                - slider [ref=e526] [cursor=pointer]: "-24"
+                - slider [ref=e527] [cursor=pointer]: "3"
+            - generic [ref=e528]:
+              - generic [ref=e529]:
+                - generic [ref=e530]: Bass
+                - generic [ref=e531]:
+                  - button "M" [ref=e532]
+                  - button "S" [ref=e533]
+              - generic [ref=e534]:
+                - generic [ref=e535]: VOL
+                - slider [ref=e536] [cursor=pointer]: "1"
+                - generic [ref=e537]: 100%
+              - generic [ref=e538]:
+                - generic [ref=e539]:
+                  - checkbox "EQ" [ref=e540]
+                  - text: EQ
+                - slider [ref=e541] [cursor=pointer]: "0"
+                - slider [ref=e542] [cursor=pointer]: "0"
+                - slider [ref=e543] [cursor=pointer]: "0"
+              - generic [ref=e544]:
+                - generic [ref=e545]:
+                  - checkbox "COMP" [ref=e546]
+                  - text: COMP
+                - slider [ref=e547] [cursor=pointer]: "-24"
+                - slider [ref=e548] [cursor=pointer]: "3"
+            - generic [ref=e549]:
+              - generic [ref=e550]:
+                - generic [ref=e551]: Music
+                - generic [ref=e552]:
+                  - button "M" [ref=e553]
+                  - button "S" [ref=e554]
+              - generic [ref=e555]:
+                - generic [ref=e556]: VOL
+                - slider [ref=e557] [cursor=pointer]: "1"
+                - generic [ref=e558]: 100%
+              - generic [ref=e559]:
+                - generic [ref=e560]:
+                  - checkbox "EQ" [ref=e561]
+                  - text: EQ
+                - slider [ref=e562] [cursor=pointer]: "0"
+                - slider [ref=e563] [cursor=pointer]: "0"
+                - slider [ref=e564] [cursor=pointer]: "0"
+              - generic [ref=e565]:
+                - generic [ref=e566]:
+                  - checkbox "COMP" [ref=e567]
+                  - text: COMP
+                - slider [ref=e568] [cursor=pointer]: "-24"
+                - slider [ref=e569] [cursor=pointer]: "3"
+            - generic [ref=e570]:
+              - generic [ref=e571]:
+                - generic [ref=e572]: FX
+                - generic [ref=e573]:
+                  - button "M" [ref=e574]
+                  - button "S" [ref=e575]
+              - generic [ref=e576]:
+                - generic [ref=e577]: VOL
+                - slider [ref=e578] [cursor=pointer]: "1"
+                - generic [ref=e579]: 100%
+              - generic [ref=e580]:
+                - generic [ref=e581]:
+                  - checkbox "EQ" [ref=e582]
+                  - text: EQ
+                - slider [ref=e583] [cursor=pointer]: "0"
+                - slider [ref=e584] [cursor=pointer]: "0"
+                - slider [ref=e585] [cursor=pointer]: "0"
+              - generic [ref=e586]:
+                - generic [ref=e587]:
+                  - checkbox "COMP" [ref=e588]
+                  - text: COMP
+                - slider [ref=e589] [cursor=pointer]: "-24"
+                - slider [ref=e590] [cursor=pointer]: "3"
+        - generic [ref=e591]:
+          - generic [ref=e592]:
+            - text: MASTER PRESET
+            - generic [ref=e593]:
+              - button "RAW" [ref=e594]
+              - button "CLEAN" [ref=e595]
+              - button "LOUD" [ref=e596]
+              - button "WARM" [ref=e597]
+              - button "BRIGHT" [ref=e598]
+          - generic [ref=e599]: MASTER EQ
+          - generic [ref=e600]:
+            - generic [ref=e601]:
+              - slider [ref=e602]: "0"
+              - generic [ref=e603]: LOW
+              - generic [ref=e604]: 0.0dB
+            - generic [ref=e605]:
+              - slider [ref=e606]: "0"
+              - generic [ref=e607]: MID
+              - generic [ref=e608]: 0.0dB
+            - generic [ref=e609]:
+              - slider [ref=e610]: "0"
+              - generic [ref=e611]: HIGH
+              - generic [ref=e612]: 0.0dB
+    - generic [ref=e613]:
+      - generic [ref=e615]: INSPECTOR
+      - generic [ref=e616]:
+        - generic [ref=e617]: Select a track header to edit track name.
+        - generic [ref=e618]: Select a clip to edit note pitch.
+```

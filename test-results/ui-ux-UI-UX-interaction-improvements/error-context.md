@@ -22,7 +22,7 @@
         - generic [ref=e27]:
           - textbox "Project Name" [ref=e28]: Untitled Project
           - button "Clone" [ref=e29]
-        - generic [ref=e30]: Saved 03:04 AM
+        - generic [ref=e30]: Saved 03:07 AM
     - generic [ref=e31]:
       - generic [ref=e32]:
         - generic [ref=e33]: BPM
@@ -55,7 +55,7 @@
           - option "Minor Pentatonic"
       - generic [ref=e41]:
         - 'button "Perf: AUTO" [ref=e42]'
-        - 'button "Metronome: OFF" [ref=e43]'
+        - 'button "Metronome: ON" [active] [pressed] [ref=e43]'
         - generic [ref=e44]:
           - button "LOOP" [ref=e45]
           - combobox [disabled] [ref=e46] [cursor=pointer]:

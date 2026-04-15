@@ -22,7 +22,7 @@
         - generic [ref=e27]:
           - textbox "Project Name" [ref=e28]: Untitled Project
           - button "Clone" [ref=e29]
-        - generic [ref=e30]: Saved 03:04 AM
+        - generic [ref=e30]: Saved 03:00 AM
     - generic [ref=e31]:
       - generic [ref=e32]:
         - generic [ref=e33]: BPM

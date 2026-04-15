@@ -22,7 +22,7 @@
         - generic [ref=e27]:
           - textbox "Project Name" [ref=e28]: Untitled Project
           - button "Clone" [ref=e29]
-        - generic [ref=e30]: Saved 03:04 AM
+        - generic [ref=e30]: Saved 03:01 AM
     - generic [ref=e31]:
       - generic [ref=e32]:
         - generic [ref=e33]: BPM
@@ -160,7 +160,7 @@
           - generic [ref=e139]: 导出后自动生成报告（含轨道峰值/响度分布/优化建议）
       - combobox [disabled] [ref=e140]:
         - option "No Templates" [disabled] [selected]
-      - button "Reset" [ref=e141]
+      - button "Reset" [active] [ref=e141]
   - generic [ref=e142]:
     - generic [ref=e143]:
       - generic:

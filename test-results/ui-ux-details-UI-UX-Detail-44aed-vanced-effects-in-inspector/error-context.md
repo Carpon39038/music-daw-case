@@ -22,7 +22,7 @@
         - generic [ref=e27]:
           - textbox "Project Name" [ref=e28]: Untitled Project
           - button "Clone" [ref=e29]
-        - generic [ref=e30]: Saved 03:04 AM
+        - generic [ref=e30]: Saved 03:07 AM
     - generic [ref=e31]:
       - generic [ref=e32]:
         - generic [ref=e33]: BPM
@@ -206,7 +206,7 @@
                   - option "Music"
                   - option "FX"
               - group [ref=e201]:
-                - generic "More Params" [ref=e202]
+                - generic "More Params" [active] [ref=e202]
           - button "Select Track 2 track" [ref=e203] [cursor=pointer]:
             - generic [ref=e204]:
               - generic [ref=e205]:
@@ -470,6 +470,193 @@
     - generic [ref=e599]:
       - generic [ref=e601]: INSPECTOR
       - generic [ref=e602]:
-        - generic [ref=e603]: Select a track header to edit track name.
-        - generic [ref=e604]: Select a clip to edit note pitch.
+        - group [ref=e603]:
+          - generic "Track Settings" [ref=e604]
+          - generic [ref=e605]:
+            - generic [ref=e606]:
+              - generic [ref=e607]: Name
+              - textbox [ref=e608]: Track 1
+            - generic [ref=e609]:
+              - generic [ref=e610]: Color
+              - textbox [ref=e611] [cursor=pointer]: "#6366f1"
+            - generic [ref=e612]:
+              - generic [ref=e613]: Quick Chord Progression
+              - generic [ref=e614]:
+                - button "Insert I–V–vi–IV" [ref=e615]
+                - button "Insert vi–IV–I–V" [ref=e616]
+                - button "Insert I–vi–IV–V" [ref=e617]
+            - generic [ref=e618]:
+              - generic [ref=e619]: Style Starter (8-bar draft)
+              - generic [ref=e620]:
+                - button "Lo-Fi" [ref=e621]
+                - button "EDM" [ref=e622]
+                - button "HipHop" [ref=e623]
+              - paragraph [ref=e624]: One click generates drum + chord + bass draft and sets BPM/scale.
+            - generic [ref=e625]:
+              - generic [ref=e626]: Song Arrangement Assistant
+              - generic [ref=e627]:
+                - button "8 Bars" [ref=e628]
+                - button "16 Bars" [ref=e629]
+                - button "32 Bars" [ref=e630]
+              - paragraph [ref=e631]: 按 Intro/Verse/Chorus/Drop 自动编排并覆盖段落标记；支持 Undo 一键撤销。
+            - generic [ref=e632]:
+              - generic [ref=e633]: Arrangement Variations (8/16 bars)
+              - generic [ref=e634]:
+                - button "生成 8 小节变体" [ref=e635]
+                - button "生成 16 小节变体" [ref=e636]
+              - paragraph [ref=e637]: 暂无变体，点击上方按钮生成保守/标准/激进三个方案。
+              - paragraph [ref=e638]: 保持当前调式/拍号；可在同一工程中一键 A/B 切换。
+            - generic [ref=e639]:
+              - generic [ref=e640]: Section Energy Automation (Marker-driven)
+              - paragraph [ref=e641]: 暂无段落标记（请先在时间线添加 Intro/Verse/Chorus/Drop 标记）
+            - generic [ref=e642]:
+              - generic [ref=e643]: Chorus Lift Builder
+              - paragraph [ref=e644]: 暂无副歌标记（请先添加/生成名为 Chorus 或 副歌 的标记）
+            - generic [ref=e645]:
+              - generic [ref=e646]: Chorus Double & Harmony Builder
+              - paragraph [ref=e647]: 暂无副歌标记（请先添加/生成名为 Chorus 或 副歌 的标记）
+            - generic [ref=e648]:
+              - generic [ref=e649]: Mood Presets
+              - generic [ref=e650]:
+                - button "开心" [ref=e651]
+                - button "治愈" [ref=e652]
+                - button "紧张" [ref=e653]
+                - button "赛博" [ref=e654]
+              - paragraph [ref=e655]: 一键应用 BPM/调式/音色组合，并生成对应风格草稿。
+            - generic [ref=e656]:
+              - generic [ref=e657]: Melody Generator
+              - button "Generate scale-locked melody (8 notes)" [ref=e658]
+              - generic [ref=e659]:
+                - generic [ref=e660]: Continue MVP (next-bar ideas)
+                - generic [ref=e661]:
+                  - generic [ref=e662]:
+                    - checkbox "Lock Rhythm" [ref=e663]
+                    - text: Lock Rhythm
+                  - generic [ref=e664]:
+                    - checkbox "Lock Pitch" [ref=e665]
+                    - text: Lock Pitch
+                - generic [ref=e666]:
+                  - button "Conservative" [ref=e667]
+                  - button "Balanced" [ref=e668]
+                  - button "Bold" [ref=e669]
+                - button "再来一版（Balanced）" [ref=e670]
+              - button "Normalize clip volumes" [ref=e671]
+              - button "Magic Polish (Beginner Mix)" [ref=e672]
+              - paragraph [ref=e673]: Uses current Scale Key / Scale Type to create inspiration clips.
+            - generic [ref=e674]:
+              - generic [ref=e675]:
+                - generic [ref=e676]: Project Health Panel
+                - generic [ref=e677]: 风险 0
+              - paragraph [ref=e678]: 最近检查：3:07:43 AM
+              - generic [ref=e679]:
+                - generic [ref=e680]:
+                  - generic [ref=e681]:
+                    - generic [ref=e682]: ✅ CPU 过载风险
+                    - button "开启性能模式" [disabled] [ref=e683]
+                  - paragraph [ref=e684]: 性能模式 AUTO，当前 4 个片段
+                - generic [ref=e685]:
+                  - generic [ref=e686]:
+                    - generic [ref=e687]: ✅ 静音但有内容轨道
+                    - button "跳转并取消静音" [disabled] [ref=e688]
+                  - paragraph [ref=e689]: 未发现静音内容轨道
+                - generic [ref=e690]:
+                  - generic [ref=e691]:
+                    - generic [ref=e692]: ✅ 未命名标记
+                    - button "跳转并重命名" [disabled] [ref=e693]
+                  - paragraph [ref=e694]: 标记命名完整
+                - generic [ref=e695]:
+                  - generic [ref=e696]:
+                    - generic [ref=e697]: ✅ 导出区间异常
+                    - button "恢复全曲导出" [disabled] [ref=e698]
+                  - paragraph [ref=e699]: 导出区间正常
+              - paragraph [ref=e700]: 风险项与导出清单保持一致，可一键跳转并修复。
+            - generic [ref=e701]:
+              - generic [ref=e702]:
+                - generic [ref=e703]: Project Cleanup
+                - generic [ref=e704]: 可清理项 0
+              - paragraph [ref=e705]: 最近扫描：3:07:43 AM
+              - generic [ref=e706]:
+                - button "扫描" [ref=e707]
+                - button "一键清理" [disabled] [ref=e708]
+                - button "撤销清理" [ref=e709]
+              - generic [ref=e711]: 暂无可清理项（未使用 Clip / 空轨道 / 失效素材引用）
+            - generic [ref=e712]:
+              - generic [ref=e714]: Auto Mix Assistant
+              - button "一键自动混音（音量/声像/低频避让）" [ref=e715]
+              - paragraph [ref=e716]: 点击按钮后将生成鼓/贝斯/和声三类建议，并支持单条撤销。
+            - generic [ref=e717]:
+              - generic [ref=e718]: Chord Suggestions
+              - list [ref=e719]:
+                - listitem [ref=e720]:
+                  - generic [ref=e721]: C
+                  - generic [ref=e722]: 100%
+                - listitem [ref=e723]:
+                  - generic [ref=e724]: Cm
+                  - generic [ref=e725]: 81%
+                - listitem [ref=e726]:
+                  - generic [ref=e727]: Am
+                  - generic [ref=e728]: 81%
+            - generic [ref=e729]:
+              - generic [ref=e730]:
+                - generic [ref=e731]: Pan
+                - generic [ref=e732]: C
+              - slider [ref=e733]: "0"
+            - generic [ref=e734]:
+              - generic [ref=e735]:
+                - generic [ref=e736]: Transpose (semitones)
+                - generic [ref=e737]: "0"
+              - slider [ref=e738]: "0"
+            - group [ref=e739]:
+              - generic "Track Effects & Params" [ref=e740]
+              - generic [ref=e742]:
+                - group [ref=e743]:
+                  - generic "Vocal Clean Chain" [ref=e744] [cursor=pointer]:
+                    - checkbox [ref=e745]
+                    - text: Vocal Clean Chain
+                - generic [ref=e747]:
+                  - checkbox [ref=e748]
+                  - text: Vocal Finalizer
+                - group [ref=e750]:
+                  - generic "Reverb" [ref=e751] [cursor=pointer]:
+                    - checkbox [ref=e752]
+                    - text: Reverb
+                - group [ref=e753]:
+                  - generic "Delay" [ref=e754] [cursor=pointer]:
+                    - checkbox [ref=e755]
+                    - text: Delay
+                - group [ref=e756]:
+                  - generic "Filter" [ref=e757] [cursor=pointer]
+                  - option "None" [selected]
+                  - option "Lowpass"
+                  - option "Highpass"
+                - group [ref=e758]:
+                  - generic "Distortion" [ref=e759] [cursor=pointer]:
+                    - checkbox [ref=e760]
+                    - text: Distortion
+                - group [ref=e761]:
+                  - generic "Comp" [ref=e762] [cursor=pointer]:
+                    - checkbox [ref=e763]
+                    - text: Comp
+                - group [ref=e764]:
+                  - generic "Chorus" [ref=e765] [cursor=pointer]:
+                    - checkbox [ref=e766]
+                    - text: Chorus
+                - group [ref=e767]:
+                  - generic "Tremolo" [ref=e768] [cursor=pointer]:
+                    - checkbox [ref=e769]
+                    - text: Tremolo
+                - group [ref=e770]:
+                  - generic "EQ3" [ref=e771] [cursor=pointer]:
+                    - checkbox [ref=e772]
+                    - text: EQ3
+                - group [ref=e773]:
+                  - generic "Flanger" [ref=e774] [cursor=pointer]:
+                    - checkbox [ref=e775]
+                    - text: Flanger
+            - generic [ref=e776]:
+              - button "Duplicate Track" [ref=e777]
+              - button "Move Up" [disabled] [ref=e778]
+              - button "Move Down" [ref=e779]
+              - button "Delete Track" [ref=e780]
+        - generic [ref=e781]: Select a clip to edit note pitch.
 ```

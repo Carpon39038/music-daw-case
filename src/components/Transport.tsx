@@ -727,7 +727,7 @@ export function Transport({
             )
           })}
         </div>
-        <div className="px-2 py-1 text-xs border border-gray-800 rounded bg-[#121212] min-w-[260px]" data-testid="offline-export-queue-panel">
+        <div className="px-2 py-1 text-xs border border-gray-800 rounded bg-[#121212] min-w-[260px] max-h-28 overflow-hidden" data-testid="offline-export-queue-panel">
           <div className="flex items-center justify-between gap-2">
             <span className="text-emerald-300 font-semibold text-[11px]">Offline Export Queue</span>
             <button
@@ -796,7 +796,7 @@ export function Transport({
           ))}
         </select>
 
-        <div className="px-2 py-1 text-xs border border-gray-800 rounded bg-[#121212] min-w-[260px]" data-testid="recovery-center-panel">
+        <div className="px-2 py-1 text-xs border border-gray-800 rounded bg-[#121212] min-w-[260px] max-h-28 overflow-hidden" data-testid="recovery-center-panel">
           <div className="flex items-center justify-between gap-2">
             <span className="text-emerald-300 font-semibold text-[11px]">Recovery Center</span>
             <span className="text-[10px] text-gray-500">最近 {recoverySnapshots.length}/5</span>
