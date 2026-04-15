@@ -1,4 +1,4 @@
-import { Volume2, Plus, Trash2, ArrowUp, ArrowDown, Copy, Lock, Unlock, Snowflake } from 'lucide-react'
+import { Volume2, Plus, Trash2, ArrowUp, ArrowDown, Copy, Lock, Unlock, Snowflake, Drum } from 'lucide-react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import type { Track } from '../types'
 import { useDAWStore } from '../store/useDAWStore'
@@ -185,28 +185,31 @@ export function TrackListPanel({ project, addTrack, addDrumTrack, ...rest }: Tra
   return (
     <div className="tracklist-panel w-64 bg-[#111] border-r border-gray-800 flex flex-col overflow-y-auto overflow-x-hidden flex-shrink-0">
       <div
-        className="tracklist-header h-8 border-b border-gray-800 flex items-center px-3 justify-between bg-[#0a0a0a] sticky top-0 z-10"
+        className="tracklist-header h-8 border-b border-gray-800 flex items-center px-2 justify-between bg-[#0a0a0a] sticky top-0 z-10"
         data-testid="tracklist-header"
       >
         <span className="text-xs text-gray-500 font-medium">TRACKS</span>
-        <button
-          data-testid="add-drum-track-btn"
-          onClick={addDrumTrack}
-          disabled={rest.isPlaying}
-          className="add-track-btn text-gray-500 hover:text-emerald-400 p-1"
-          title="Add Drum Track"
-        >
-          <span className="text-xs font-bold font-mono">+ DRUM</span>
-        </button>
-        <button
-          data-testid="add-track-btn"
-          onClick={addTrack}
-          disabled={rest.isPlaying}
-          className="add-track-btn text-gray-500 hover:text-emerald-400 p-1"
-        >
-          <Plus size={14} />
-          <span style={{ fontSize: 0, opacity: 0 }}>Add Track</span>
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            data-testid="add-drum-track-btn"
+            onClick={addDrumTrack}
+            disabled={rest.isPlaying}
+            className="add-track-btn text-gray-500 hover:text-amber-400 p-1 disabled:opacity-40"
+            title="Add Drum Track"
+          >
+            <Drum size={14} />
+          </button>
+          <button
+            data-testid="add-track-btn"
+            onClick={addTrack}
+            disabled={rest.isPlaying}
+            className="add-track-btn text-gray-500 hover:text-emerald-400 p-1 disabled:opacity-40"
+            title="Add Track"
+          >
+            <Plus size={14} />
+            <span style={{ fontSize: 0, opacity: 0 }}>Add Track</span>
+          </button>
+        </div>
       </div>
       {project.tracks.map((track) => (
         <TrackList key={track.id} track={track} project={project} {...rest} />

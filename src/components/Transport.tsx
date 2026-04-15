@@ -1,4 +1,4 @@
-import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2, FileAudio, Mic } from 'lucide-react'
+import { Play, Square, RotateCcw, Download, Upload, Undo2, Redo2, FileAudio, Mic, Shield, GitCompare, Zap } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DAWActions } from '../hooks/useDAWActions'
 import { formatTime } from '../utils/formatTime'
@@ -198,6 +198,10 @@ export function Transport({
   const unlockAchievement = useDAWStore(s => s.unlockAchievement)
 
   const [challengeOpen, setChallengeOpen] = useState(false)
+  const [exportPanelOpen, setExportPanelOpen] = useState(false)
+  const [recoveryPanelOpen, setRecoveryPanelOpen] = useState(false)
+  const [referencePanelOpen, setReferencePanelOpen] = useState(false)
+  const [workflowPanelOpen, setWorkflowPanelOpen] = useState(false)
   const [challengeStyle, setChallengeStyle] = useState<ChallengeStyle | null>(null)
   const [challengeBaselineSignature, setChallengeBaselineSignature] = useState<string | null>(null)
   const [challengeCompleted, setChallengeCompleted] = useState(false)
@@ -315,8 +319,8 @@ export function Transport({
   }
 
   return (
-    <section className="transport bg-[#111] border-b border-gray-800 flex items-center px-4 gap-4 h-auto min-h-[3rem] py-2 flex-shrink-0 overflow-x-auto overflow-y-hidden" data-testid="transport">
-      <div className="transport-primary flex items-center gap-4 flex-shrink-0">
+    <section className="transport bg-[#111] border-b border-gray-800 flex items-center h-16 min-h-16 max-h-16 px-4 gap-4 flex-shrink-0 overflow-x-auto overflow-y-hidden" data-testid="transport">
+      <div className="transport-primary min-w-0 flex items-center gap-4 flex-shrink-0">
         <div className="flex items-center gap-2 bg-[#1a1a1a] p-1 rounded-md">
           <button
             className="p-2 hover:bg-gray-800 rounded text-gray-400 hover:text-white"
@@ -390,7 +394,7 @@ export function Transport({
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="min-w-0 flex-1 flex items-center justify-end flex-wrap gap-3 content-center">
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500 uppercase tracking-wider">BPM</span>
           <input
@@ -702,15 +706,89 @@ export function Transport({
         >
           Card
         </button>
-        <button
-          onClick={() => setChallengeOpen((prev) => !prev)}
-          disabled={isPlaying}
-          data-testid="challenge-mode-toggle"
-          className={`px-2 py-1 text-xs border rounded ${challengeOpen ? 'bg-amber-900/40 border-amber-700 text-amber-300' : 'bg-[#1a1a1a] hover:bg-gray-800 border-gray-800 text-gray-300'}`}
-          title="30 秒出歌挑战模式"
-        >
-          30s Challenge
-        </button>
+        <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-md">
+          <button
+            type="button"
+            onClick={() => {
+              setExportPanelOpen((v) => {
+                const next = !v
+                if (next) {
+                  setRecoveryPanelOpen(false)
+                  setReferencePanelOpen(false)
+                  setWorkflowPanelOpen(false)
+                }
+                return next
+              })
+            }}
+            className={`p-1.5 rounded hover:bg-gray-800 ${exportPanelOpen ? 'text-emerald-400 bg-emerald-900/20' : 'text-gray-500 hover:text-emerald-400'}`}
+            title="Export 面板"
+          >
+            <Download size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setRecoveryPanelOpen((v) => {
+                const next = !v
+                if (next) {
+                  setExportPanelOpen(false)
+                  setReferencePanelOpen(false)
+                  setWorkflowPanelOpen(false)
+                }
+                return next
+              })
+            }}
+            className={`p-1.5 rounded hover:bg-gray-800 ${recoveryPanelOpen ? 'text-blue-400 bg-blue-900/20' : 'text-gray-500 hover:text-blue-400'}`}
+            title="Recovery 面板"
+          >
+            <Shield size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setReferencePanelOpen((v) => {
+                const next = !v
+                if (next) {
+                  setExportPanelOpen(false)
+                  setRecoveryPanelOpen(false)
+                  setWorkflowPanelOpen(false)
+                }
+                return next
+              })
+            }}
+            className={`p-1.5 rounded hover:bg-gray-800 ${referencePanelOpen ? 'text-purple-400 bg-purple-900/20' : 'text-gray-500 hover:text-purple-400'}`}
+            title="Reference 面板"
+          >
+            <GitCompare size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setWorkflowPanelOpen((v) => {
+                const next = !v
+                if (next) {
+                  setExportPanelOpen(false)
+                  setRecoveryPanelOpen(false)
+                  setReferencePanelOpen(false)
+                }
+                return next
+              })
+            }}
+            className={`p-1.5 rounded hover:bg-gray-800 ${workflowPanelOpen ? 'text-yellow-400 bg-yellow-900/20' : 'text-gray-500 hover:text-yellow-400'}`}
+            title="Workflow 面板"
+          >
+            <Zap size={16} />
+          </button>
+          <button
+            onClick={() => setChallengeOpen((prev) => !prev)}
+            disabled={isPlaying}
+            data-testid="challenge-mode-toggle"
+            className={`px-2 py-1 text-xs border rounded ${challengeOpen ? 'bg-amber-900/40 border-amber-700 text-amber-300' : 'bg-[#1a1a1a] hover:bg-gray-800 border-gray-800 text-gray-300'}`}
+            title="30 秒出歌挑战模式"
+          >
+            30s
+          </button>
+        </div>
 
         <div className="flex items-center gap-1" data-testid="achievement-status-row">
           {Object.entries(ACHIEVEMENT_META).map(([key, meta]) => {
@@ -727,7 +805,7 @@ export function Transport({
             )
           })}
         </div>
-        <div className="px-2 py-1 text-xs border border-gray-800 rounded bg-[#121212] min-w-[260px] max-h-28 overflow-hidden" data-testid="offline-export-queue-panel">
+        <div className={`${exportPanelOpen ? '' : 'hidden '}px-2 py-1 text-xs border border-gray-800 rounded bg-[#121212] min-w-0 w-[260px] max-w-full max-h-28 overflow-hidden`} data-testid="offline-export-queue-panel">
           <div className="flex items-center justify-between gap-2">
             <span className="text-emerald-300 font-semibold text-[11px]">Offline Export Queue</span>
             <button
@@ -796,7 +874,7 @@ export function Transport({
           ))}
         </select>
 
-        <div className="px-2 py-1 text-xs border border-gray-800 rounded bg-[#121212] min-w-[260px] max-h-28 overflow-hidden" data-testid="recovery-center-panel">
+        <div className={`${recoveryPanelOpen ? '' : 'hidden '}px-2 py-1 text-xs border border-gray-800 rounded bg-[#121212] min-w-0 w-[260px] max-w-full max-h-28 overflow-hidden`} data-testid="recovery-center-panel">
           <div className="flex items-center justify-between gap-2">
             <span className="text-emerald-300 font-semibold text-[11px]">Recovery Center</span>
             <span className="text-[10px] text-gray-500">最近 {recoverySnapshots.length}/5</span>
@@ -875,7 +953,7 @@ export function Transport({
 
         <ProjectGallery />
 
-        <div className="ml-2 rounded border border-gray-800 bg-[#111] px-2 py-2 w-[300px] overflow-hidden" data-testid="reference-ab-panel">
+        <div className={`${referencePanelOpen ? '' : 'hidden '}ml-2 rounded border border-gray-800 bg-[#111] px-2 py-2 w-[300px] overflow-hidden`} data-testid="reference-ab-panel">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] text-emerald-300 font-semibold">Reference A/B</span>
             <span className="text-[10px] text-gray-500" data-testid="reference-current-label">当前：{monitorSource === 'reference' ? 'Reference' : 'Project'}</span>
@@ -992,7 +1070,7 @@ export function Transport({
                 : `${lastPreExportChecklistReport.failedCount} 项未通过`
               : '未检查'}
           </div>
-          <div className="mt-2 rounded border border-gray-800/80 px-2 py-2" data-testid="pre-export-auto-fix-panel">
+          <div className={`${exportPanelOpen ? '' : 'hidden '}mt-2 rounded border border-gray-800/80 px-2 py-2`} data-testid="pre-export-auto-fix-panel">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] text-emerald-300 font-semibold">导出前缺失项修复器</span>
               <button
@@ -1031,7 +1109,7 @@ export function Transport({
               </div>
             )}
           </div>
-          <div className="mt-2 border-t border-gray-800 pt-2" data-testid="export-version-compare-panel">
+          <div className={`${exportPanelOpen ? '' : 'hidden '}mt-2 border-t border-gray-800 pt-2`} data-testid="export-version-compare-panel">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] text-emerald-300 font-semibold">导出版本对比</span>
               <span className="text-[10px] text-gray-500">最近 {exportVersionHistory.length}/5</span>
@@ -1068,7 +1146,7 @@ export function Transport({
             )}
           </div>
 
-          <div className="mt-2 border-t border-gray-800 pt-2" data-testid="mix-report-panel">
+          <div className={`${workflowPanelOpen ? '' : 'hidden '}mt-2 border-t border-gray-800 pt-2`} data-testid="mix-report-panel">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] text-emerald-300 font-semibold">新手混音报告</span>
               <span className="text-[10px] text-gray-500">历史 {(latestMixReport ? 1 : 0) + (previousMixReport ? 1 : 0)}/2</span>

@@ -48,7 +48,7 @@ export function Mixer({
   return (
     <section className="meter h-48 bg-[#111] border-t border-gray-800 flex min-w-0 p-4 gap-8 flex-shrink-0 overflow-x-auto" data-testid="mixer">
       {/* Master Volume */}
-      <div className="flex flex-col items-center w-24">
+      <div className="flex flex-col items-center w-24 shrink-0">
         <span className="text-xs text-gray-500 font-medium mb-2">MASTER</span>
         <div className="flex-1 flex items-center gap-4">
           <input
@@ -79,7 +79,7 @@ export function Mixer({
       </div>
 
       {/* Bus Groups */}
-      <div className="flex flex-col w-[28rem] border-l border-gray-800 pl-6 pr-2 overflow-y-auto" data-testid="bus-group-mixer">
+      <div className="flex flex-col w-[28rem] border-l border-gray-800 pl-6 pr-2 overflow-y-auto shrink-0" data-testid="bus-group-mixer">
         <span className="text-xs text-gray-500 font-medium mb-2">BUS GROUPS</span>
         <div className="grid grid-cols-2 gap-2">
           {busGroups.map((group) => (
@@ -146,7 +146,7 @@ export function Mixer({
       </div>
 
       {/* Master EQ */}
-      <div className="flex flex-col w-80 border-l border-gray-800 pl-8">
+      <div className="flex flex-col w-80 border-l border-gray-800 pl-8 shrink-0">
         <div className="mb-3">
           <span className="text-xs text-gray-500 font-medium">MASTER PRESET</span>
           <div className="grid grid-cols-5 gap-1 mt-2" data-testid="master-preset-pack">

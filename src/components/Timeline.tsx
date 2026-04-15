@@ -440,7 +440,7 @@ export function TimelineSection(props: TimelineSectionProps) {
   const isPerformanceModeActive = performanceMode === 'on' || (performanceMode === 'auto' && totalClips > 30)
 
   return (
-    <section className="timeline flex-1 flex flex-col overflow-auto min-w-0 bg-[#151515]" data-testid="timeline">
+    <section className="timeline flex-1 flex flex-col overflow-auto min-w-0 bg-[#151515] relative" data-testid="timeline">
       <TimelineHeader
         startPlayheadDrag={props.startPlayheadDrag}
         markers={project.markers ?? []}
