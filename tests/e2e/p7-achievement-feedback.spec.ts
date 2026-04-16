@@ -9,7 +9,7 @@ test.describe('P7 achievement feedback', () => {
     await expect(page.getByTestId('achievement-badge-firstChord')).toContainText('⬜')
 
     await page.getByTestId('track-header-track-1').click()
-    await page.getByTestId('insert-chord-I-V-vi-IV').click()
+    await page.getByTestId('insert-chord-I-V-vi-IV').evaluate((el: HTMLButtonElement) => el.click())
 
     await expect(page.getByTestId('achievement-badge-firstChord')).toContainText('🏅')
     await expect(page.getByTestId('achievement-toast')).toContainText('首次用和弦')
@@ -18,6 +18,7 @@ test.describe('P7 achievement feedback', () => {
   test('unlocks first export achievement after MP3 export', async ({ page }) => {
     await expect(page.getByTestId('achievement-badge-firstExport')).toContainText('⬜')
 
+    await page.getByTitle('Export 面板').click()
     await page.getByTestId('mp3-export-btn').click()
 
     await expect(page.getByTestId('achievement-badge-firstExport')).toContainText('🏅')

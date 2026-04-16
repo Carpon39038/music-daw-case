@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('P7 Style Starter', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
+    await page.getByTitle('Transport Settings').click()
     await page.getByTestId('track-header-track-1').click()
   })
 

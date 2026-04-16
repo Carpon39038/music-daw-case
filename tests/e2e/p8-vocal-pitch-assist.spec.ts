@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename)
 test.describe('P8 Vocal Pitch Assist', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
+    await page.getByTitle('Transport Settings').click()
     await page.waitForSelector('[data-testid="transport"]')
   })
 

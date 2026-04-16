@@ -3,10 +3,12 @@ import { test, expect } from '@playwright/test'
 test.describe('P9 export naming template', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
+    await page.getByTitle('Export 面板').click()
     await page.evaluate(() => {
       window.localStorage.clear()
     })
     await page.reload()
+    await page.getByTitle('Export 面板').click()
   })
 
   test('supports custom template preview and persists as default', async ({ page }) => {
@@ -28,6 +30,7 @@ test.describe('P9 export naming template', () => {
 
     await page.waitForTimeout(120)
     await page.reload()
+    await page.getByTitle('Export 面板').click()
 
     await expect(page.getByTestId('export-naming-template-input')).toHaveValue('{project}-{version}-{date}-{bpm}')
   })

@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test('metronome toggle works', async ({ page }) => {
   await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
+  await page.getByTitle('Transport Settings').click();
   
   const metronomeBtn = page.getByTestId('metronome-btn')
   await expect(metronomeBtn).toHaveText('Metronome: OFF')

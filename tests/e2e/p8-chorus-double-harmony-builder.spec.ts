@@ -14,13 +14,19 @@ test.describe('P8 Chorus Double & Harmony Builder', () => {
 
     await page.getByTestId('add-track-btn').click()
 
-    const sourceTrack = page.locator('[data-testid^="track-header-"]').nth(initialTrackCount)
+    const sourceTrack = page.locator('[data-testid="track-header-track-1"]')
     await sourceTrack.click()
 
-    const sourceTrackId = ((await sourceTrack.getAttribute('data-testid')) || '').replace('track-header-', '')
-    expect(sourceTrackId.length).toBeGreaterThan(0)
+    const sourceTrackId = 'track-1'
 
-    await page.getByTestId(`add-clip-${sourceTrackId}`).click()
+    await page.getByTestId('add-clip-track-1').click()
+    await page.getByTestId('add-clip-track-1').click()
+
+    const firstClip = page.locator('[data-testid^="clip-track-1-"]').first()
+    await firstClip.click()
+    await page.getByTestId('selected-clip-length-input').fill('8')
+
+    const trackCountBeforeApply = await page.locator('[data-testid^="track-header-"]').count()
 
     const inspector = page.getByTestId('inspector-chorus-double-harmony-builder')
     await expect(inspector).toBeVisible()
@@ -30,7 +36,8 @@ test.describe('P8 Chorus Double & Harmony Builder', () => {
     await page.getByTestId('chorus-double-harmony-toggle-high-octave').check()
     await page.getByTestId('chorus-double-harmony-apply-btn').click()
 
-    await expect(page.locator('[data-testid^="track-header-"]')).toHaveCount(initialTrackCount + 3)
+    await expect(page.getByTestId('chorus-double-harmony-apply-btn')).toBeEnabled()
+    await expect.poll(async () => await page.locator('[data-testid^="track-header-"]').count()).toBe(trackCountBeforeApply + 2)
 
     const newTrackNames = await page.locator('[data-testid^="track-header-"] .track-name').allTextContents()
     const hasDouble = newTrackNames.some((name) => /double/i.test(name))

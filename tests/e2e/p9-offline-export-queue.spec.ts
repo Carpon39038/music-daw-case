@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('P9 offline export queue', () => {
   test('supports queuing at least 3 tasks, keeps sequential processing, and keeps editor interactive', async ({ page }) => {
     await page.goto('/')
+    await page.getByTitle('Export 面板').click()
 
     await expect(page.getByTestId('offline-export-queue-panel')).toBeVisible()
     await expect(page.getByTestId('offline-export-queue-panel')).toContainText('暂无任务')

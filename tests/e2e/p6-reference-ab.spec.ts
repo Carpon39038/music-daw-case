@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('P6 Reference A/B', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
+    await page.getByTitle('Reference 面板').click()
   })
 
   test('imports reference track and toggles monitor source by button and R shortcut', async ({ page }) => {

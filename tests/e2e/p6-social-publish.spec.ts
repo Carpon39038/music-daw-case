@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('P6 Social Publish', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
+    await page.getByTitle('Export 面板').click()
   })
 
   test('renders one-click social publish button', async ({ page }) => {

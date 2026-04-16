@@ -6,6 +6,7 @@ test.describe('P8 release metadata wizard', () => {
       window.localStorage.clear()
     })
     await page.goto('/')
+    await page.getByTitle('Export 面板').click()
   })
 
   test('blocks card export when required metadata missing', async ({ page }) => {

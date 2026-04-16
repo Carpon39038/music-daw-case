@@ -3,15 +3,18 @@ import { test, expect } from '@playwright/test'
 test.describe('P7 30s challenge mode', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
+    await page.getByTitle('Transport Settings').click()
+    await page.getByTitle('Export 面板').click()
   })
 
   test('supports 3-step flow: select style -> edit -> export', async ({ page }) => {
-    await page.goto('/')
     await page.addInitScript(() => {
       window.alert = () => {}
       window.confirm = () => true
     })
     await page.reload()
+    await page.getByTitle('Transport Settings').click()
+    await page.getByTitle('Export 面板').click()
 
     await page.getByTestId('challenge-mode-toggle').click()
     await expect(page.getByTestId('challenge-mode-panel')).toBeVisible()

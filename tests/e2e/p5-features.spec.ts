@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('P5 Features', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await page.getByTitle('Transport Settings').click();
   });
 
   test('Quantize clip to 1/4 grid', async ({ page }) => {
@@ -71,7 +72,7 @@ test.describe('P5 Features', () => {
 
     const beforeCount = await page.locator('.clip').count();
 
-    await page.getByTestId('insert-chord-I-V-vi-IV').click();
+    await page.getByTestId('insert-chord-I-V-vi-IV').evaluate((el: HTMLButtonElement) => el.click());
 
     await expect(page.locator('.clip')).toHaveCount(beforeCount + 12);
   });

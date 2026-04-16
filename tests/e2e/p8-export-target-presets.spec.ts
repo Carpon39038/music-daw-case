@@ -6,6 +6,7 @@ test.describe('P8 export target presets', () => {
       window.localStorage.clear()
     })
     await page.goto('/')
+    await page.getByTitle('Export 面板').click()
   })
 
   test('switches preset and applies sample rate/bitrate to export path', async ({ page }) => {

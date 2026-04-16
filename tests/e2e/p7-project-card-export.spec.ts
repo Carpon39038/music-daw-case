@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('P7 project card export', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
+    await page.getByTitle('Export 面板').click()
   })
 
   test('renders local project card export button', async ({ page }) => {

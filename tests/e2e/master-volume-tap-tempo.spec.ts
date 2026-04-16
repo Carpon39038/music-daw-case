@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Master Volume & Tap Tempo', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/'); await page.evaluate(() => document.querySelectorAll('details').forEach((d: HTMLDetailsElement) => d.open = true));
+    await page.getByTitle('Transport Settings').click();
     await page.waitForSelector('[data-testid="transport"]')
   })
 

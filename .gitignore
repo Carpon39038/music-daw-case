@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated test artifacts
+test-results/
+playwright-report/
+reports/eval/daily-*.md
+
+# E2E local audio fixtures generated during runs
+tests/e2e/test-*.wav
+
+# Playwright state
+test-results/.last-run.json
