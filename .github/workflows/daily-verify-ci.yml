@@ -16,6 +16,9 @@ permissions:
 jobs:
   verify-ci:
     runs-on: ubuntu-latest
+    env:
+      FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_BOT_WEBHOOK_URL }}
+      FEISHU_WEBHOOK_SECRET: ${{ secrets.FEISHU_BOT_WEBHOOK_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -43,10 +46,7 @@ jobs:
             harness/metrics/judgements/*.json
             reports/eval/*.md
       - name: Notify Feishu on failure
-        if: failure() && secrets.FEISHU_BOT_WEBHOOK_URL != ''
-        env:
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_BOT_WEBHOOK_URL }}
-          FEISHU_WEBHOOK_SECRET: ${{ secrets.FEISHU_BOT_WEBHOOK_SECRET }}
+        if: failure() && env.FEISHU_WEBHOOK_URL != ''
         run: |
           MSG="❌ daily-verify-ci 失败\nrepo: ${{ github.repository }}\nbranch: ${{ github.ref_name }}\nrun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\nactor: ${{ github.actor }}"
           if [ -n "$FEISHU_WEBHOOK_SECRET" ]; then
