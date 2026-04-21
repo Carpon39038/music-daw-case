@@ -51,15 +51,7 @@ jobs:
           MSG="❌ daily-verify-ci 失败\nrepo: ${{ github.repository }}\nbranch: ${{ github.ref_name }}\nrun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\nactor: ${{ github.actor }}"
           if [ -n "$FEISHU_WEBHOOK_SECRET" ]; then
             export TS=$(date +%s)
-            SIGN=$(python3 - <<'PY'
-import base64, hashlib, hmac, os
-secret=os.environ['FEISHU_WEBHOOK_SECRET']
-ts=os.environ['TS']
-string_to_sign=f"{ts}\n{secret}".encode('utf-8')
-digest=hmac.new(secret.encode('utf-8'), string_to_sign, digestmod=hashlib.sha256).digest()
-print(base64.b64encode(digest).decode())
-PY
-)
+            SIGN=$(python3 -c "import base64,hashlib,hmac,os;secret=os.environ['FEISHU_WEBHOOK_SECRET'];ts=os.environ['TS'];s=f'{ts}\\n{secret}'.encode('utf-8');d=hmac.new(secret.encode('utf-8'), s, digestmod=hashlib.sha256).digest();print(base64.b64encode(d).decode())")
             curl -sS -X POST "$FEISHU_WEBHOOK_URL" \
               -H 'Content-Type: application/json' \
               -d "{\"timestamp\":\"$TS\",\"sign\":\"$SIGN\",\"msg_type\":\"text\",\"content\":{\"text\":\"$MSG\"}}" >/dev/null
