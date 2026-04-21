@@ -534,7 +534,11 @@ export function Transport({
         </div>
       </div>
 
-      <div className={`${exportPanelOpen || recoveryPanelOpen || referencePanelOpen || workflowPanelOpen ? 'fixed top-20 right-4 z-50 w-[640px] max-w-[calc(100vw-2rem)] flex flex-wrap items-start gap-2 rounded-lg border border-gray-800 bg-[#111]/95 backdrop-blur p-3 shadow-2xl' : 'flex items-center gap-2'}`}>
+      <div
+        className={`${exportPanelOpen || recoveryPanelOpen || referencePanelOpen || workflowPanelOpen
+          ? `fixed ${transportSettingsOpen ? 'top-[184px]' : 'top-20'} right-4 z-50 w-[640px] max-w-[calc(100vw-2rem)] flex flex-wrap items-start gap-2 rounded-lg border border-gray-800 bg-[#111]/95 backdrop-blur p-3 shadow-2xl`
+          : 'flex items-center gap-2'}`}
+      >
         <input
           data-testid="midi-import-input"
           type="file"
@@ -746,6 +750,7 @@ export function Transport({
           </button>
           <button
             type="button"
+            data-testid="reference-panel-toggle"
             onClick={() => {
               setReferencePanelOpen((v) => {
                 const next = !v

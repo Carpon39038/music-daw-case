@@ -13,7 +13,7 @@ test.describe('P9 pre-export auto fix', () => {
     }
 
     await expect(page.getByTestId('mp3-export-btn')).toBeVisible()
-    await page.getByTestId('loop-enabled').click()
+    await page.getByTestId('loop-enabled').evaluate((el: HTMLButtonElement) => el.click())
 
     await expect(page.getByTestId('pre-export-checklist-status')).toContainText('未检查')
     await page.getByTestId('pre-export-auto-fix-btn').first().evaluate((el: HTMLButtonElement) => el.click())

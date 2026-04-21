@@ -2651,16 +2651,19 @@ export function useDAWActions(): DAWActions {
   const undoDepth = past.length
   const redoDepth = future.length
 
-  const setProject = (
-    value: ProjectState | ((prev: ProjectState) => ProjectState),
-    options?: { saveHistory?: boolean },
-  ) => {
-    if (typeof value === 'function') {
-      updateProject(value, options)
-      return
-    }
-    storeSetProject(value, options)
-  }
+  const setProject = React.useCallback(
+    (
+      value: ProjectState | ((prev: ProjectState) => ProjectState),
+      options?: { saveHistory?: boolean },
+    ) => {
+      if (typeof value === 'function') {
+        updateProject(value, options)
+        return
+      }
+      storeSetProject(value, options)
+    },
+    [updateProject, storeSetProject],
+  )
 
   const setIsPlaying = (value: boolean) => {
     storeSetIsPlaying(value)

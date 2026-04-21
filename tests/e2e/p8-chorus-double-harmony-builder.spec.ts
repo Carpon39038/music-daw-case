@@ -10,14 +10,10 @@ test.describe('P8 Chorus Double & Harmony Builder', () => {
   })
 
   test('creates two derived tracks for selected chorus marker and selected source track', async ({ page }) => {
-    const initialTrackCount = await page.locator('[data-testid^="track-header-"]').count()
-
     await page.getByTestId('add-track-btn').click()
 
     const sourceTrack = page.locator('[data-testid="track-header-track-1"]')
     await sourceTrack.click()
-
-    const sourceTrackId = 'track-1'
 
     await page.getByTestId('add-clip-track-1').click()
     await page.getByTestId('add-clip-track-1').click()
